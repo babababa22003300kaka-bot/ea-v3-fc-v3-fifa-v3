@@ -1,0 +1,145 @@
+{
+  "name": "Fort Knox Digital Identity - Phase 2",
+  "short_name": "Fort Knox FC26",
+  "description": "نظام الهوية الرقمية المحصن - المرحلة الثانية المطورة",
+  "version": "2.1.0",
+  "manifest_version": 3,
+  
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2c3e50",
+  "background_color": "#ecf0f1",
+  
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "96x96",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "128x128",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "144x144",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "152x152",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "384x384",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232c3e50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='white'%3E🏰%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  
+  "categories": ["security", "identity", "encryption", "privacy"],
+  "lang": "ar",
+  "dir": "rtl",
+  
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 568'%3E%3Crect width='320' height='568' fill='%23ecf0f1'/%3E%3Ctext x='160' y='200' font-size='20' text-anchor='middle' fill='%232c3e50'%3EFort Knox%3C/text%3E%3Ctext x='160' y='240' font-size='16' text-anchor='middle' fill='%237f8c8d'%3EDigital Identity%3C/text%3E%3C/svg%3E",
+      "sizes": "320x568",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 800'%3E%3Crect width='1280' height='800' fill='%23ecf0f1'/%3E%3Ctext x='640' y='350' font-size='40' text-anchor='middle' fill='%232c3e50'%3EFort Knox Digital Identity%3C/text%3E%3Ctext x='640' y='420' font-size='28' text-anchor='middle' fill='%237f8c8d'%3EPhase 2 - Enhanced Security%3C/text%3E%3C/svg%3E",
+      "sizes": "1280x800",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ],
+  
+  "shortcuts": [
+    {
+      "name": "تسجيل الدخول السريع",
+      "short_name": "دخول",
+      "description": "تسجيل دخول سريع وآمن",
+      "url": "/?action=quick_login",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232c3e50' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "لوحة التحكم",
+      "short_name": "لوحة",
+      "description": "الوصول للوحة التحكم الرئيسية",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232c3e50' d='M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'/%3E%3C/svg%3E",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "الإعدادات الأمنية",
+      "short_name": "أمان",
+      "description": "إدارة إعدادات الأمان والحماية",
+      "url": "/?section=security",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232c3e50' d='M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11C15.4,11 16,11.4 16,12V16C16,16.6 15.6,17 15,17H9C8.4,17 8,16.6 8,16V12C8,11.4 8.4,11 9,11V10C9,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.2,9.2 10.2,10V11H13.8V10C13.8,9.2 12.8,8.2 12,8.2Z'/%3E%3C/svg%3E",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  
+  "related_applications": [],
+  "prefer_related_applications": false,
+  
+  "protocol_handlers": [
+    {
+      "protocol": "web+fortknox",
+      "url": "/?protocol=%s"
+    }
+  ],
+  
+  "scope": "/",
+  "id": "fort-knox-digital-identity-phase2",
+  
+  "permissions": [
+    "notifications",
+    "background-sync",
+    "persistent-storage"
+  ],
+  
+  "features": {
+    "crossOriginIsolated": true,
+    "displayMode": "standalone",
+    "offlineSupport": true,
+    "backgroundSync": true,
+    "pushNotifications": true,
+    "biometricAuth": false,
+    "fingerprint": true,
+    "faceId": false
+  }
+}
