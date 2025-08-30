@@ -44,6 +44,21 @@ from validators import (
     validate_whatsapp_ultimate,
 )
 
+# 🔒 استيراد وزارة الأمان الجديدة
+try:
+    from ministries.security_ministry import security_ministry, zero_trust, security_required
+    SECURITY_ENABLED = True
+    print("✅ Security Ministry loaded successfully")
+except ImportError as e:
+    print(f"⚠️ Security Ministry not available: {e}")
+    SECURITY_ENABLED = False
+    security_ministry = None
+    zero_trust = None
+    def security_required(min_trust_score=30):
+        def decorator(func):
+            return func
+        return decorator
+
 # ... (باقي الملف يبقى كما هو) ...
 # ============================================================================
 # 🚀 الخطوة 2: إنشاء التطبيق وتهيئته
@@ -737,6 +752,17 @@ def internal_error(error):
     print(f"خطأ داخلي في الخادم: {str(error)}")
     return jsonify({"error": "خطأ داخلي في الخادم"}), 500
 
+
+# ============================================================================
+# 🏰 تسجيل Fortress Routes
+# ============================================================================
+
+try:
+    from fortress_routes import fortress_bp
+    app.register_blueprint(fortress_bp)
+    print("✅ Fortress Routes registered successfully")
+except ImportError as e:
+    print(f"⚠️ Fortress Routes not available: {e}")
 
 # ============================================================================
 # 🏁 الخطوة 7: تشغيل التطبيق
