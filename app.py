@@ -44,20 +44,44 @@ from validators import (
     validate_whatsapp_ultimate,
 )
 
-# 🔒 استيراد وزارة الأمان الجديدة
+# 🔒 استيراد وزارة الأمان المتقدمة V2
 try:
+    from ministries.advanced_security_ministry import (
+        advanced_security_ministry, 
+        require_security,
+        ThreatLevel,
+        SecurityEventType
+    )
+    # للتوافق مع الكود القديم
     from ministries.security_ministry import security_ministry, zero_trust, security_required
     SECURITY_ENABLED = True
-    print("✅ Security Ministry loaded successfully")
+    ADVANCED_SECURITY = True
+    print("✅ Advanced Security Ministry V2 loaded successfully")
+    print(f"   System ID: {advanced_security_ministry.system_id}")
+    print(f"   Version: {advanced_security_ministry.version}")
 except ImportError as e:
-    print(f"⚠️ Security Ministry not available: {e}")
-    SECURITY_ENABLED = False
-    security_ministry = None
-    zero_trust = None
-    def security_required(min_trust_score=30):
-        def decorator(func):
-            return func
-        return decorator
+    print(f"⚠️ Advanced Security Ministry not available: {e}")
+    # محاولة تحميل النسخة القديمة
+    try:
+        from ministries.security_ministry import security_ministry, zero_trust, security_required
+        SECURITY_ENABLED = True
+        ADVANCED_SECURITY = False
+        advanced_security_ministry = None
+        print("✅ Basic Security Ministry loaded")
+    except ImportError:
+        SECURITY_ENABLED = False
+        ADVANCED_SECURITY = False
+        security_ministry = None
+        advanced_security_ministry = None
+        zero_trust = None
+        def security_required(min_trust_score=30):
+            def decorator(func):
+                return func
+            return decorator
+        def require_security(min_trust_score=30, threat_level=None):
+            def decorator(func):
+                return func
+            return decorator
 
 # ... (باقي الملف يبقى كما هو) ...
 # ============================================================================
@@ -763,6 +787,14 @@ try:
     print("✅ Fortress Routes registered successfully")
 except ImportError as e:
     print(f"⚠️ Fortress Routes not available: {e}")
+
+# تسجيل Advanced Fortress Routes V2
+try:
+    from advanced_fortress_routes import advanced_fortress_bp
+    app.register_blueprint(advanced_fortress_bp)
+    print("✅ Advanced Fortress Routes V2 registered successfully")
+except ImportError as e:
+    print(f"⚠️ Advanced Fortress Routes V2 not available: {e}")
 
 # ============================================================================
 # 🏁 الخطوة 7: تشغيل التطبيق
