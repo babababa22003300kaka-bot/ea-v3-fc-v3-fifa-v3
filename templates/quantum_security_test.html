@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 اختبار نظام الأمان الكمومي V3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+            direction: rtl;
+        }
+        
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .test-card h2 {
+            margin-bottom: 20px;
+            color: #ffd700;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 10px;
+        }
+        
+        .test-section {
+            margin-bottom: 20px;
+        }
+        
+        .test-section h3 {
+            margin-bottom: 10px;
+            color: #87ceeb;
+        }
+        
+        input, textarea, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        
+        .status-active {
+            background: #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-inactive {
+            background: #ff0000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .threat-samples {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .sample-button {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            text-align: right;
+        }
+        
+        .sample-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 اختبار نظام الأمان الكمومي V3.0</h1>
+        
+        <div class="test-grid">
+            <!-- Encryption Test -->
+            <div class="test-card">
+                <h2>🔐 اختبار التشفير متعدد الطبقات</h2>
+                <div class="test-section">
+                    <textarea id="encryptInput" placeholder="أدخل النص المراد تشفيره...">سر خطير جداً يحتاج حماية قصوى!</textarea>
+                    <button onclick="testEncryption()">تشفير الآن</button>
+                    <div id="encryptResult" class="result-box">النتيجة ستظهر هنا...</div>
+                </div>
+            </div>
+            
+            <!-- Decryption Test -->
+            <div class="test-card">
+                <h2>🔓 اختبار فك التشفير</h2>
+                <div class="test-section">
+                    <textarea id="decryptInput" placeholder="الصق النص المشفر هنا..."></textarea>
+                    <button onclick="testDecryption()">فك التشفير</button>
+                    <div id="decryptResult" class="result-box">النتيجة ستظهر هنا...</div>
+                </div>
+            </div>
+            
+            <!-- Threat Detection Test -->
+            <div class="test-card">
+                <h2>🚨 اختبار كشف التهديدات</h2>
+                <div class="test-section">
+                    <h3>عينات تهديدات جاهزة:</h3>
+                    <div class="threat-samples">
+                        <button class="sample-button" onclick="setThreatSample('xss')">XSS: &lt;script&gt;alert('هجوم')&lt;/script&gt;</button>
+                        <button class="sample-button" onclick="setThreatSample('sql')">SQL: ' OR 1=1 --</button>
+                        <button class="sample-button" onclick="setThreatSample('path')">Path: ../../etc/passwd</button>
+                        <button class="sample-button" onclick="setThreatSample('cmd')">Command: ; rm -rf /</button>
+                    </div>
+                    <textarea id="threatInput" placeholder="أدخل نص للفحص..."></textarea>
+                    <button onclick="testThreatDetection()">فحص التهديدات</button>
+                    <div id="threatResult" class="result-box">النتيجة ستظهر هنا...</div>
+                </div>
+            </div>
+            
+            <!-- Session Management Test -->
+            <div class="test-card">
+                <h2>🔄 اختبار إدارة الجلسات</h2>
+                <div class="test-section">
+                    <input type="text" id="userId" placeholder="معرف المستخدم" value="user123">
+                    <input type="text" id="deviceId" placeholder="معرف الجهاز" value="device456">
+                    <button onclick="createSession()">إنشاء جلسة آمنة</button>
+                    <div id="sessionResult" class="result-box">معلومات الجلسة...</div>
+                </div>
+                <div class="test-section">
+                    <input type="text" id="sessionToken" placeholder="رمز الجلسة للتحقق">
+                    <button onclick="validateSession()">التحقق من الجلسة</button>
+                    <div id="validateResult" class="result-box">نتيجة التحقق...</div>
+                </div>
+            </div>
+            
+            <!-- Trust Score Test -->
+            <div class="test-card">
+                <h2>📊 اختبار Trust Score</h2>
+                <div class="test-section">
+                    <h3>سيناريو المستخدم:</h3>
+                    <select id="userScenario">
+                        <option value="normal">مستخدم عادي</option>
+                        <option value="suspicious">نشاط مشبوه</option>
+                        <option value="attacker">محاولة اختراق</option>
+                    </select>
+                    <button onclick="calculateTrustScore()">حساب Trust Score</button>
+                    <div id="trustResult" class="result-box">Trust Score...</div>
+                </div>
+            </div>
+            
+            <!-- System Status -->
+            <div class="test-card">
+                <h2>📈 حالة النظام</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="encryptionLayers">4</div>
+                        <div class="stat-label">طبقات التشفير</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="activeSessions">0</div>
+                        <div class="stat-label">جلسات نشطة</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="threatsBlocked">0</div>
+                        <div class="stat-label">تهديدات محظورة</div>
+                    </div>
+                </div>
+                <button onclick="refreshStatus()">تحديث الحالة</button>
+                <div id="statusResult" class="result-box">معلومات النظام...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Base API URL
+        const API_BASE = '/fortress/v3';
+        
+        // Test Encryption
+        async function testEncryption() {
+            const input = document.getElementById('encryptInput').value;
+            const resultDiv = document.getElementById('encryptResult');
+            
+            try {
+                resultDiv.textContent = 'جاري التشفير...';
+                const response = await fetch(`${API_BASE}/encrypt`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({plaintext: input})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.textContent = `✅ تم التشفير بنجاح!\n\nالنص المشفر:\n${data.encrypted}\n\nطبقات التشفير المستخدمة: ${data.layers_used}\nالوقت المستغرق: ${data.processing_time}ms`;
+                } else {
+                    resultDiv.textContent = `❌ فشل التشفير: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Test Decryption
+        async function testDecryption() {
+            const input = document.getElementById('decryptInput').value;
+            const resultDiv = document.getElementById('decryptResult');
+            
+            try {
+                resultDiv.textContent = 'جاري فك التشفير...';
+                const response = await fetch(`${API_BASE}/decrypt`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({encrypted: input})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.textContent = `✅ تم فك التشفير بنجاح!\n\nالنص الأصلي:\n${data.plaintext}\n\nالوقت المستغرق: ${data.processing_time}ms`;
+                } else {
+                    resultDiv.textContent = `❌ فشل فك التشفير: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Set Threat Sample
+        function setThreatSample(type) {
+            const samples = {
+                'xss': '<script>alert("XSS Attack")</script>',
+                'sql': "' OR 1=1 --",
+                'path': '../../etc/passwd',
+                'cmd': '; rm -rf /'
+            };
+            document.getElementById('threatInput').value = samples[type];
+        }
+        
+        // Test Threat Detection
+        async function testThreatDetection() {
+            const input = document.getElementById('threatInput').value;
+            const resultDiv = document.getElementById('threatResult');
+            
+            try {
+                resultDiv.textContent = 'جاري الفحص...';
+                const response = await fetch(`${API_BASE}/threat-scan`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({data: input})
+                });
+                
+                const data = await response.json();
+                if (data.is_threat) {
+                    resultDiv.textContent = `🚨 تحذير! تم اكتشاف تهديد!\n\nنوع التهديد: ${data.threat_type}\nمستوى الخطورة: ${data.severity}\nالتفاصيل: ${data.details}\n\nالإجراء المتخذ: ${data.action}`;
+                } else {
+                    resultDiv.textContent = `✅ آمن - لم يتم اكتشاف أي تهديدات\n\nالوقت المستغرق: ${data.scan_time}ms`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Create Session
+        async function createSession() {
+            const userId = document.getElementById('userId').value;
+            const deviceId = document.getElementById('deviceId').value;
+            const resultDiv = document.getElementById('sessionResult');
+            
+            try {
+                resultDiv.textContent = 'جاري إنشاء الجلسة...';
+                const response = await fetch(`${API_BASE}/create-session`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: userId,
+                        device_id: deviceId
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.textContent = `✅ تم إنشاء الجلسة بنجاح!\n\nرمز الجلسة:\n${data.session_token}\n\nمعرف الجلسة: ${data.session_id}\nصالحة حتى: ${new Date(data.expires_at).toLocaleString('ar')}`;
+                    document.getElementById('sessionToken').value = data.session_token;
+                } else {
+                    resultDiv.textContent = `❌ فشل إنشاء الجلسة: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Validate Session
+        async function validateSession() {
+            const token = document.getElementById('sessionToken').value;
+            const resultDiv = document.getElementById('validateResult');
+            
+            try {
+                resultDiv.textContent = 'جاري التحقق...';
+                const response = await fetch(`${API_BASE}/validate-session`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_token: token})
+                });
+                
+                const data = await response.json();
+                if (data.valid) {
+                    resultDiv.textContent = `✅ الجلسة صالحة!\n\nمعرف المستخدم: ${data.user_id}\nمعرف الجهاز: ${data.device_id}\nمتبقي: ${data.time_remaining} ثانية`;
+                } else {
+                    resultDiv.textContent = `❌ الجلسة غير صالحة: ${data.reason}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Calculate Trust Score
+        async function calculateTrustScore() {
+            const scenario = document.getElementById('userScenario').value;
+            const resultDiv = document.getElementById('trustResult');
+            
+            const scenarios = {
+                'normal': {
+                    failed_logins: 0,
+                    suspicious_activities: 0,
+                    verified_mfa: true,
+                    session_duration: 300
+                },
+                'suspicious': {
+                    failed_logins: 3,
+                    suspicious_activities: 5,
+                    verified_mfa: false,
+                    session_duration: 10
+                },
+                'attacker': {
+                    failed_logins: 10,
+                    suspicious_activities: 20,
+                    verified_mfa: false,
+                    session_duration: 2
+                }
+            };
+            
+            try {
+                resultDiv.textContent = 'جاري الحساب...';
+                const response = await fetch(`${API_BASE}/trust-score`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(scenarios[scenario])
+                });
+                
+                const data = await response.json();
+                const color = data.trust_score > 70 ? '#00ff00' : data.trust_score > 40 ? '#ffff00' : '#ff0000';
+                resultDiv.innerHTML = `Trust Score: <span style="color: ${color}; font-size: 2em; font-weight: bold;">${data.trust_score}/100</span>\n\nالتوصية: ${data.recommendation}\nالإجراء المقترح: ${data.action}`;
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Refresh Status
+        async function refreshStatus() {
+            const resultDiv = document.getElementById('statusResult');
+            
+            try {
+                resultDiv.textContent = 'جاري التحديث...';
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                document.getElementById('encryptionLayers').textContent = data.encryption_layers || 4;
+                document.getElementById('activeSessions').textContent = data.active_sessions || 0;
+                document.getElementById('threatsBlocked').textContent = data.threats_blocked || 0;
+                
+                resultDiv.textContent = `✅ تم التحديث\n\nالإصدار: ${data.version}\nالحالة: ${data.status}\nآخر تحديث: ${new Date().toLocaleString('ar')}`;
+            } catch (error) {
+                resultDiv.textContent = `❌ خطأ: ${error.message}`;
+            }
+        }
+        
+        // Auto-refresh status every 10 seconds
+        setInterval(refreshStatus, 10000);
+        
+        // Initial status load
+        refreshStatus();
+    </script>
+</body>
+</html>
