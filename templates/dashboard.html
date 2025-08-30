@@ -132,11 +132,21 @@
     <div class="success-notifications" id="successNotifications"></div>
 
     <!-- تحميل ملف JavaScript المعزول -->
+    <!-- Core Security Components - MUST BE LOADED FIRST -->
+    <script src="{{ url_for('static', filename='js/CryptoEngine.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/SilentIdentity.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/Dashboard.js') }}"></script>
+    
+    <!-- Original Fortress Components -->
     <script src="{{ url_for('static', filename='js/DashboardFortress.js') }}"></script>
     
     <!-- 🏰 ملاحظة: أسطر تحميل قلاع الهوية الصامتة تم نقلها إلى index.html للتفعيل الشامل -->
     
     <!-- 🔧 نظام الاختبار الذاتي - Fort Knox Digital Identity Testing Framework -->
+    <!-- Integration Bridge - LOAD AFTER COMPONENTS -->
+    <script src="{{ url_for('static', filename='js/IntegrationBridge.js') }}"></script>
+    
+    <!-- Testing Components -->
     <script src="{{ url_for('static', filename='js/fortress_testing/fortresses/DevToolsInspectorFortress.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fortress_testing/core/CoreTestFortress.js') }}"></script>
     

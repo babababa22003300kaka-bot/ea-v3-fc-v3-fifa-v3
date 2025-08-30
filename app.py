@@ -819,6 +819,14 @@ try:
 except ImportError as e:
     print(f"⚠️ Quantum Fortress Routes V3 not available: {e}")
 
+# 🛡️ تسجيل API Routes للنظام الأمني
+try:
+    from api_routes import api_bp
+    app.register_blueprint(api_bp)
+    print("✅ API Routes registered successfully")
+except ImportError as e:
+    print(f"⚠️ API Routes not available: {e}")
+
 # ============================================================================
 # 🏁 الخطوة 7: تشغيل التطبيق
 # ============================================================================
