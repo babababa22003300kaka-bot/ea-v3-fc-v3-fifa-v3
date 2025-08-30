@@ -72,16 +72,31 @@ except ImportError as e:
         SECURITY_ENABLED = False
         ADVANCED_SECURITY = False
         security_ministry = None
-        advanced_security_ministry = None
-        zero_trust = None
-        def security_required(min_trust_score=30):
-            def decorator(func):
-                return func
-            return decorator
-        def require_security(min_trust_score=30, threat_level=None):
-            def decorator(func):
-                return func
-            return decorator
+
+# 🔐 استيراد وزارة الأمان الكمي V3
+try:
+    from ministries.quantum_security_ministry import quantum_security
+    QUANTUM_SECURITY = True
+    print("✅ Quantum Security Ministry V3 loaded successfully")
+    print(f"   System ID: {quantum_security.system_id}")
+    print(f"   Version: {quantum_security.version}")
+except ImportError as e:
+    print(f"⚠️ Quantum Security Ministry not available: {e}")
+    QUANTUM_SECURITY = False
+    quantum_security = None
+        
+# استكمال الكود إذا لم تكن الوزارات موجودة
+if not SECURITY_ENABLED:
+    advanced_security_ministry = None
+    zero_trust = None
+    def security_required(min_trust_score=30):
+        def decorator(func):
+            return func
+        return decorator
+    def require_security(min_trust_score=30, threat_level=None):
+        def decorator(func):
+            return func
+        return decorator
 
 # ... (باقي الملف يبقى كما هو) ...
 # ============================================================================
@@ -795,6 +810,14 @@ try:
     print("✅ Advanced Fortress Routes V2 registered successfully")
 except ImportError as e:
     print(f"⚠️ Advanced Fortress Routes V2 not available: {e}")
+
+# 🚀 تسجيل قلعة الأمان الكمي V3
+try:
+    from quantum_fortress_routes import quantum_fortress_bp
+    app.register_blueprint(quantum_fortress_bp)
+    print("✅ Quantum Fortress Routes V3 registered successfully")
+except ImportError as e:
+    print(f"⚠️ Quantum Fortress Routes V3 not available: {e}")
 
 # ============================================================================
 # 🏁 الخطوة 7: تشغيل التطبيق
