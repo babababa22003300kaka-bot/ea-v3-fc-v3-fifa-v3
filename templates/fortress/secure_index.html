@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC 26 Profile System - نظام الحماية الخارقة</title>
+    
+    <!-- الأنماط الأساسية -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        /* 🎨 أنماط الحماية الخارقة */
+        :root {
+            --primary-color: #1a1a2e;
+            --secondary-color: #16213e;
+            --accent-color: #0f3460;
+            --danger-color: #e94560;
+            --success-color: #00d4ff;
+            --warning-color: #ffd700;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+            min-height: 100vh;
+            color: #fff;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* 🛡️ شريط الحماية */
+        .security-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(90deg, 
+                rgba(0,212,255,0.1) 0%, 
+                rgba(233,69,96,0.1) 50%, 
+                rgba(0,212,255,0.1) 100%);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            animation: securityPulse 3s infinite;
+        }
+        
+        @keyframes securityPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        .security-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+        
+        .security-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .trust-score {
+            background: rgba(0,0,0,0.3);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+        }
+        
+        /* 📦 الحاوية الرئيسية */
+        .main-container {
+            max-width: 1200px;
+            margin: 60px auto 20px;
+            padding: 20px;
+        }
+        
+        /* 🎯 الهيدر المحسن */
+        .header {
+            background: linear-gradient(135deg, 
+                rgba(26,26,46,0.9), 
+                rgba(22,33,62,0.9), 
+                rgba(15,52,96,0.9));
+            padding: 40px;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, 
+                rgba(0,212,255,0.1) 0%, 
+                transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(90deg, #00d4ff, #e94560, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(30deg); }
+        }
+        
+        /* 📋 نموذج الإدخال المحسن */
+        .form-section {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 0 0 20px 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--success-color);
+            font-weight: 500;
+        }
+        
+        .secure-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(0,212,255,0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .secure-input:focus {
+            outline: none;
+            border-color: var(--success-color);
+            background: rgba(255,255,255,0.15);
+            box-shadow: 0 0 15px rgba(0,212,255,0.3);
+        }
+        
+        /* 🔐 مؤشرات الأمان */
+        .security-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .security-feature {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,212,255,0.3);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .security-feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,212,255,0.2);
+        }
+        
+        .feature-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .feature-status {
+            font-size: 12px;
+            color: var(--success-color);
+        }
+        
+        /* 🎮 الأزرار المحسنة */
+        .btn-fortress {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, var(--accent-color), var(--secondary-color));
+            border: none;
+            border-radius: 50px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn-fortress::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn-fortress:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-fortress:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,212,255,0.3);
+        }
+        
+        /* 📊 لوحة المعلومات */
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--success-color);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        /* 🚨 التنبيهات */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-success {
+            background: rgba(0,212,255,0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+        
+        .alert-danger {
+            background: rgba(233,69,96,0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+        
+        .alert-warning {
+            background: rgba(255,215,0,0.1);
+            border: 1px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+        
+        /* 📱 التوافق مع الموبايل */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .security-features {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-fortress {
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+        
+        /* ✨ تأثيرات إضافية */
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(0,212,255,0.5); }
+            to { box-shadow: 0 0 20px rgba(0,212,255,0.8), 0 0 30px rgba(0,212,255,0.5); }
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--success-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 🛡️ شريط الحماية العلوي -->
+    <div class="security-bar">
+        <div class="security-status">
+            <span class="security-indicator"></span>
+            <span>نظام الحماية نشط</span>
+        </div>
+        <div class="trust-score">
+            Trust Score: <span id="trustScore">0</span>
+        </div>
+    </div>
+    
+    <!-- 📦 الحاوية الرئيسية -->
+    <div class="main-container">
+        <!-- 🎯 الهيدر -->
+        <div class="header">
+            <h1>🛡️ FC 26 Profile System</h1>
+            <p>نظام الحماية الخارقة - Zero Trust Architecture</p>
+        </div>
+        
+        <!-- 📊 لوحة الإحصائيات -->
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-value" id="securityLevel">MAX</div>
+                <div class="stat-label">مستوى الحماية</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeUsers">0</div>
+                <div class="stat-label">مستخدمون نشطون</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="blockedAttempts">0</div>
+                <div class="stat-label">محاولات محظورة</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="systemUptime">100%</div>
+                <div class="stat-label">وقت التشغيل</div>
+            </div>
+        </div>
+        
+        <!-- 🔐 مؤشرات الأمان -->
+        <div class="security-features">
+            <div class="security-feature">
+                <div class="feature-icon">🔐</div>
+                <div class="feature-name">تشفير AES-256</div>
+                <div class="feature-status">✅ مفعل</div>
+            </div>
+            <div class="security-feature">
+                <div class="feature-icon">🛡️</div>
+                <div class="feature-name">Zero Trust</div>
+                <div class="feature-status">✅ مفعل</div>
+            </div>
+            <div class="security-feature">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-name">كشف التهديدات</div>
+                <div class="feature-status">✅ مفعل</div>
+            </div>
+            <div class="security-feature">
+                <div class="feature-icon">🧠</div>
+                <div class="feature-name">AI Protection</div>
+                <div class="feature-status">✅ مفعل</div>
+            </div>
+        </div>
+        
+        <!-- 📋 النموذج -->
+        <div class="form-section">
+            <form id="secureForm" method="POST" action="/validate">
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                
+                <div class="form-group">
+                    <label for="whatsapp">رقم الواتساب</label>
+                    <input type="text" id="whatsapp" name="whatsapp" class="secure-input" 
+                           placeholder="مثال: +201234567890" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment_method">طريقة الدفع</label>
+                    <select id="payment_method" name="payment_method" class="secure-input">
+                        <option value="">اختر طريقة الدفع</option>
+                        <option value="vodafone_cash">فودافون كاش</option>
+                        <option value="instapay">انستاباي</option>
+                        <option value="card">بطاقة بنكية</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment_details">تفاصيل الدفع</label>
+                    <input type="text" id="payment_details" name="payment_details" 
+                           class="secure-input" placeholder="أدخل تفاصيل الدفع">
+                </div>
+                
+                <div style="text-align: center;">
+                    <button type="submit" class="btn-fortress glow">
+                        🚀 تأكيد البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 🚨 منطقة التنبيهات -->
+        <div id="alertArea"></div>
+    </div>
+    
+    <!-- تحميل نظام الحماية JavaScript -->
+    <script src="{{ url_for('static', filename='fortress/security_fortress.js') }}"></script>
+    
+    <script>
+        // 🚀 تهيئة نظام الحماية
+        document.addEventListener('DOMContentLoaded', function() {
+            // تهيئة نظام Fortress Security
+            if (window.FortressSecurity) {
+                const security = window.FortressSecurity.init({
+                    debug: false,
+                    strictMode: true
+                });
+                
+                console.log('✅ Fortress Security initialized:', security.getSystemInfo());
+                
+                // تحديث Trust Score
+                setInterval(() => {
+                    const score = security.getTrustScore();
+                    document.getElementById('trustScore').textContent = score;
+                    
+                    // تغيير لون المؤشر حسب النقاط
+                    const indicator = document.querySelector('.security-indicator');
+                    if (score < 30) {
+                        indicator.style.background = '#e94560';
+                    } else if (score < 70) {
+                        indicator.style.background = '#ffd700';
+                    } else {
+                        indicator.style.background = '#00d4ff';
+                    }
+                }, 1000);
+            }
+            
+            // معالج النموذج
+            document.getElementById('secureForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // عرض رسالة التحميل
+                showAlert('جاري المعالجة...', 'warning');
+                
+                // إرسال النموذج بـ AJAX
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('✅ تم التحقق بنجاح!', 'success');
+                    } else {
+                        showAlert('❌ ' + (data.message || 'حدث خطأ'), 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('❌ خطأ في الاتصال', 'danger');
+                    console.error('Error:', error);
+                });
+            });
+        });
+        
+        // دالة عرض التنبيهات
+        function showAlert(message, type) {
+            const alertArea = document.getElementById('alertArea');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertArea.innerHTML = '';
+            alertArea.appendChild(alert);
+            
+            // إخفاء التنبيه بعد 5 ثواني
+            setTimeout(() => {
+                alert.style.animation = 'slideOut 0.5s ease';
+                setTimeout(() => alert.remove(), 500);
+            }, 5000);
+        }
+        
+        // تحديث الإحصائيات التجريبية
+        setInterval(() => {
+            // محاكاة البيانات
+            document.getElementById('activeUsers').textContent = 
+                Math.floor(Math.random() * 100) + 50;
+            document.getElementById('blockedAttempts').textContent = 
+                Math.floor(Math.random() * 20);
+        }, 5000);
+    </script>
+</body>
+</html>
