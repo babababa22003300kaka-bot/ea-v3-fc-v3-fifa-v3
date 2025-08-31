@@ -17,7 +17,7 @@ SYSTEM_STATUS = {
     'version': '3.0.0',
     'status': 'operational',
     'security_level': 'high',
-    'last_update': datetime.now().isoformat()
+    'last_update': datetime.utcnow().isoformat()
 }
 
 @api_bp.route('/system/status', methods=['GET'])
@@ -27,7 +27,7 @@ def system_status():
     """
     try:
         # Update timestamp
-        SYSTEM_STATUS['last_update'] = datetime.now().isoformat()
+        SYSTEM_STATUS['last_update'] = datetime.utcnow().isoformat()
         
         # Add session info if available
         if 'user_id' in session:
