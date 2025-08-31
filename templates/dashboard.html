@@ -143,6 +143,9 @@
     <!-- 🏰 ملاحظة: أسطر تحميل قلاع الهوية الصامتة تم نقلها إلى index.html للتفعيل الشامل -->
     
     <!-- 🔧 نظام الاختبار الذاتي - Fort Knox Digital Identity Testing Framework -->
+    <!-- Compatibility Wrapper - LOAD BEFORE INTEGRATION -->
+    <script src="{{ url_for('static', filename='js/compatibility_wrapper.js') }}"></script>
+    
     <!-- Integration Bridge - LOAD AFTER COMPONENTS -->
     <script src="{{ url_for('static', filename='js/IntegrationBridge.js') }}"></script>
     
@@ -213,11 +216,16 @@
                     // نجاهل الأخطاء - ممكن تكون مُفعلة بالفعل
                 });
                 
-                window.FC26IntegrationBridge.initialize().then(() => {
-                    console.log('✅ تم تفعيل جسر التكامل بنجاح'); 
-                }).catch(() => {
-                    // نجاهل الأخطاء - ممكن يكون مُفعل بالفعل
-                });
+                // Check if initialize method exists
+                if (window.FC26IntegrationBridge.initialize) {
+                    window.FC26IntegrationBridge.initialize().then(() => {
+                        console.log('✅ تم تفعيل جسر التكامل بنجاح'); 
+                    }).catch(() => {
+                        // نجاهل الأخطاء - ممكن يكون مُفعل بالفعل
+                    });
+                } else {
+                    console.log('✅ جسر التكامل جاهز (auto-initialized)');
+                }
             }
         }, 1000);
     </script>
