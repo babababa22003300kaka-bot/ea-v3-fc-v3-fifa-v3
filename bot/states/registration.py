@@ -6,17 +6,16 @@
 
 from telegram.ext import ConversationHandler
 
-# تعريف حالات التسجيل
+# تعريف حالات التسجيل (6 خطوات بدلاً من 7)
 (
     CHOOSING_PLATFORM,
     ENTERING_WHATSAPP,
     CHOOSING_PAYMENT,
     ENTERING_PHONE,
-    ENTERING_CARD,
-    ENTERING_INSTAPAY,
+    ENTERING_PAYMENT_INFO,  # حالة موحدة للمعلومات حسب طريقة الدفع
     ENTERING_EMAILS,
     CONFIRMING_DATA
-) = range(8)
+) = range(7)
 
 # أسماء الحالات للعرض
 STATE_NAMES = {
@@ -24,8 +23,7 @@ STATE_NAMES = {
     ENTERING_WHATSAPP: "إدخال رقم واتساب",
     CHOOSING_PAYMENT: "اختيار طريقة الدفع",
     ENTERING_PHONE: "إدخال رقم الهاتف",
-    ENTERING_CARD: "إدخال آخر 4 أرقام من البطاقة",
-    ENTERING_INSTAPAY: "إدخال رابط InstaPay",
+    ENTERING_PAYMENT_INFO: "إدخال معلومات الدفع",
     ENTERING_EMAILS: "إدخال البريد الإلكتروني",
     CONFIRMING_DATA: "تأكيد البيانات"
 }
@@ -35,9 +33,8 @@ STATE_FLOW = {
     CHOOSING_PLATFORM: ENTERING_WHATSAPP,
     ENTERING_WHATSAPP: CHOOSING_PAYMENT,
     CHOOSING_PAYMENT: ENTERING_PHONE,
-    ENTERING_PHONE: ENTERING_CARD,
-    ENTERING_CARD: ENTERING_INSTAPAY,
-    ENTERING_INSTAPAY: ENTERING_EMAILS,
+    ENTERING_PHONE: ENTERING_PAYMENT_INFO,
+    ENTERING_PAYMENT_INFO: ENTERING_EMAILS,
     ENTERING_EMAILS: CONFIRMING_DATA,
     CONFIRMING_DATA: ConversationHandler.END
 }
