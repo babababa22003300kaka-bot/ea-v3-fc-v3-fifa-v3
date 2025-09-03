@@ -1,0 +1,58 @@
+# Sensitive files - NEVER commit these
+.env
+*.env
+*_config.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Flask
+flask_app.log
+flask_app_error.log
+
+# Database 
+*.db
+*.sqlite
+*.sqlite3
+fc26_identities.db
+
+# Supervisor
+supervisord.log
+supervisord.pid
+supervisor.sock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+logs/
+*.log
+
+# SSL certificates
+*.pem
+*.key
+*.cert
+*.crt
+
+# Keys and secrets
+keys/
+secrets/
+*.secret
