@@ -626,6 +626,10 @@ class FC26Bot:
             if success:
                 await query.edit_message_text(
                     f"✅ تم حذف المستخدم {target_id} بنجاح من قاعدة البيانات."
+        # تجاهل أزرار الحذف - لها handlers منفصلة
+        if query.data in ["confirm_delete", "cancel_delete"]:
+            return
+        
                 )
             else:
                 await query.edit_message_text(
@@ -806,35 +810,64 @@ class FC26Bot:
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
+    
+    async def handle_delete_confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """تأكيد حذف الحساب"""
+        query = update.callback_query
+        await query.answer("جاري حذف الحساب...")
+        
+        telegram_id = query.from_user.id
+        success = self.db.delete_user_account(telegram_id)
+        
+        if success:
+            await query.edit_message_text(
+                "✅ تم حذف حسابك بنجاح.\n\n"
+                "نأسف لرؤيتك تغادر 😢\n"
+                "يمكنك التسجيل مرة أخرى في أي وقت بكتابة /start"
+            )
+        else:
+            await query.edit_message_text(
+                "❌ حدث خطأ في حذف الحساب. الرجاء المحاولة لاحقاً."
+            )
+    
+    async def handle_delete_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """إلغاء حذف الحساب"""
+        query = update.callback_query
+        await query.answer("تم الإلغاء")
+        
+        await query.edit_message_text(
+            "✅ تم إلغاء عملية حذف الحساب.\n\n"
+            "سعداء لبقائك معنا! 😊",
+            reply_markup=get_main_menu_keyboard()
+        )
+
     def run(self):
         """تشغيل البوت"""
         # إنشاء التطبيق
         app = Application.builder().token(BOT_TOKEN).build()
         
         # إضافة معالجات الأوامر
-        app.add_handler(CommandHandler("start", self.start))
+        app.add_handler(CommandHandler("start", self.start_command))
         app.add_handler(CommandHandler("help", self.help_command))
-        app.add_handler(CommandHandler("sell", self.sell_command))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("wallet", self.wallet_command))
         app.add_handler(CommandHandler("delete", self.delete_command))
         app.add_handler(CommandHandler("deleteuser", self.deleteuser_command))
-        app.add_handler(CommandHandler("transactions", self.transactions_command))
-        app.add_handler(CommandHandler("prices", self.prices_command))
-        app.add_handler(CommandHandler("settings", self.settings_command))
-        app.add_handler(CommandHandler("support", self.support_command))
         app.add_handler(CommandHandler("admin", self.admin_command))
+        app.add_handler(CommandHandler("broadcast", self.broadcast_command))
+        app.add_handler(CommandHandler("stats", self.stats_command))
         
-        # إضافة معالج الرسائل النصية
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        # معالجات حذف الحساب - قبل التسجيل
+        app.add_handler(CallbackQueryHandler(self.handle_delete_confirm, pattern="^confirm_delete$"))
+        app.add_handler(CallbackQueryHandler(self.handle_delete_cancel, pattern="^cancel_delete$"))
         
-        # إضافة معالج الأزرار التفاعلية
+        # معالج الأزرار التفاعلية الأخرى
         app.add_handler(CallbackQueryHandler(self.handle_callback_query))
         
-        # إضافة معالج التسجيل
+        # إضافة معالج التسجيل - في الآخر
         app.add_handler(get_registration_conversation())
         
-        # تشغيل البوت
+# تشغيل البوت
         logger.info("🚀 بدء تشغيل FC 26 Bot...")
         logger.info("✅ النسخة المبسطة - بدون شراء أو عروض أو إحالات")
         app.run_polling(allowed_updates=Update.ALL_TYPES)
