@@ -568,12 +568,9 @@ def get_registration_conversation():
             ENTERING_PHONE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handler.handle_phone_input)
             ],
-            ENTERING_CARD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handler.handle_card_input)
-            ],
-            ENTERING_INSTAPAY: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handler.handle_instapay_input),
-                CallbackQueryHandler(handler.handle_instapay_input, pattern="^skip_step$")
+            ENTERING_PAYMENT_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handler.handle_payment_info_input),
+                CallbackQueryHandler(handler.handle_payment_info_input, pattern="^skip_step$")
             ],
             ENTERING_EMAILS: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handler.handle_email_input),

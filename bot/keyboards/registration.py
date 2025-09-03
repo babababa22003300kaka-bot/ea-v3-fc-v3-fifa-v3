@@ -77,16 +77,13 @@ def get_emails_keyboard():
 def get_main_menu_keyboard():
     """لوحة القائمة الرئيسية - أزرار تفاعلية فقط"""
     keyboard = [
-        [InlineKeyboardButton("💰 شراء عملات", callback_data="buy_coins"),
-         InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+        [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
         [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile"),
          InlineKeyboardButton("💳 المحفظة", callback_data="wallet")],
         [InlineKeyboardButton("📊 المعاملات", callback_data="transactions"),
-         InlineKeyboardButton("🎁 العروض", callback_data="offers")],
+         InlineKeyboardButton("💹 الأسعار", callback_data="prices")],
         [InlineKeyboardButton("⚙️ الإعدادات", callback_data="settings"),
          InlineKeyboardButton("📞 الدعم", callback_data="support")],
-        [InlineKeyboardButton("👥 الإحالات", callback_data="referrals"),
-         InlineKeyboardButton("💹 الأسعار", callback_data="prices")],
         [InlineKeyboardButton("🔴 حذف الحساب", callback_data="delete_account")]
     ]
     return InlineKeyboardMarkup(keyboard)

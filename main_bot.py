@@ -3,7 +3,7 @@
 """
 FC 26 Bot - البوت الرئيسي
 نظام أزرار تفاعلية فقط - بدون كيبورد
-كل الخدمات متاحة بالأوامر والأزرار
+نسخة محدثة ومبسطة
 """
 
 import os
@@ -38,6 +38,7 @@ class FC26Bot:
     def __init__(self):
         self.db = Database()
         self.registration_handler = RegistrationHandler()
+        self.delete_user_state = {}  # لتتبع حالة حذف المستخدم
         
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية"""
@@ -59,11 +60,10 @@ class FC26Bot:
 ⭐ نقاط الولاء: {profile.get('loyalty_points', 0)}
 
 🔹 **الأوامر المتاحة:**
-• /buy - شراء عملات
 • /sell - بيع عملات  
 • /profile - الملف الشخصي
 • /wallet - المحفظة
-• /delete - حذف الحساب
+• /delete - حذف حسابك
 • /help - المساعدة
 
 أو استخدم الأزرار التفاعلية:
@@ -88,7 +88,6 @@ class FC26Bot:
 • /help - عرض هذه المساعدة
 
 💰 **التداول:**
-• /buy - شراء عملات FC 26
 • /sell - بيع عملات FC 26
 • /prices - أسعار العملات
 
@@ -96,61 +95,39 @@ class FC26Bot:
 • /profile - عرض الملف الشخصي
 • /wallet - عرض المحفظة
 • /transactions - سجل المعاملات
-• /delete - حذف الحساب
-
-🎁 **المميزات:**
-• /offers - العروض المتاحة
-• /referral - نظام الإحالة
+• /delete - حذف حسابك
 
 ⚙️ **أخرى:**
 • /settings - الإعدادات
 • /support - الدعم الفني
 • /cancel - إلغاء العملية الحالية
 
+🔧 **أوامر الأدمن:**
+• /admin - لوحة الإدارة
+• /deleteuser - حذف مستخدم محدد
+
 💡 **نصائح:**
 • أكمل تسجيلك للحصول على 100 نقطة ترحيبية
-• تابع العروض اليومية للحصول على خصومات
 • ارفع مستواك للحصول على مميزات إضافية
 
 ⚡ يمكنك استخدام الأزرار التفاعلية أو كتابة الأوامر مباشرة
 """
+        
+        # إضافة أوامر الأدمن إذا كان المستخدم أدمن
+        if update.effective_user.id == ADMIN_ID:
+            help_text += """
+━━━━━━━━━━━━━━━━
+🔧 **أوامر الأدمن الخاصة:**
+• /deleteuser [telegram_id] - حذف مستخدم بمعرفه
+• /broadcast - رسالة جماعية
+• /stats - إحصائيات مفصلة
+• /backup - نسخة احتياطية
+"""
+        
         await update.message.reply_text(
             help_text, 
             parse_mode='Markdown',
             reply_markup=get_main_menu_keyboard()
-        )
-    
-    async def buy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """أمر شراء العملات"""
-        buy_message = """
-💰 **شراء عملات FC 26**
-━━━━━━━━━━━━━━━━
-
-📊 السعر الحالي: 1.20 جنيه للعملة
-📈 الحد الأدنى: 100 عملة
-📉 الحد الأقصى: 100,000 عملة
-
-🎯 **عروض خاصة:**
-• شراء 1000 عملة = خصم 5%
-• شراء 5000 عملة = خصم 10%
-• شراء 10000+ عملة = خصم 15%
-
-اختر الكمية المطلوبة:
-"""
-        keyboard = [
-            [InlineKeyboardButton("100 عملة (120 جنيه)", callback_data="buy_100"),
-             InlineKeyboardButton("500 عملة (600 جنيه)", callback_data="buy_500")],
-            [InlineKeyboardButton("1000 عملة (1140 جنيه) -5%", callback_data="buy_1000"),
-             InlineKeyboardButton("5000 عملة (5400 جنيه) -10%", callback_data="buy_5000")],
-            [InlineKeyboardButton("10000 عملة (10200 جنيه) -15%", callback_data="buy_10000")],
-            [InlineKeyboardButton("💎 كمية مخصصة", callback_data="buy_custom")],
-            [InlineKeyboardButton("🔙 رجوع للقائمة", callback_data="back_to_menu")]
-        ]
-        
-        await update.message.reply_text(
-            buy_message,
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
     async def sell_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -168,7 +145,7 @@ class FC26Bot:
         
         if balance == 0:
             await update.message.reply_text(
-                "❌ ليس لديك عملات للبيع!\n\nاكتب /buy لشراء عملات",
+                "❌ ليس لديك عملات للبيع!\n\nرصيدك الحالي: 0 عملة",
                 reply_markup=get_main_menu_keyboard()
             )
             return
@@ -264,6 +241,7 @@ class FC26Bot:
 
 🆔 **معرف المستخدم:** #{profile.get('user_id')}
 📱 **تيليجرام:** @{profile.get('telegram_username', 'غير محدد')}
+🆔 **Telegram ID:** `{telegram_id}`
 🎮 **المنصة:** {profile.get('platform', 'غير محدد')}
 📅 **تاريخ التسجيل:** {profile.get('created_at', 'غير محدد')[:10]}
 
@@ -278,14 +256,8 @@ class FC26Bot:
 • التقدم: [{progress_bar}] {progress}%
 
 📊 **الإحصائيات:**
-• عمليات الشراء: {profile.get('buy_count', 0)}
 • عمليات البيع: {profile.get('sell_count', 0)}
 • إجمالي المعاملات: {profile.get('transaction_count', 0)}
-• التقييم: ⭐⭐⭐⭐⭐
-
-🎁 **المكافآت:**
-• نقاط يومية: {profile.get('daily_points', 0)}/50
-• مكافأة الإحالة: {profile.get('referral_bonus', 0)} نقطة
 """
         
         keyboard = [
@@ -293,8 +265,6 @@ class FC26Bot:
              InlineKeyboardButton("🔐 الأمان", callback_data="security")],
             [InlineKeyboardButton("💳 المحفظة", callback_data="wallet"),
              InlineKeyboardButton("📊 المعاملات", callback_data="transactions")],
-            [InlineKeyboardButton("🎁 المكافآت", callback_data="rewards"),
-             InlineKeyboardButton("👥 الإحالات", callback_data="referrals")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
@@ -324,28 +294,23 @@ class FC26Bot:
 
 💰 **الرصيد الحالي:**
 • عملات FC 26: {balance:,} عملة
-• القيمة بسعر الشراء: {balance * 1.20:,.2f} جنيه
 • القيمة بسعر البيع: {balance * 1.15:,.2f} جنيه
 
 ⭐ **نقاط الولاء:**
 • النقاط المتاحة: {points:,} نقطة
 • القيمة: {points * 0.01:.2f} جنيه
-• يمكن استخدامها للخصومات
 
 📈 **آخر 5 معاملات:**
 جاري التحميل...
 
 💡 **نصائح:**
 • احصل على 50 نقطة يومياً بتسجيل الدخول
-• أحل أصدقاءك واحصل على 100 نقطة لكل إحالة
-• استخدم النقاط للحصول على خصومات حتى 20%
+• استخدم النقاط للحصول على خصومات
 """
         
         keyboard = [
-            [InlineKeyboardButton("💰 شراء عملات", callback_data="buy_coins"),
-             InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
-            [InlineKeyboardButton("💱 تحويل عملات", callback_data="transfer"),
-             InlineKeyboardButton("🎁 استخدام النقاط", callback_data="use_points")],
+            [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+            [InlineKeyboardButton("💱 تحويل عملات", callback_data="transfer")],
             [InlineKeyboardButton("📊 كل المعاملات", callback_data="all_transactions")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
@@ -372,7 +337,6 @@ class FC26Bot:
 • رصيدك من العملات 💰
 • نقاط الولاء المتراكمة ⭐
 • سجل معاملاتك بالكامل 📊
-• جميع المكافآت والعروض 🎁
 
 ⛔ **لا يمكن التراجع عن هذا الإجراء نهائياً!**
 
@@ -383,6 +347,73 @@ class FC26Bot:
             reply_markup=get_delete_account_keyboard(),
             parse_mode='Markdown'
         )
+    
+    async def deleteuser_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """أمر حذف مستخدم محدد (للأدمن فقط)"""
+        if update.effective_user.id != ADMIN_ID:
+            await update.message.reply_text("❌ هذا الأمر للمشرفين فقط!")
+            return
+        
+        # التحقق من وجود معرف المستخدم
+        if len(context.args) == 0:
+            # طلب معرف المستخدم
+            await update.message.reply_text(
+                """🔧 **حذف مستخدم محدد**
+━━━━━━━━━━━━━━━━
+
+استخدم الأمر بالشكل التالي:
+`/deleteuser [telegram_id]`
+
+مثال:
+`/deleteuser 123456789`
+
+أو أرسل معرف التيليجرام الآن:""",
+                parse_mode='Markdown'
+            )
+            # حفظ الحالة لانتظار الرد
+            self.delete_user_state[update.effective_user.id] = True
+            return
+        
+        try:
+            target_telegram_id = int(context.args[0])
+            
+            # البحث عن المستخدم
+            user = self.db.get_user_by_telegram_id(target_telegram_id)
+            
+            if not user:
+                await update.message.reply_text(
+                    f"❌ لم يتم العثور على مستخدم بالمعرف: {target_telegram_id}"
+                )
+                return
+            
+            # عرض معلومات المستخدم وطلب التأكيد
+            confirm_text = f"""
+⚠️ **تأكيد حذف المستخدم**
+━━━━━━━━━━━━━━━━
+
+🆔 **معرف المستخدم:** #{user.get('user_id')}
+📱 **اسم المستخدم:** @{user.get('telegram_username', 'غير محدد')}
+🆔 **Telegram ID:** `{target_telegram_id}`
+📅 **تاريخ التسجيل:** {user.get('created_at', 'غير محدد')[:10]}
+
+هل تريد حذف هذا المستخدم نهائياً؟
+"""
+            
+            keyboard = [
+                [InlineKeyboardButton("⚠️ نعم، احذف المستخدم", callback_data=f"admin_delete_{target_telegram_id}")],
+                [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_admin_delete")]
+            ]
+            
+            await update.message.reply_text(
+                confirm_text,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+        except ValueError:
+            await update.message.reply_text(
+                "❌ معرف غير صحيح! يجب أن يكون رقماً."
+            )
     
     async def transactions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض المعاملات"""
@@ -399,86 +430,23 @@ class FC26Bot:
 📊 **سجل المعاملات**
 ━━━━━━━━━━━━━━━━
 
-📅 **آخر 10 معاملات:**
-
-1️⃣ شراء 1000 عملة - 1200 جنيه
-   📅 2024-01-15 | ✅ مكتمل
-
-2️⃣ بيع 500 عملة - 575 جنيه
-   📅 2024-01-14 | ✅ مكتمل
-
-3️⃣ شراء 2000 عملة - 2400 جنيه
-   📅 2024-01-13 | ✅ مكتمل
+📅 **آخر المعاملات:**
+• لا توجد معاملات حتى الآن
 
 📈 **إحصائيات:**
-• إجمالي الشراء: 5000 عملة
-• إجمالي البيع: 2000 عملة
-• صافي الربح: +150 جنيه
+• إجمالي البيع: 0 عملة
+• صافي الربح: 0 جنيه
 
-🔍 للمزيد من التفاصيل استخدم الأزرار:
+🔍 المعاملات ستظهر هنا عند إجراء عمليات
 """
         
         keyboard = [
-            [InlineKeyboardButton("📈 معاملات الشراء", callback_data="trans_buy"),
-             InlineKeyboardButton("📉 معاملات البيع", callback_data="trans_sell")],
-            [InlineKeyboardButton("📊 تقرير شهري", callback_data="monthly_report"),
-             InlineKeyboardButton("💹 تقرير سنوي", callback_data="yearly_report")],
-            [InlineKeyboardButton("📥 تصدير Excel", callback_data="export_excel")],
+            [InlineKeyboardButton("📊 تقرير شهري", callback_data="monthly_report")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
         await update.message.reply_text(
             transactions_text,
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    
-    async def offers_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """عرض العروض"""
-        offers_text = """
-🎁 **العروض والمكافآت**
-━━━━━━━━━━━━━━━━
-
-🔥 **عرض اليوم:**
-خصم 20% على شراء 10000 عملة!
-⏰ ينتهي خلال: 5:23:15
-
-🎯 **العروض النشطة:**
-
-1️⃣ **عرض الوافد الجديد** 🆕
-   • 100 نقطة ترحيبية مجاناً
-   • خصم 10% على أول عملية
-   • صالح لمدة 7 أيام
-
-2️⃣ **عرض نهاية الأسبوع** 🎉
-   • خصم 15% الجمعة والسبت
-   • نقاط مضاعفة على كل عملية
-   • بونص 500 عملة عند شراء 5000
-
-3️⃣ **عرض الإحالة** 👥
-   • 100 نقطة لكل صديق
-   • بونص 5% من عملياتهم
-   • مكافأة 1000 عملة عند 10 إحالات
-
-4️⃣ **عرض VIP** 👑
-   • خصم دائم 10%
-   • أولوية في المعاملات
-   • دعم فني مخصص
-
-💎 **كيفية الاستفادة:**
-اضغط على العرض المطلوب للتفعيل
-"""
-        
-        keyboard = [
-            [InlineKeyboardButton("🆕 عرض الوافد الجديد", callback_data="offer_new")],
-            [InlineKeyboardButton("🎉 عرض نهاية الأسبوع", callback_data="offer_weekend")],
-            [InlineKeyboardButton("👥 عرض الإحالة", callback_data="offer_referral")],
-            [InlineKeyboardButton("👑 عضوية VIP", callback_data="offer_vip")],
-            [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
-        ]
-        
-        await update.message.reply_text(
-            offers_text,
             parse_mode='Markdown',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -490,32 +458,18 @@ class FC26Bot:
 ━━━━━━━━━━━━━━━━
 
 📊 **الأسعار الحالية:**
-• سعر الشراء: 1.20 جنيه/عملة
 • سعر البيع: 1.15 جنيه/عملة
-• الفارق: 0.05 جنيه (4.17%)
 
 📈 **مؤشر السوق:**
-• الاتجاه: صاعد ↗️ +2.5%
-• أعلى سعر اليوم: 1.22 جنيه
-• أدنى سعر اليوم: 1.18 جنيه
+• الاتجاه: مستقر 📊
 • حجم التداول: 125,000 عملة
 
-💡 **توقعات السوق:**
-• توقع الغد: 1.21 - 1.23 جنيه
-• توقع الأسبوع: مستقر 📊
-• توصية: شراء 🟢
-
 ⏰ **آخر تحديث:** منذ دقيقتين
-
-🔄 التحديث التلقائي كل 5 دقائق
 """
         
         keyboard = [
-            [InlineKeyboardButton("💰 شراء الآن", callback_data="buy_now"),
-             InlineKeyboardButton("💸 بيع الآن", callback_data="sell_now")],
-            [InlineKeyboardButton("📊 الرسم البياني", callback_data="price_chart"),
-             InlineKeyboardButton("📈 التحليل الفني", callback_data="analysis")],
-            [InlineKeyboardButton("🔔 تنبيهات الأسعار", callback_data="price_alerts")],
+            [InlineKeyboardButton("💸 بيع الآن", callback_data="sell_now")],
+            [InlineKeyboardButton("📊 الرسم البياني", callback_data="price_chart")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
@@ -534,21 +488,13 @@ class FC26Bot:
 🔧 **إعدادات الحساب:**
 • اللغة: العربية 🇪🇬
 • المنطقة الزمنية: Cairo (GMT+2)
-• العملة: جنيه مصري
 
 🔔 **الإشعارات:**
 • إشعارات الأسعار: ✅ مفعل
-• إشعارات العروض: ✅ مفعل
 • إشعارات المعاملات: ✅ مفعل
 
 🔐 **الأمان:**
 • التحقق الثنائي: ❌ معطل
-• رمز PIN: غير مفعل
-• جلسات نشطة: 1
-
-📱 **معلومات الاتصال:**
-• رقم الهاتف: محفوظ
-• البريد الإلكتروني: محفوظ
 
 اختر ما تريد تعديله:
 """
@@ -556,10 +502,7 @@ class FC26Bot:
         keyboard = [
             [InlineKeyboardButton("🌍 اللغة", callback_data="set_language"),
              InlineKeyboardButton("🔔 الإشعارات", callback_data="set_notifications")],
-            [InlineKeyboardButton("🔐 الأمان", callback_data="set_security"),
-             InlineKeyboardButton("📱 معلومات الاتصال", callback_data="set_contact")],
-            [InlineKeyboardButton("🎨 المظهر", callback_data="set_theme"),
-             InlineKeyboardButton("💾 النسخ الاحتياطي", callback_data="backup")],
+            [InlineKeyboardButton("🔐 الأمان", callback_data="set_security")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
@@ -583,32 +526,21 @@ class FC26Bot:
 
 💬 **تيليجرام:**
 • الدعم المباشر: @FC26_Support
-• مجموعة المساعدة: @FC26_Help
 
 📧 **البريد الإلكتروني:**
 • support@fc26bot.com
-• الرد خلال 24 ساعة
-
-☎️ **الخط الساخن:**
-• 19555 (من 9 ص - 12 م)
 
 ❓ **الأسئلة الشائعة:**
-• كيف أشتري عملات؟
 • كيف أبيع عملات؟
 • كيف أحول لصديق؟
 • كيف أستخدم النقاط؟
-
-🔧 **مركز المساعدة:**
-help.fc26bot.com
 
 اختر طريقة التواصل:
 """
         
         keyboard = [
             [InlineKeyboardButton("💬 دردشة مباشرة", url="https://t.me/FC26_Support")],
-            [InlineKeyboardButton("📱 واتساب", url="https://wa.me/201234567890")],
             [InlineKeyboardButton("❓ الأسئلة الشائعة", callback_data="faq")],
-            [InlineKeyboardButton("🎫 فتح تذكرة دعم", callback_data="open_ticket")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
@@ -618,54 +550,53 @@ help.fc26bot.com
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
-    async def referral_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """نظام الإحالة"""
-        telegram_id = update.effective_user.id
-        username = update.effective_user.username
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج الرسائل النصية"""
+        user_id = update.effective_user.id
         
-        referral_link = f"https://t.me/FC26_Trading_Bot?start=ref_{telegram_id}"
-        
-        referral_text = f"""
-👥 **نظام الإحالة**
+        # التحقق من حالة انتظار معرف المستخدم للحذف
+        if user_id == ADMIN_ID and self.delete_user_state.get(user_id):
+            try:
+                target_telegram_id = int(update.message.text.strip())
+                
+                # البحث عن المستخدم
+                user = self.db.get_user_by_telegram_id(target_telegram_id)
+                
+                if not user:
+                    await update.message.reply_text(
+                        f"❌ لم يتم العثور على مستخدم بالمعرف: {target_telegram_id}"
+                    )
+                else:
+                    # عرض معلومات المستخدم وطلب التأكيد
+                    confirm_text = f"""
+⚠️ **تأكيد حذف المستخدم**
 ━━━━━━━━━━━━━━━━
 
-🔗 **رابط الإحالة الخاص بك:**
-`{referral_link}`
+🆔 **معرف المستخدم:** #{user.get('user_id')}
+📱 **اسم المستخدم:** @{user.get('telegram_username', 'غير محدد')}
+🆔 **Telegram ID:** `{target_telegram_id}`
 
-📊 **إحصائياتك:**
-• عدد الإحالات: 0
-• نقاط مكتسبة: 0
-• عمولات مكتسبة: 0 جنيه
-
-🎁 **المكافآت:**
-• 100 نقطة لكل إحالة ناجحة
-• 5% عمولة من كل عملية لصديقك
-• 1000 عملة مجانية عند 10 إحالات
-
-📈 **الترتيب:**
-• ترتيبك: #0
-• أفضل محيل: 0 إحالة
-
-💡 **نصائح للنجاح:**
-• شارك الرابط على السوشيال ميديا
-• انضم لمجموعات FC 26
-• اشرح المميزات لأصدقائك
-
-📤 انسخ الرابط واشاركه الآن!
+هل تريد حذف هذا المستخدم نهائياً؟
 """
-        
-        keyboard = [
-            [InlineKeyboardButton("📤 مشاركة", url=f"https://t.me/share/url?url={referral_link}&text=انضم لأفضل بوت تداول FC 26!")],
-            [InlineKeyboardButton("📊 إحصائيات مفصلة", callback_data="ref_stats")],
-            [InlineKeyboardButton("🏆 لوحة الصدارة", callback_data="ref_leaderboard")],
-            [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
-        ]
-        
-        await update.message.reply_text(
-            referral_text,
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("⚠️ نعم، احذف المستخدم", callback_data=f"admin_delete_{target_telegram_id}")],
+                        [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_admin_delete")]
+                    ]
+                    
+                    await update.message.reply_text(
+                        confirm_text,
+                        parse_mode='Markdown',
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+                
+                # إلغاء حالة الانتظار
+                self.delete_user_state[user_id] = False
+                
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ معرف غير صحيح! يجب أن يكون رقماً."
+                )
     
     async def handle_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج الأزرار التفاعلية"""
@@ -674,7 +605,7 @@ help.fc26bot.com
         
         telegram_id = query.from_user.id
         
-        # معالجة حذف الحساب
+        # معالجة حذف الحساب الشخصي
         if query.data == "confirm_delete":
             success = self.db.delete_user_account(telegram_id)
             
@@ -693,6 +624,29 @@ help.fc26bot.com
                 reply_markup=get_main_menu_keyboard()
             )
         
+        # معالجة حذف المستخدم من قبل الأدمن
+        elif query.data.startswith("admin_delete_"):
+            if telegram_id != ADMIN_ID:
+                await query.answer("❌ غير مصرح لك!", show_alert=True)
+                return
+            
+            target_id = int(query.data.replace("admin_delete_", ""))
+            success = self.db.delete_user_account(target_id)
+            
+            if success:
+                await query.edit_message_text(
+                    f"✅ تم حذف المستخدم {target_id} بنجاح من قاعدة البيانات."
+                )
+            else:
+                await query.edit_message_text(
+                    f"❌ فشل حذف المستخدم {target_id}. قد يكون غير موجود."
+                )
+        
+        elif query.data == "cancel_admin_delete":
+            await query.edit_message_text(
+                "✅ تم إلغاء عملية حذف المستخدم."
+            )
+        
         # معالجة زر حذف من القائمة
         elif query.data == "delete_account":
             warning_message = """
@@ -705,7 +659,6 @@ help.fc26bot.com
 • جميع بياناتك الشخصية 🗑️
 • رصيدك من العملات 💰
 • نقاط الولاء المتراكمة ⭐
-• سجل معاملاتك بالكامل 📊
 
 ⛔ **لا يمكن التراجع عن هذا الإجراء!**
 """
@@ -713,31 +666,6 @@ help.fc26bot.com
                 warning_message,
                 reply_markup=get_delete_account_keyboard(),
                 parse_mode='Markdown'
-            )
-        
-        # معالجة الشراء
-        elif query.data == "buy_coins" or query.data == "buy_now":
-            # نعرض قائمة الشراء
-            buy_message = """
-💰 **شراء عملات FC 26**
-━━━━━━━━━━━━━━━━
-
-📊 السعر الحالي: 1.20 جنيه للعملة
-
-اختر الكمية:
-"""
-            keyboard = [
-                [InlineKeyboardButton("100 عملة", callback_data="buy_100"),
-                 InlineKeyboardButton("500 عملة", callback_data="buy_500")],
-                [InlineKeyboardButton("1000 عملة", callback_data="buy_1000"),
-                 InlineKeyboardButton("5000 عملة", callback_data="buy_5000")],
-                [InlineKeyboardButton("💎 كمية مخصصة", callback_data="buy_custom")],
-                [InlineKeyboardButton("🔙 رجوع", callback_data="back_to_menu")]
-            ]
-            await query.edit_message_text(
-                buy_message,
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
             )
         
         # معالجة البيع
@@ -863,33 +791,22 @@ help.fc26bot.com
 👥 **المستخدمون:**
 • الإجمالي: {total_users}
 • المسجلون: {registered_users}
-• النشطون اليوم: {registered_users // 2}
 
 💳 **المعاملات:**
 • الإجمالي: {total_transactions}
-• اليوم: {total_transactions // 10}
-• هذا الأسبوع: {total_transactions // 2}
-
-💰 **الإحصائيات المالية:**
-• حجم التداول: 250,000 جنيه
-• العمولات: 12,500 جنيه
-• صافي الربح: 10,000 جنيه
 
 ⚙️ **الأوامر الإدارية:**
-/broadcast - رسالة جماعية
-/users - قائمة المستخدمين
-/stats - إحصائيات مفصلة
-/backup - نسخة احتياطية
-/logs - سجلات النظام
+• /deleteuser [id] - حذف مستخدم محدد
+• /broadcast - رسالة جماعية
+• /users - قائمة المستخدمين
+• /stats - إحصائيات مفصلة
+• /backup - نسخة احتياطية
 """
         
         keyboard = [
-            [InlineKeyboardButton("📊 إحصائيات", callback_data="admin_stats"),
-             InlineKeyboardButton("👥 المستخدمون", callback_data="admin_users")],
-            [InlineKeyboardButton("💳 المعاملات", callback_data="admin_trans"),
-             InlineKeyboardButton("📨 رسالة جماعية", callback_data="admin_broadcast")],
-            [InlineKeyboardButton("💾 نسخة احتياطية", callback_data="admin_backup"),
-             InlineKeyboardButton("📝 السجلات", callback_data="admin_logs")],
+            [InlineKeyboardButton("👥 المستخدمون", callback_data="admin_users"),
+             InlineKeyboardButton("🗑️ حذف مستخدم", callback_data="admin_delete_user")],
+            [InlineKeyboardButton("📊 إحصائيات", callback_data="admin_stats")],
             [InlineKeyboardButton("🔙 إغلاق", callback_data="close")]
         ]
         
@@ -907,18 +824,19 @@ help.fc26bot.com
         # إضافة معالجات الأوامر
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("help", self.help_command))
-        app.add_handler(CommandHandler("buy", self.buy_command))
         app.add_handler(CommandHandler("sell", self.sell_command))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("wallet", self.wallet_command))
         app.add_handler(CommandHandler("delete", self.delete_command))
+        app.add_handler(CommandHandler("deleteuser", self.deleteuser_command))
         app.add_handler(CommandHandler("transactions", self.transactions_command))
-        app.add_handler(CommandHandler("offers", self.offers_command))
         app.add_handler(CommandHandler("prices", self.prices_command))
         app.add_handler(CommandHandler("settings", self.settings_command))
         app.add_handler(CommandHandler("support", self.support_command))
-        app.add_handler(CommandHandler("referral", self.referral_command))
         app.add_handler(CommandHandler("admin", self.admin_command))
+        
+        # إضافة معالج الرسائل النصية
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         
         # إضافة معالج الأزرار التفاعلية
         app.add_handler(CallbackQueryHandler(self.handle_callback_query))
@@ -928,7 +846,7 @@ help.fc26bot.com
         
         # تشغيل البوت
         logger.info("🚀 بدء تشغيل FC 26 Bot...")
-        logger.info("✅ جميع الأوامر والأزرار التفاعلية جاهزة")
+        logger.info("✅ النسخة المبسطة - بدون شراء أو عروض أو إحالات")
         app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
