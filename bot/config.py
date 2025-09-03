@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # توكن البوت
-BOT_TOKEN = os.getenv('BOT_TOKEN', '7607085569:AAHHE4ddOM4LqJNocOHz0htE7x5zHeqyhRE')
+BOT_TOKEN = os.getenv('BOT_TOKEN', '7607085569:AAEq91WtoNg68U9e8-mWm8DsOTh2W9MmmTw')
 
 # معرف الأدمن
 ADMIN_ID = int(os.getenv('ADMIN_ID', '1124247595'))
