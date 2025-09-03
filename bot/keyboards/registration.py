@@ -93,6 +93,15 @@ def get_main_menu_keyboard():
         ["💰 شراء عملات", "💸 بيع عملات"],
         ["👤 الملف الشخصي", "💳 المحفظة"],
         ["📊 المعاملات", "🎁 العروض"],
-        ["⚙️ الإعدادات", "📞 الدعم"]
+        ["⚙️ الإعدادات", "📞 الدعم"],
+        ["🔴 حذف الحساب"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def get_delete_account_keyboard():
+    """لوحة تأكيد حذف الحساب"""
+    keyboard = [
+        [InlineKeyboardButton("✅ نعم، احذف حسابي", callback_data="confirm_delete")],
+        [InlineKeyboardButton("❌ لا، تراجع", callback_data="cancel_delete")]
+    ]
+    return InlineKeyboardMarkup(keyboard)

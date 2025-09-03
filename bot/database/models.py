@@ -406,3 +406,51 @@ class Database:
         conn.close()
         
         return profile
+    
+    def delete_user_account(self, telegram_id: int) -> bool:
+        """حذف حساب المستخدم من جميع الجداول"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # الحصول على معرف المستخدم
+            cursor.execute('SELECT user_id FROM users WHERE telegram_id = ?', (telegram_id,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False
+            
+            user_id = user['user_id']
+            
+            # حذف من جميع الجداول
+            tables_to_delete = [
+                'activity_log',
+                'notifications',
+                'referrals',
+                'user_sessions',
+                'transactions',
+                'user_levels',
+                'wallet',
+                'email_data',
+                'payment_info',
+                'registration_data',
+                'temp_registration',
+                'users'
+            ]
+            
+            for table in tables_to_delete:
+                if table == 'temp_registration':
+                    cursor.execute(f'DELETE FROM {table} WHERE telegram_id = ?', (telegram_id,))
+                else:
+                    cursor.execute(f'DELETE FROM {table} WHERE user_id = ?', (user_id,))
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            print(f"Error deleting user account: {e}")
+            return False
