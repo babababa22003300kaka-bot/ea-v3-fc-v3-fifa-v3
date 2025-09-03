@@ -198,7 +198,7 @@ class RegistrationHandler:
         self.db.save_temp_registration(
             context.user_data['registration']['telegram_id'],
             'phone_entered',
-            ENTERING_CARD,
+            ENTERING_PAYMENT_INFO,
             context.user_data['registration']
         )
         
@@ -209,107 +209,100 @@ class RegistrationHandler:
             MESSAGES['data_saved']
         )
         
+        # التحقق من طريقة الدفع المختارة لعرض الرسالة المناسبة
+        payment_method = context.user_data['registration'].get('payment_method', '')
+        if payment_method == 'instapay':
+            message = "🏦 أرسل رابط InstaPay الخاص بك:\n\nيمكنك نسخ الرسالة كاملة من InstaPay أو كتابة 'تخطي' للمتابعة"
+        else:
+            message = "💳 أرسل معلومات الدفع الخاصة بك:\n\n" + MESSAGES.get('skip_option', 'يمكنك كتابة "تخطي" لتجاوز هذه الخطوة')
+        
         await update.message.reply_text(
-            MESSAGES['enter_card']
+            message,
+            reply_markup=get_skip_keyboard()
         )
         
-        return ENTERING_CARD
+        return ENTERING_PAYMENT_INFO
     
-    async def handle_card_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة إدخال آخر 4 أرقام من البطاقة"""
-        card_input = update.message.text.strip()
+    async def handle_payment_info_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة إدخال معلومات الدفع حسب الطريقة المختارة"""
+        
+        # التعامل مع الضغط على زر التخطي
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            
+            if query.data == "skip_step":
+                context.user_data['registration']['payment_info'] = None
+                
+                # الانتقال للخطوة التالية
+                await query.edit_message_text(
+                    "⏭️ تم تخطي معلومات الدفع\n\n" + MESSAGES['enter_emails'],
+                    reply_markup=get_skip_keyboard()
+                )
+                return ENTERING_EMAILS
+        
+        # معالجة النص المدخل
+        payment_info = update.message.text.strip()
         
         # التحقق من أمر التخطي
-        if is_skip_command(card_input):
-            context.user_data['registration']['card_last_four'] = None
+        if is_skip_command(payment_info):
+            context.user_data['registration']['payment_info'] = None
             
             # الانتقال للخطوة التالية
             await update.message.reply_text(
-                "⏭️ تم تخطي هذه الخطوة\n\n" + MESSAGES['enter_instapay'],
+                "⏭️ تم تخطي معلومات الدفع\n\n" + MESSAGES['enter_emails'],
                 reply_markup=get_skip_keyboard()
             )
-            return ENTERING_INSTAPAY
+            return ENTERING_EMAILS
         
-        # التحقق من الأرقام
-        is_valid, cleaned_digits = validate_card_digits(card_input)
+        payment_method = context.user_data['registration'].get('payment_method', '')
         
-        if not is_valid:
+        # معالجة حسب طريقة الدفع
+        if payment_method == 'instapay':
+            # محاولة استخراج رابط InstaPay
+            extracted_link = extract_instapay_link(payment_info)
+            if extracted_link:
+                context.user_data['registration']['payment_info'] = extracted_link
+                await update.message.reply_text(
+                    f"✅ تم استخراج وحفظ رابط InstaPay:\n{extracted_link}\n" +
+                    MESSAGES['data_saved']
+                )
+            else:
+                # حفظ المعلومات كما هي
+                context.user_data['registration']['payment_info'] = payment_info
+                await update.message.reply_text(
+                    "✅ تم حفظ معلومات InstaPay"
+                )
+        elif payment_method in ['vodafone', 'etisalat', 'orange']:
+            # للمحافظ الإلكترونية - التحقق من رقم الهاتف
+            is_valid, cleaned_number = validate_egyptian_phone(payment_info)
+            if is_valid:
+                context.user_data['registration']['payment_info'] = cleaned_number
+                formatted_number = format_phone_display(cleaned_number)
+                await update.message.reply_text(
+                    f"✅ تم حفظ رقم المحفظة: {formatted_number}\n" +
+                    MESSAGES['data_saved']
+                )
+            else:
+                # حفظ كما هو إذا لم يكن رقم صالح
+                context.user_data['registration']['payment_info'] = payment_info
+                await update.message.reply_text(
+                    "✅ تم حفظ معلومات الدفع"
+                )
+        else:
+            # لأي طريقة دفع أخرى
+            context.user_data['registration']['payment_info'] = payment_info
             await update.message.reply_text(
-                f"❌ {cleaned_digits}\n\nحاول مرة أخرى أو اكتب 'تخطي'"
+                "✅ تم حفظ معلومات الدفع\n" + MESSAGES['data_saved']
             )
-            return ENTERING_CARD
-        
-        # حفظ الأرقام
-        context.user_data['registration']['card_last_four'] = cleaned_digits
         
         # حفظ تلقائي
         self.db.save_temp_registration(
             context.user_data['registration']['telegram_id'],
-            'card_entered',
-            ENTERING_INSTAPAY,
+            'payment_info_entered',
+            ENTERING_EMAILS,
             context.user_data['registration']
         )
-        
-        # الانتقال للخطوة التالية
-        masked = mask_card_number(cleaned_digits)
-        await update.message.reply_text(
-            f"✅ تم حفظ البيانات: {masked}\n🔐 بياناتك آمنة ومشفرة\n" +
-            MESSAGES['data_saved']
-        )
-        
-        await update.message.reply_text(
-            MESSAGES['enter_instapay'],
-            reply_markup=get_skip_keyboard()
-        )
-        
-        return ENTERING_INSTAPAY
-    
-    async def handle_instapay_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة إدخال رابط InstaPay"""
-        instapay_input = update.message.text.strip()
-        
-        # التحقق من أمر التخطي
-        if is_skip_command(instapay_input) or update.callback_query:
-            context.user_data['registration']['instapay'] = None
-            
-            # الانتقال للخطوة التالية
-            message = "⏭️ تم تخطي رابط InstaPay\n\n" + MESSAGES['enter_emails']
-            if update.callback_query:
-                await update.callback_query.answer()
-                await update.callback_query.edit_message_text(
-                    message,
-                    reply_markup=get_skip_keyboard()
-                )
-            else:
-                await update.message.reply_text(
-                    message,
-                    reply_markup=get_skip_keyboard()
-                )
-            return ENTERING_EMAILS
-        
-        # استخراج الرابط
-        extracted_link = extract_instapay_link(instapay_input)
-        
-        if extracted_link:
-            context.user_data['registration']['instapay'] = extracted_link
-            
-            # حفظ تلقائي
-            self.db.save_temp_registration(
-                context.user_data['registration']['telegram_id'],
-                'instapay_entered',
-                ENTERING_EMAILS,
-                context.user_data['registration']
-            )
-            
-            await update.message.reply_text(
-                f"✅ تم استخراج وحفظ الرابط:\n{extracted_link}\n" +
-                MESSAGES['data_saved']
-            )
-        else:
-            context.user_data['registration']['instapay'] = instapay_input
-            await update.message.reply_text(
-                "✅ تم حفظ المعلومات"
-            )
         
         # الانتقال للخطوة التالية
         await update.message.reply_text(
@@ -387,6 +380,13 @@ class RegistrationHandler:
         payment_name = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
         emails = ', '.join(reg_data.get('emails', [])) or 'لا يوجد'
         
+        # تنسيق معلومات الدفع
+        payment_info = reg_data.get('payment_info', 'غير محدد')
+        if payment_info and payment_info != 'غير محدد':
+            payment_method = reg_data.get('payment_method', '')
+            if payment_method in ['vodafone', 'etisalat', 'orange'] and len(payment_info) == 11:
+                payment_info = format_phone_display(payment_info)
+        
         summary = f"""
 📊 **ملخص بياناتك:**
 ━━━━━━━━━━━━━━━━
@@ -394,8 +394,7 @@ class RegistrationHandler:
 📱 واتساب: {format_phone_display(reg_data.get('whatsapp', ''))}
 💳 طريقة الدفع: {payment_name}
 📞 الهاتف: {format_phone_display(reg_data.get('phone', ''))}
-💳 البطاقة: {mask_card_number(reg_data.get('card_last_four', '****'))}
-🏦 InstaPay: {reg_data.get('instapay', 'غير محدد')}
+💰 معلومات الدفع: {payment_info}
 📧 الإيميلات: {emails}
 ━━━━━━━━━━━━━━━━
         """
@@ -498,8 +497,7 @@ class RegistrationHandler:
                     ENTERING_WHATSAPP: MESSAGES['enter_whatsapp'],
                     CHOOSING_PAYMENT: MESSAGES['choose_payment'],
                     ENTERING_PHONE: MESSAGES['enter_phone'],
-                    ENTERING_CARD: MESSAGES['enter_card'],
-                    ENTERING_INSTAPAY: MESSAGES['enter_instapay'],
+                    ENTERING_PAYMENT_INFO: self._get_payment_info_message(context.user_data['registration'].get('payment_method', '')),
                     ENTERING_EMAILS: MESSAGES['enter_emails']
                 }
                 
@@ -510,7 +508,7 @@ class RegistrationHandler:
                     await query.edit_message_text(message, reply_markup=get_payment_keyboard())
                 elif step == CHOOSING_PLATFORM:
                     await query.edit_message_text(message, reply_markup=get_platform_keyboard())
-                elif step in [ENTERING_INSTAPAY, ENTERING_EMAILS]:
+                elif step in [ENTERING_PAYMENT_INFO, ENTERING_EMAILS]:
                     await query.edit_message_text(message, reply_markup=get_skip_keyboard())
                 else:
                     await query.edit_message_text(message)
@@ -533,6 +531,20 @@ class RegistrationHandler:
             }
             
             return CHOOSING_PLATFORM
+    
+    def _get_payment_info_message(self, payment_method: str) -> str:
+        """الحصول على رسالة معلومات الدفع حسب الطريقة المختارة"""
+        if payment_method == 'instapay':
+            return "🏦 أرسل رابط InstaPay الخاص بك:\n\nيمكنك نسخ الرسالة كاملة من InstaPay أو كتابة 'تخطي' للمتابعة"
+        elif payment_method in ['vodafone', 'etisalat', 'orange']:
+            method_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'المحفظة')
+            return f"📱 أرسل رقم {method_name}:\n\nأرسل الرقم المسجل في المحفظة الإلكترونية أو اكتب 'تخطي'"
+        elif payment_method == 'visa':
+            return "💳 أرسل آخر 4 أرقام من البطاقة (للتحقق فقط):\n\nمثال: 1234\nأو اكتب 'تخطي' للمتابعة"
+        elif payment_method == 'paypal':
+            return "💰 أرسل بريدك الإلكتروني المسجل في PayPal:\n\nأو اكتب 'تخطي' للمتابعة"
+        else:
+            return "💸 أرسل معلومات الدفع الخاصة بك:\n\nأو اكتب 'تخطي' للمتابعة"
     
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء عملية التسجيل"""
