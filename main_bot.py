@@ -595,24 +595,9 @@ class FC26Bot:
         
         telegram_id = query.from_user.id
         
-        # معالجة حذف الحساب الشخصي
-        if query.data == "confirm_delete":
-            success = self.db.delete_user_account(telegram_id)
-            
-            if success:
-                await query.edit_message_text(
-                    "✅ تم حذف حسابك بنجاح.\n\nنأسف لرؤيتك تغادر 😢\nيمكنك التسجيل مرة أخرى في أي وقت بكتابة /start"
-                )
-            else:
-                await query.edit_message_text(
-                    "❌ حدث خطأ في حذف الحساب. الرجاء المحاولة لاحقاً."
-                )
-        
-        elif query.data == "cancel_delete":
-            await query.edit_message_text(
-                "✅ تم إلغاء عملية حذف الحساب.\n\nسعداء لبقائك معنا! 😊",
-                reply_markup=get_main_menu_keyboard()
-            )
+        # تجاهل أزرار الحذف - لها handlers منفصلة
+        if query.data in ["confirm_delete", "cancel_delete"]:
+            return
         
         # معالجة حذف المستخدم من قبل الأدمن
         elif query.data.startswith("admin_delete_"):
@@ -626,10 +611,6 @@ class FC26Bot:
             if success:
                 await query.edit_message_text(
                     f"✅ تم حذف المستخدم {target_id} بنجاح من قاعدة البيانات."
-        # تجاهل أزرار الحذف - لها handlers منفصلة
-        if query.data in ["confirm_delete", "cancel_delete"]:
-            return
-        
                 )
             else:
                 await query.edit_message_text(
