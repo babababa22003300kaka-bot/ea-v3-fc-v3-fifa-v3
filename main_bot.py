@@ -829,15 +829,14 @@ class FC26Bot:
         app = Application.builder().token(BOT_TOKEN).build()
         
         # إضافة معالجات الأوامر
-        app.add_handler(CommandHandler("start", self.start_command))
+        app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("help", self.help_command))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("wallet", self.wallet_command))
         app.add_handler(CommandHandler("delete", self.delete_command))
         app.add_handler(CommandHandler("deleteuser", self.deleteuser_command))
         app.add_handler(CommandHandler("admin", self.admin_command))
-        app.add_handler(CommandHandler("broadcast", self.broadcast_command))
-        app.add_handler(CommandHandler("stats", self.stats_command))
+        # أوامر إضافية يمكن إضافتها لاحقاً
         
         # معالجات حذف الحساب - قبل التسجيل
         app.add_handler(CallbackQueryHandler(self.handle_delete_confirm, pattern="^confirm_delete$"))
