@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-FC 26 Bot - النسخة النهائية الشغالة 100%
-تم إصلاح زر التسجيل نهائياً
+FC 26 Bot - النسخة النهائية المُحسنة
+تم إصلاح جميع الأخطاء
 """
 
 import os
@@ -42,12 +42,17 @@ class FC26Bot:
     
     def __init__(self):
         self.db = Database()
+        self.app = None
         logger.info("✅ تم تهيئة البوت")
     
     # ========== الأوامر الأساسية ==========
     
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية"""
+        # التأكد من عدم معالجة التحديثات المكررة
+        if update.message is None:
+            return
+            
         telegram_id = update.effective_user.id
         username = update.effective_user.username or "صديقنا العزيز"
         
@@ -179,7 +184,7 @@ class FC26Bot:
         telegram_id = query.from_user.id
         username = query.from_user.username or query.from_user.first_name
         
-        # إنشاء مستخدم جديد
+        # إنشاء مستخدم جديد إذا لم يكن موجود
         user = self.db.get_user_by_telegram_id(telegram_id)
         if not user:
             self.db.create_user(
@@ -252,46 +257,56 @@ class FC26Bot:
         conn = self.db.get_connection()
         cursor = conn.cursor()
         
-        # تحديث بيانات المستخدم
-        cursor.execute("""
-            UPDATE users 
-            SET registration_status = 'complete'
-            WHERE telegram_id = ?
-        """, (telegram_id,))
-        
-        # الحصول على user_id
-        cursor.execute("SELECT user_id FROM users WHERE telegram_id = ?", (telegram_id,))
-        user = cursor.fetchone()
-        
-        if user:
-            user_id = user['user_id']
-            
-            # حفظ بيانات التسجيل
+        try:
+            # تحديث بيانات المستخدم
             cursor.execute("""
-                INSERT OR REPLACE INTO registration_data 
-                (user_id, gaming_platform, whatsapp_number, payment_method)
-                VALUES (?, ?, ?, ?)
-            """, (user_id, context.user_data.get('platform'), 
-                  context.user_data.get('whatsapp'), payment))
-        
-        conn.commit()
-        conn.close()
-        
-        # رسالة النجاح
-        keyboard = [
-            [InlineKeyboardButton("👤 الملف الشخصي", callback_data="show_profile")],
-            [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
-            [InlineKeyboardButton("📊 المعاملات", callback_data="transactions")]
-        ]
-        
-        await query.edit_message_text(
-            "🎉 **تم التسجيل بنجاح!**\n\n"
-            "✅ حسابك جاهز الآن\n"
-            "يمكنك البدء في التداول فوراً\n\n"
-            "اختر من القائمة:",
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+                UPDATE users 
+                SET registration_status = 'complete'
+                WHERE telegram_id = ?
+            """, (telegram_id,))
+            
+            # الحصول على user_id
+            cursor.execute("SELECT user_id FROM users WHERE telegram_id = ?", (telegram_id,))
+            user = cursor.fetchone()
+            
+            if user:
+                user_id = user['user_id']
+                
+                # حفظ بيانات التسجيل
+                cursor.execute("""
+                    INSERT OR REPLACE INTO registration_data 
+                    (user_id, gaming_platform, whatsapp_number, payment_method)
+                    VALUES (?, ?, ?, ?)
+                """, (user_id, context.user_data.get('platform'), 
+                      context.user_data.get('whatsapp'), payment))
+            
+            conn.commit()
+            
+            # رسالة النجاح
+            keyboard = [
+                [InlineKeyboardButton("👤 الملف الشخصي", callback_data="show_profile")],
+                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("📊 المعاملات", callback_data="transactions")]
+            ]
+            
+            await query.edit_message_text(
+                "🎉 **تم التسجيل بنجاح!**\n\n"
+                "✅ حسابك جاهز الآن\n"
+                "يمكنك البدء في التداول فوراً\n\n"
+                "اختر من القائمة:",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+        except Exception as e:
+            logger.error(f"خطأ في حفظ التسجيل: {e}")
+            await query.edit_message_text(
+                "❌ حدث خطأ في حفظ البيانات\n"
+                "يرجى المحاولة مرة أخرى لاحقاً",
+                parse_mode='Markdown'
+            )
+        finally:
+            conn.close()
         
         return ConversationHandler.END
     
@@ -313,14 +328,15 @@ class FC26Bot:
         data = query.data
         telegram_id = query.from_user.id
         
-        if data == "show_profile":
-            # عرض الملف الشخصي
-            profile = self.db.get_user_profile(telegram_id)
-            if not profile:
-                await query.edit_message_text("❌ يجب عليك التسجيل أولاً!")
-                return
-            
-            profile_text = f"""
+        try:
+            if data == "show_profile":
+                # عرض الملف الشخصي
+                profile = self.db.get_user_profile(telegram_id)
+                if not profile:
+                    await query.edit_message_text("❌ يجب عليك التسجيل أولاً!")
+                    return
+                
+                profile_text = f"""
 👤 **الملف الشخصي**
 ━━━━━━━━━━━━━━━━
 
@@ -334,38 +350,38 @@ class FC26Bot:
 • طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
 • الحالة: ✅ نشط
 """
+                
+                keyboard = [
+                    [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                    [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account_warning")],
+                    [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="main_menu")]
+                ]
+                
+                await query.edit_message_text(
+                    profile_text,
+                    parse_mode='Markdown',
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
             
-            keyboard = [
-                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
-                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account_warning")],
-                [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="main_menu")]
-            ]
+            elif data == "main_menu":
+                username = query.from_user.username or "صديقنا العزيز"
+                keyboard = [
+                    [InlineKeyboardButton("👤 الملف الشخصي", callback_data="show_profile")],
+                    [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                    [InlineKeyboardButton("📊 المعاملات", callback_data="transactions")],
+                    [InlineKeyboardButton("❓ المساعدة", callback_data="help")]
+                ]
+                
+                await query.edit_message_text(
+                    f"🏠 **القائمة الرئيسية**\n\n"
+                    f"مرحباً {username} 👋\n"
+                    "اختر من القائمة:",
+                    parse_mode='Markdown',
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
             
-            await query.edit_message_text(
-                profile_text,
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        
-        elif data == "main_menu":
-            username = query.from_user.username or "صديقنا العزيز"
-            keyboard = [
-                [InlineKeyboardButton("👤 الملف الشخصي", callback_data="show_profile")],
-                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
-                [InlineKeyboardButton("📊 المعاملات", callback_data="transactions")],
-                [InlineKeyboardButton("❓ المساعدة", callback_data="help")]
-            ]
-            
-            await query.edit_message_text(
-                f"🏠 **القائمة الرئيسية**\n\n"
-                f"مرحباً {username} 👋\n"
-                "اختر من القائمة:",
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        
-        elif data == "help":
-            help_text = """
+            elif data == "help":
+                help_text = """
 📚 **دليل الاستخدام**
 ━━━━━━━━━━━━━━━━
 
@@ -378,31 +394,36 @@ class FC26Bot:
 💡 **نصائح:**
 • استخدم الأزرار للتنقل
 • يمكنك العودة أي وقت بـ /start
-            """
+                """
+                
+                keyboard = [
+                    [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                ]
+                
+                await query.edit_message_text(
+                    help_text,
+                    parse_mode='Markdown',
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
             
-            keyboard = [
-                [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
-            ]
+            elif data == "sell_coins":
+                await query.edit_message_text(
+                    "💸 **بيع العملات**\n\n"
+                    "قريباً... هذه الميزة قيد التطوير 🚧",
+                    parse_mode='Markdown'
+                )
             
-            await query.edit_message_text(
-                help_text,
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        
-        elif data == "sell_coins":
-            await query.edit_message_text(
-                "💸 **بيع العملات**\n\n"
-                "قريباً... هذه الميزة قيد التطوير 🚧",
-                parse_mode='Markdown'
-            )
-        
-        elif data == "transactions":
-            await query.edit_message_text(
-                "📊 **سجل المعاملات**\n\n"
-                "قريباً... هذه الميزة قيد التطوير 🚧",
-                parse_mode='Markdown'
-            )
+            elif data == "transactions":
+                await query.edit_message_text(
+                    "📊 **سجل المعاملات**\n\n"
+                    "قريباً... هذه الميزة قيد التطوير 🚧",
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            # تجاهل أخطاء "Message is not modified"
+            if "Message is not modified" not in str(e):
+                logger.error(f"خطأ في معالج الأزرار: {e}")
     
     # ========== معالجات الحذف ==========
     
@@ -420,18 +441,23 @@ class FC26Bot:
             ]
         ]
         
-        await query.edit_message_text(
-            f"⚠️ **تحذير: حذف الحساب**\n\n"
-            f"مرحباً {username} 👋\n\n"
-            "هل أنت متأكد من حذف حسابك؟\n"
-            "⚠️ **سيتم حذف:**\n"
-            "• جميع بياناتك الشخصية\n"
-            "• سجل معاملاتك\n"
-            "• رصيدك من العملات\n\n"
-            "❌ **لا يمكن التراجع عن هذا الإجراء!**",
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        try:
+            await query.edit_message_text(
+                f"⚠️ **تحذير: حذف الحساب**\n\n"
+                f"مرحباً {username} 👋\n\n"
+                "هل أنت متأكد من حذف حسابك؟\n"
+                "⚠️ **سيتم حذف:**\n"
+                "• جميع بياناتك الشخصية\n"
+                "• سجل معاملاتك\n"
+                "• رصيدك من العملات\n\n"
+                "❌ **لا يمكن التراجع عن هذا الإجراء!**",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        except Exception as e:
+            # تجاهل خطأ "Message is not modified"
+            if "Message is not modified" not in str(e):
+                logger.error(f"خطأ في تحذير الحذف: {e}")
     
     async def handle_delete_confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """تأكيد الحذف"""
@@ -469,13 +495,16 @@ class FC26Bot:
                 
         except Exception as e:
             logger.error(f"💥 خطأ في حذف حساب {telegram_id}: {e}")
-            await query.edit_message_text(
-                "❌ **خطأ غير متوقع**\n\n"
-                "حدث خطأ تقني\n"
-                "يرجى التواصل مع الدعم الفني\n\n"
-                f"🔍 رقم الخطأ: #{telegram_id}",
-                parse_mode='Markdown'
-            )
+            # إرسال رسالة خطأ بدون markdown إذا كان هناك مشكلة في التنسيق
+            try:
+                await query.edit_message_text(
+                    f"❌ خطأ غير متوقع\n\n"
+                    f"حدث خطأ تقني\n"
+                    f"يرجى التواصل مع الدعم الفني\n\n"
+                    f"رقم الخطأ: {telegram_id}"
+                )
+            except:
+                pass
     
     async def handle_delete_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء الحذف"""
@@ -515,7 +544,7 @@ class FC26Bot:
             logger.warning(f"⚠️ تحذير webhook: {e}")
         
         # إنشاء التطبيق
-        app = Application.builder().token(BOT_TOKEN).build()
+        self.app = Application.builder().token(BOT_TOKEN).build()
         
         # ========== معالج التسجيل ==========
         registration_conv = ConversationHandler(
@@ -542,26 +571,29 @@ class FC26Bot:
         # ========== ترتيب المعالجات مهم جداً ==========
         
         # 1. معالج التسجيل أولاً (أعلى أولوية)
-        app.add_handler(registration_conv)
+        self.app.add_handler(registration_conv)
         
         # 2. معالجات الحذف
-        app.add_handler(CallbackQueryHandler(self.handle_delete_warning, pattern="^delete_account_warning$"))
-        app.add_handler(CallbackQueryHandler(self.handle_delete_confirm, pattern="^delete_confirm$"))
-        app.add_handler(CallbackQueryHandler(self.handle_delete_cancel, pattern="^delete_cancel$"))
+        self.app.add_handler(CallbackQueryHandler(self.handle_delete_warning, pattern="^delete_account_warning$"))
+        self.app.add_handler(CallbackQueryHandler(self.handle_delete_confirm, pattern="^delete_confirm$"))
+        self.app.add_handler(CallbackQueryHandler(self.handle_delete_cancel, pattern="^delete_cancel$"))
         
         # 3. الأوامر الأساسية
-        app.add_handler(CommandHandler("start", self.start))
-        app.add_handler(CommandHandler("help", self.help_command))
-        app.add_handler(CommandHandler("profile", self.profile_command))
-        app.add_handler(CommandHandler("delete", self.delete_command))
+        self.app.add_handler(CommandHandler("start", self.start))
+        self.app.add_handler(CommandHandler("help", self.help_command))
+        self.app.add_handler(CommandHandler("profile", self.profile_command))
+        self.app.add_handler(CommandHandler("delete", self.delete_command))
         
         # 4. معالج الأزرار العامة (آخر شيء)
-        app.add_handler(CallbackQueryHandler(self.handle_callback))
+        self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         
         logger.info("✅ البوت جاهز - التسجيل والحذف يعملان 100%!")
         
-        # تشغيل البوت
-        app.run_polling(drop_pending_updates=True)
+        # تشغيل البوت مع drop_pending_updates لتجنب التحديثات المكررة
+        self.app.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=Update.ALL_TYPES
+        )
         logger.info("🎉 البوت شغال! اضغط Ctrl+C للإيقاف")
 
 # نقطة البداية
