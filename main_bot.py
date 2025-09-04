@@ -209,32 +209,7 @@ class FC26Bot:
             )
             return
         
-        # حساب مستوى المستخدم
-        points = profile.get('loyalty_points', 0)
-        if points >= 5000:
-            level = "👑 أسطورة"
-            next_level = "المستوى الأقصى"
-            progress = 100
-        elif points >= 1000:
-            level = "💎 خبير"
-            next_level = "👑 أسطورة (5000 نقطة)"
-            progress = int((points - 1000) / 40)
-        elif points >= 500:
-            level = "⚡ محترف"
-            next_level = "💎 خبير (1000 نقطة)"
-            progress = int((points - 500) / 5)
-        elif points >= 100:
-            level = "🔥 نشط"
-            next_level = "⚡ محترف (500 نقطة)"
-            progress = int((points - 100) / 4)
-        else:
-            level = "🌱 مبتدئ"
-            next_level = "🔥 نشط (100 نقطة)"
-            progress = int(points)
-        
-        # شريط التقدم
-        progress_bar = "█" * (progress // 10) + "░" * (10 - progress // 10)
-        
+        # عرض المعلومات الأساسية فقط - بدون معلومات مالية
         profile_text = f"""
 👤 **الملف الشخصي**
 ━━━━━━━━━━━━━━━━
@@ -243,6 +218,10 @@ class FC26Bot:
 📱 **تيليجرام:** @{profile.get('telegram_username', 'غير محدد')}
 🎮 **المنصة:** {profile.get('platform', 'غير محدد')}
 📅 **تاريخ التسجيل:** {profile.get('created_at', 'غير محدد')[:10]}
+
+📧 **معلومات التواصل:**
+• واتساب: {profile.get('whatsapp_number', 'غير محدد')}
+• طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
 
 📊 **معلومات الحساب:**
 • حالة الحساب: ✅ نشط
@@ -253,8 +232,9 @@ class FC26Bot:
         keyboard = [
             [InlineKeyboardButton("✏️ تعديل البيانات", callback_data="edit_profile"),
              InlineKeyboardButton("🔐 الأمان", callback_data="security")],
-            [InlineKeyboardButton("💳 المحفظة", callback_data="wallet"),
+            [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins"),
              InlineKeyboardButton("📊 المعاملات", callback_data="transactions")],
+            [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account_btn")],
             [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_menu")]
         ]
         
@@ -324,9 +304,8 @@ class FC26Bot:
 
 **سيتم حذف:**
 • جميع بياناتك الشخصية 🗑️
-• رصيدك من العملات 💰
-• نقاط الولاء المتراكمة ⭐
 • سجل معاملاتك بالكامل 📊
+• جميع بيانات حسابك 👤
 
 ⛔ **لا يمكن التراجع عن هذا الإجراء نهائياً!**
 
@@ -599,6 +578,28 @@ class FC26Bot:
         if query.data in ["confirm_delete", "cancel_delete"]:
             return
         
+        # معالجة زر حذف الحساب من الملف الشخصي
+        elif query.data == "delete_account_btn":
+            warning_message = """
+⚠️ **تحذير مهم جداً!**
+━━━━━━━━━━━━━━━━
+
+هل أنت متأكد من حذف حسابك نهائياً؟
+
+**سيتم حذف:**
+• جميع بياناتك الشخصية 🗑️
+• سجل معاملاتك بالكامل 📊
+
+⛔ **لا يمكن التراجع عن هذا الإجراء نهائياً!**
+
+هل تريد المتابعة؟
+"""
+            await query.edit_message_text(
+                warning_message,
+                reply_markup=get_delete_account_keyboard(),
+                parse_mode='Markdown'
+            )
+        
         # معالجة حذف المستخدم من قبل الأدمن
         elif query.data.startswith("admin_delete_"):
             if telegram_id != ADMIN_ID:
@@ -828,15 +829,14 @@ class FC26Bot:
         app = Application.builder().token(BOT_TOKEN).build()
         
         # إضافة معالجات الأوامر
-        app.add_handler(CommandHandler("start", self.start_command))
+        app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("help", self.help_command))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("wallet", self.wallet_command))
         app.add_handler(CommandHandler("delete", self.delete_command))
         app.add_handler(CommandHandler("deleteuser", self.deleteuser_command))
         app.add_handler(CommandHandler("admin", self.admin_command))
-        app.add_handler(CommandHandler("broadcast", self.broadcast_command))
-        app.add_handler(CommandHandler("stats", self.stats_command))
+        # أوامر إضافية يمكن إضافتها لاحقاً
         
         # معالجات حذف الحساب - قبل التسجيل
         app.add_handler(CallbackQueryHandler(self.handle_delete_confirm, pattern="^confirm_delete$"))
