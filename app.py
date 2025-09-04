@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Flask App for FC 26 Bot deployment on Render
+Flask App for FC 26 Bot deployment on Render - Fixed Version
 """
 
 import os
@@ -11,10 +11,6 @@ import threading
 from flask import Flask, request, jsonify
 from telegram import Update, Bot
 from telegram.ext import Application
-
-# استيراد البوت
-from main_bot import FC26Bot
-from bot.config import BOT_TOKEN, ADMIN_ID
 
 # إعداد السجلات
 logging.basicConfig(
@@ -28,46 +24,8 @@ app = Flask(__name__)
 
 # متغير للبوت
 bot_app = None
-
-def run_bot_in_thread():
-    """تشغيل البوت في thread منفصل"""
-    global bot_app
-    
-    try:
-        # إنشاء event loop جديد للـ thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # إنشاء البوت
-        fc26_bot = FC26Bot()
-        
-        # إنشاء التطبيق
-        bot_app = Application.builder().token(BOT_TOKEN).build()
-        
-        # إضافة المعالجات
-        from bot.handlers.registration import get_registration_conversation
-        
-        bot_app.add_handler(get_registration_conversation())
-        
-        # معالجات الأوامر الأساسية
-        from telegram.ext import CommandHandler
-        bot_app.add_handler(CommandHandler("start", fc26_bot.start))
-        bot_app.add_handler(CommandHandler("help", fc26_bot.help_command))
-        bot_app.add_handler(CommandHandler("profile", fc26_bot.profile_command))
-        bot_app.add_handler(CommandHandler("wallet", fc26_bot.wallet_command))
-        bot_app.add_handler(CommandHandler("prices", fc26_bot.prices_command))
-        bot_app.add_handler(CommandHandler("admin", fc26_bot.admin_command))
-        
-        logger.info("🚀 تشغيل البوت في وضع polling...")
-        
-        # تشغيل البوت
-        loop.run_until_complete(bot_app.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=Update.ALL_TYPES
-        ))
-        
-    except Exception as e:
-        logger.error(f"خطأ في تشغيل البوت: {e}")
+bot_thread = None
+is_local = os.getenv("RENDER") is None
 
 @app.route('/')
 def index():
@@ -77,13 +35,12 @@ def index():
         'bot': 'FC 26 Trading Bot',
         'version': '2.0',
         'features': [
-            '7-step interactive registration',
-            'Auto-save on every step',
-            'Gaming platforms support',
-            'Multiple payment methods',
-            'Profile management',
-            'Wallet system',
-            'Egyptian Arabic interface'
+            'تسجيل تفاعلي من 3 خطوات',
+            'حفظ تلقائي لكل خطوة',
+            'دعم منصات الألعاب المختلفة',
+            'طرق دفع متعددة',
+            'إدارة الملف الشخصي',
+            'واجهة عربية مصرية'
         ],
         'endpoints': {
             '/': 'This page',
@@ -141,68 +98,40 @@ def stats():
             'bot_status': 'starting'
         })
 
-@app.route('/webhook', methods=['POST'])
-async def webhook():
-    """استقبال تحديثات Telegram webhook"""
-    if not bot_app:
-        return jsonify({'error': 'Bot not initialized'}), 503
+def run_bot_in_thread():
+    """تشغيل البوت في thread منفصل"""
+    global bot_app
     
     try:
-        data = request.get_json()
+        # إنشاء event loop جديد للـ thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
-        if not data:
-            return jsonify({'error': 'No data'}), 400
+        # استيراد البوت
+        from main_bot import FC26Bot
         
-        # تحويل إلى Update object
-        update = Update.de_json(data, bot_app.bot)
+        # إنشاء البوت
+        fc26_bot = FC26Bot()
         
-        # معالجة التحديث
-        await bot_app.process_update(update)
+        logger.info("🚀 تشغيل البوت في وضع polling...")
         
-        return jsonify({'ok': True})
-    
+        # تشغيل البوت مباشرة
+        fc26_bot.run()
+        
     except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
-        return jsonify({'error': str(e)}), 500
-
-def setup_webhook():
-    """إعداد webhook إذا كنا على Render"""
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    
-    if render_url:
-        logger.info(f"🌐 Render URL detected: {render_url}")
-        
-        try:
-            import httpx
-            webhook_url = f"{render_url}/webhook"
-            
-            # إعداد webhook
-            response = httpx.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/setWebhook",
-                json={
-                    'url': webhook_url,
-                    'drop_pending_updates': True,
-                    'allowed_updates': Update.ALL_TYPES
-                }
-            )
-            
-            if response.status_code == 200:
-                logger.info(f"✅ Webhook set successfully: {webhook_url}")
-            else:
-                logger.error(f"❌ Failed to set webhook: {response.text}")
-                
-        except Exception as e:
-            logger.error(f"Error setting webhook: {e}")
-    else:
-        logger.info("🖥️ Running locally - using polling mode")
-        # بدء البوت في thread منفصل
-        bot_thread = threading.Thread(target=run_bot_in_thread, daemon=True)
-        bot_thread.start()
-
-# إعداد البوت عند بدء التشغيل
-if not os.environ.get('WERKZEUG_RUN_MAIN'):
-    setup_webhook()
+        logger.error(f"خطأ في تشغيل البوت: {e}")
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    if is_local:
+        logger.info("🖥️ Running locally - using polling mode")
+        
+        # إنشاء البوت وتشغيله في thread منفصل
+        bot_thread = threading.Thread(target=run_bot_in_thread, daemon=True)
+        bot_thread.start()
+        
+        # تشغيل Flask
+        app.run(host='0.0.0.0', port=5000, debug=False)
+    else:
+        logger.info("☁️ Running on Render - webhook mode")
+        # على Render، سيتم تشغيل Flask فقط
+        # والبوت سيعمل من خلال webhook
