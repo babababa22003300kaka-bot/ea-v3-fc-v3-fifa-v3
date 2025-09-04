@@ -20,9 +20,6 @@ from telegram.ext import (
     ConversationHandler
 )
 
-# الإعدادات
-BOT_TOKEN = "7607085569:AAEq91WtoNg68U9e8-mWm8DsOTh2W9MmmTw"
-ADMIN_ID = 1124247595
 
 # إعداد السجلات
 logging.basicConfig(
