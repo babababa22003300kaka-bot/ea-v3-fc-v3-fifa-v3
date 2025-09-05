@@ -753,47 +753,23 @@ class SmartRegistrationHandler:
             
             message = MESSAGES['welcome_back'].format(last_step=last_step)
             
-            # إرسال رسالة الترحيب
+            # إضافة أزرار للاختيار بين المتابعة أو البدء من جديد
+            keyboard = [
+                [InlineKeyboardButton("✅ متابعة من حيث توقفت", callback_data="continue_registration")],
+                [InlineKeyboardButton("🔄 البدء من جديد", callback_data="restart_registration")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # إرسال رسالة مع الأزرار
             await smart_message_manager.send_new_active_message(
-                update, context, message + "\n\nأكتب البيانات المطلوبة للمتابعة:"
+                update, context, 
+                message + "\n\nماذا تريد أن تفعل؟",
+                reply_markup=reply_markup
             )
             
-            # إرسال رسالة الخطوة المناسبة
-            if step == ENTERING_WHATSAPP:
-                await smart_message_manager.send_new_active_message(
-                    update, context, MESSAGES['enter_whatsapp']
-                )
-                return ENTERING_WHATSAPP
-            elif step == CHOOSING_PAYMENT:
-                await smart_message_manager.send_new_active_message(
-                    update, context, MESSAGES['choose_payment'],
-                    reply_markup=Keyboards.get_payment_keyboard()
-                )
-                return CHOOSING_PAYMENT
-            elif step == ENTERING_PHONE:
-                await smart_message_manager.send_new_active_message(
-                    update, context, MESSAGES['enter_phone']
-                )
-                return ENTERING_PHONE
-            elif step == ENTERING_PAYMENT_INFO:
-                await smart_message_manager.send_new_active_message(
-                    update, context, self._get_payment_message(temp_data['data']),
-                    reply_markup=Keyboards.get_skip_keyboard()
-                )
-                return ENTERING_PAYMENT_INFO
-            elif step == ENTERING_EMAILS:
-                await smart_message_manager.send_new_active_message(
-                    update, context, MESSAGES['enter_emails'],
-                    reply_markup=Keyboards.get_skip_keyboard()
-                )
-                return ENTERING_EMAILS
-            else:
-                # إذا لم نجد الخطوة، نعرض أزرار الاستكمال
-                await smart_message_manager.send_new_active_message(
-                    update, context, "اختر ما تريد:",
-                    reply_markup=Keyboards.get_continue_keyboard()
-                )
-                return ConversationHandler.END
+            # لا نرسل رسالة الخطوة مباشرة، بل ننتظر اختيار المستخدم
+            return ConversationHandler.END
+
         
         # مستخدم جديد
         await smart_message_manager.send_new_active_message(
@@ -811,6 +787,9 @@ class SmartRegistrationHandler:
         telegram_id = query.from_user.id
         username = query.from_user.username
         full_name = query.from_user.full_name
+        
+        # مسح أي بيانات تسجيل قديمة
+        self.db.clear_temp_registration(telegram_id)
         
         user_id = self.db.create_user(telegram_id, username, full_name)
         
@@ -873,16 +852,25 @@ class SmartRegistrationHandler:
             )
             return ENTERING_WHATSAPP
         
+        # التأكد من وجود registration في context
+        if 'registration' not in context.user_data:
+            context.user_data['registration'] = {
+                'telegram_id': update.effective_user.id
+            }
+        
         # حفظ الرقم في السياق
         context.user_data['registration']['whatsapp'] = result
         
-        # حفظ في قاعدة البيانات المؤقتة
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'whatsapp_entered', 
-            CHOOSING_PAYMENT,
-            context.user_data['registration']
-        )
+        # حفظ في قاعدة البيانات المؤقتة مع معالجة الأخطاء
+        try:
+            self.db.save_temp_registration(
+                context.user_data['registration']['telegram_id'],
+                'whatsapp_entered', 
+                CHOOSING_PAYMENT,
+                context.user_data['registration']
+            )
+        except Exception as e:
+            logger.error(f"Error saving temp registration: {e}")
         
         # إرسال رسالة التأكيد مع لوحة المفاتيح للخطوة التالية
         await smart_message_manager.send_new_active_message(
