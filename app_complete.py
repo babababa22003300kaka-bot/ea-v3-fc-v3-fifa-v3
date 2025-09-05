@@ -732,7 +732,9 @@ class SmartRegistrationHandler:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بداية التسجيل"""
         telegram_id = update.effective_user.id
+        username = update.effective_user.username
         
+        # التحقق من وجود تسجيل سابق غير مكتمل
         temp_data = self.db.get_temp_registration(telegram_id)
         
         if temp_data:
@@ -751,8 +753,10 @@ class SmartRegistrationHandler:
                 update, context, message,
                 reply_markup=Keyboards.get_continue_keyboard()
             )
+            # لا نرجع END هنا، نستنى الضغط على الأزرار
             return ConversationHandler.END
         
+        # مستخدم جديد
         await smart_message_manager.send_new_active_message(
             update, context, MESSAGES['welcome'],
             reply_markup=Keyboards.get_start_keyboard()
@@ -1128,6 +1132,7 @@ class SmartRegistrationHandler:
                 
                 message = step_messages.get(step, "")
                 
+                # عرض الرسالة المناسبة حسب الخطوة
                 if step == CHOOSING_PAYMENT:
                     await smart_message_manager.update_current_message(
                         update, context, message,
@@ -1137,6 +1142,11 @@ class SmartRegistrationHandler:
                     await smart_message_manager.update_current_message(
                         update, context, message,
                         reply_markup=Keyboards.get_platform_keyboard()
+                    )
+                elif step == ENTERING_WHATSAPP:
+                    # للواتساب نرسل الرسالة بدون لوحة مفاتيح
+                    await smart_message_manager.update_current_message(
+                        update, context, message
                     )
                 elif step in [ENTERING_PAYMENT_INFO, ENTERING_EMAILS]:
                     await smart_message_manager.update_current_message(
@@ -1395,7 +1405,8 @@ class FC26SmartBot:
                 ]
             },
             fallbacks=[
-                CommandHandler('cancel', self.registration_handler.cancel)
+                CommandHandler('cancel', self.registration_handler.cancel),
+                CommandHandler('start', self.registration_handler.start)
             ],
             allow_reentry=True
         )
