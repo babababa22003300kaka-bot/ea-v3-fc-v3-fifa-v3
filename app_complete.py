@@ -738,6 +738,10 @@ class SmartRegistrationHandler:
         temp_data = self.db.get_temp_registration(telegram_id)
         
         if temp_data:
+            # استعادة البيانات المحفوظة
+            context.user_data['registration'] = temp_data['data']
+            step = temp_data['step_number']
+            
             step_names = {
                 ENTERING_WHATSAPP: "إدخال واتساب",
                 CHOOSING_PAYMENT: "اختيار طريقة الدفع",
@@ -745,16 +749,51 @@ class SmartRegistrationHandler:
                 ENTERING_PAYMENT_INFO: "معلومات الدفع",
                 ENTERING_EMAILS: "البريد الإلكتروني"
             }
-            last_step = step_names.get(temp_data['step_number'], "غير معروف")
+            last_step = step_names.get(step, "غير معروف")
             
             message = MESSAGES['welcome_back'].format(last_step=last_step)
             
+            # إرسال رسالة الترحيب
             await smart_message_manager.send_new_active_message(
-                update, context, message,
-                reply_markup=Keyboards.get_continue_keyboard()
+                update, context, message + "\n\nأكتب البيانات المطلوبة للمتابعة:"
             )
-            # لا نرجع END هنا، نستنى الضغط على الأزرار
-            return ConversationHandler.END
+            
+            # إرسال رسالة الخطوة المناسبة
+            if step == ENTERING_WHATSAPP:
+                await smart_message_manager.send_new_active_message(
+                    update, context, MESSAGES['enter_whatsapp']
+                )
+                return ENTERING_WHATSAPP
+            elif step == CHOOSING_PAYMENT:
+                await smart_message_manager.send_new_active_message(
+                    update, context, MESSAGES['choose_payment'],
+                    reply_markup=Keyboards.get_payment_keyboard()
+                )
+                return CHOOSING_PAYMENT
+            elif step == ENTERING_PHONE:
+                await smart_message_manager.send_new_active_message(
+                    update, context, MESSAGES['enter_phone']
+                )
+                return ENTERING_PHONE
+            elif step == ENTERING_PAYMENT_INFO:
+                await smart_message_manager.send_new_active_message(
+                    update, context, self._get_payment_message(temp_data['data']),
+                    reply_markup=Keyboards.get_skip_keyboard()
+                )
+                return ENTERING_PAYMENT_INFO
+            elif step == ENTERING_EMAILS:
+                await smart_message_manager.send_new_active_message(
+                    update, context, MESSAGES['enter_emails'],
+                    reply_markup=Keyboards.get_skip_keyboard()
+                )
+                return ENTERING_EMAILS
+            else:
+                # إذا لم نجد الخطوة، نعرض أزرار الاستكمال
+                await smart_message_manager.send_new_active_message(
+                    update, context, "اختر ما تريد:",
+                    reply_markup=Keyboards.get_continue_keyboard()
+                )
+                return ConversationHandler.END
         
         # مستخدم جديد
         await smart_message_manager.send_new_active_message(
@@ -1415,6 +1454,9 @@ class FC26SmartBot:
         """تشغيل البوت"""
         app = Application.builder().token(BOT_TOKEN).build()
         
+        # معالج التسجيل (يجب أن يكون أولاً ليأخذ الأولوية)
+        app.add_handler(self.get_registration_conversation())
+        
         # الأوامر
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("profile", self.profile_command))
@@ -1426,14 +1468,11 @@ class FC26SmartBot:
             pattern="^(confirm_delete|cancel_delete)$"
         ))
         
-        # الرسائل النصية
+        # الرسائل النصية (يجب أن يكون آخراً)
         app.add_handler(MessageHandler(
             filters.TEXT & ~filters.COMMAND,
             self.handle_text_messages
         ))
-        
-        # معالج التسجيل
-        app.add_handler(self.get_registration_conversation())
         
         # التشغيل
         logger.info("🚀 بدء تشغيل FC 26 Smart Bot...")
