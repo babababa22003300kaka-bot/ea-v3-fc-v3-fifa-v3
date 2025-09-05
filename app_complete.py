@@ -25,7 +25,7 @@ from telegram.ext import (
 )
 
 # ================================ الإعدادات ================================
-BOT_TOKEN = '7607085569:AAHHE4ddOM4LqJNocOHz0htE7x5zHeqyhRE'
+BOT_TOKEN = '7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k'
 ADMIN_ID = 1124247595
 DATABASE_PATH = 'fc26_bot.db'
 
