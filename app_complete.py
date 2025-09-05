@@ -811,23 +811,37 @@ class SmartRegistrationHandler:
         """إدخال واتساب"""
         whatsapp = update.message.text.strip()
         
-        is_valid, result = Validators.validate_phone(whatsapp)
+        # تنظيف الرقم من أي رموز
+        cleaned_phone = re.sub(r'[^\d]', '', whatsapp)
+        
+        # التحقق من صحة الرقم
+        if len(cleaned_phone) == 11 and cleaned_phone[:3] in ['010', '011', '012', '015']:
+            is_valid = True
+            result = cleaned_phone
+        else:
+            is_valid = False
+            result = "رقم غير صحيح"
         
         if not is_valid:
             await smart_message_manager.send_new_active_message(
-                update, context, MESSAGES['error_invalid_phone'],
+                update, context, 
+                f"❌ {result}\n\n" + MESSAGES['error_invalid_phone'],
                 disable_previous=False
             )
             return ENTERING_WHATSAPP
         
+        # حفظ الرقم في السياق
         context.user_data['registration']['whatsapp'] = result
         
+        # حفظ في قاعدة البيانات المؤقتة
         self.db.save_temp_registration(
             context.user_data['registration']['telegram_id'],
-            'whatsapp_entered', CHOOSING_PAYMENT,
+            'whatsapp_entered', 
+            CHOOSING_PAYMENT,
             context.user_data['registration']
         )
         
+        # إرسال رسالة التأكيد مع لوحة المفاتيح للخطوة التالية
         await smart_message_manager.send_new_active_message(
             update, context,
             f"✅ تم حفظ الواتساب: {result}\n" + MESSAGES['data_saved'] +
