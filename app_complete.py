@@ -13,7 +13,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -217,7 +217,8 @@ class SmartMessageManager:
         text: str,
         reply_markup: Optional[InlineKeyboardMarkup] = None,
         choice_made: str = None,
-        disable_previous: bool = True
+        disable_previous: bool = True,
+        remove_keyboard: bool = True
     ):
         """إرسال رسالة جديدة نشطة"""
         user_id = update.effective_user.id
@@ -233,9 +234,11 @@ class SmartMessageManager:
                     parse_mode='Markdown'
                 )
             else:
+                # إزالة الكيبورد إذا لم يكن هناك reply_markup
+                final_markup = reply_markup if reply_markup else (ReplyKeyboardRemove() if remove_keyboard else None)
                 sent_message = await update.message.reply_text(
                     text=text,
-                    reply_markup=reply_markup,
+                    reply_markup=final_markup,
                     parse_mode='Markdown'
                 )
             
@@ -1233,9 +1236,26 @@ class FC26SmartBot:
 
 كيف يمكنني مساعدتك اليوم؟
 """
-            await smart_message_manager.send_new_active_message(
-                update, context, welcome_message
-            )
+            # أزرار تفاعلية فقط للخدمات المتاحة
+            keyboard = [
+                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
+                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # إزالة أي كيبورد موجود
+            if update.message:
+                await update.message.reply_text(
+                    welcome_message,
+                    reply_markup=reply_markup
+                )
+            else:
+                await smart_message_manager.send_new_active_message(
+                    update, context, welcome_message,
+                    reply_markup=reply_markup
+                )
         else:
             await self.registration_handler.start(update, context)
     
@@ -1268,6 +1288,35 @@ class FC26SmartBot:
             update, context, profile_text
         )
     
+    async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """عرض المساعدة"""
+        help_text = """
+🆘 **المساعدة والأوامر**
+━━━━━━━━━━━━━━━━
+
+📢 الأوامر المتاحة:
+
+/start - البداية والقائمة الرئيسية
+/profile - عرض ملفك الشخصي
+/delete - حذف حسابك
+/help - هذه الرسالة
+
+🔗 للدعم والمساعدة:
+@FC26Support
+"""
+        # أزرار مفيدة
+        keyboard = [
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")],
+            [InlineKeyboardButton("👤 ملفي الشخصي", callback_data="profile")],
+            [InlineKeyboardButton("📞 الدعم الفني", callback_data="support")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await smart_message_manager.send_new_active_message(
+            update, context, help_text,
+            reply_markup=reply_markup
+        )
+    
     async def delete_account_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف الحساب"""
         warning = """
@@ -1278,8 +1327,6 @@ class FC26SmartBot:
 
 سيتم حذف:
 • جميع بياناتك 🗑️
-• رصيدك ونقاطك 💰
-• سجل معاملاتك 📊
 
 لا يمكن التراجع! ⛔
 """
@@ -1324,43 +1371,27 @@ class FC26SmartBot:
             await self.profile_command(update, context)
         elif query.data == "delete_account":
             await self.delete_account_command(update, context)
-        elif query.data == "buy_coins":
-            await smart_message_manager.update_current_message(
-                update, context, "🚧 قريباً... خدمة شراء العملات"
-            )
         elif query.data == "sell_coins":
             await smart_message_manager.update_current_message(
                 update, context, "🚧 قريباً... خدمة بيع العملات"
-            )
-        elif query.data == "wallet":
-            await smart_message_manager.update_current_message(
-                update, context, "💳 محفظتك فارغة حالياً. قريباً!"
-            )
-        elif query.data == "transactions":
-            await smart_message_manager.update_current_message(
-                update, context, "📊 لا توجد معاملات حتى الآن"
-            )
-        elif query.data == "offers":
-            await smart_message_manager.update_current_message(
-                update, context, "🎁 عروض قادمة قريباً!"
-            )
-        elif query.data == "settings":
-            await smart_message_manager.update_current_message(
-                update, context, "⚙️ الإعدادات قيد التطوير"
             )
         elif query.data == "support":
             await smart_message_manager.update_current_message(
                 update, context, "📞 للدعم: @FC26Support"
             )
+        elif query.data == "main_menu":
+            # العودة للقائمة الرئيسية
+            await self.start(update, context)
     
     async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
-        await smart_message_manager.send_new_active_message(
-            update, context,
+        # إزالة أي كيبورد موجود
+        await update.message.reply_text(
             "👋 استخدم الأوامر التالية:\n\n"
             "/start - البداية\n"
             "/profile - الملف الشخصي\n"
-            "/help - المساعدة"
+            "/help - المساعدة",
+            reply_markup=ReplyKeyboardRemove()
         )
     
     def get_registration_conversation(self):
@@ -1445,6 +1476,7 @@ class FC26SmartBot:
         # الأوامر
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("profile", self.profile_command))
+        app.add_handler(CommandHandler("help", self.help_command))
         app.add_handler(CommandHandler("delete", self.delete_account_command))
         
         # الأزرار
@@ -1453,10 +1485,10 @@ class FC26SmartBot:
             pattern="^(confirm_delete|cancel_delete)$"
         ))
         
-        # أزرار القائمة الرئيسية
+        # أزرار القائمة الرئيسية (محدثة بدون الأزرار المحذوفة)
         app.add_handler(CallbackQueryHandler(
             self.handle_menu_buttons,
-            pattern="^(profile|delete_account|buy_coins|sell_coins|wallet|transactions|offers|settings|support)$"
+            pattern="^(profile|delete_account|sell_coins|support|main_menu)$"
         ))
         
         # الرسائل النصية (يجب أن يكون آخراً)
