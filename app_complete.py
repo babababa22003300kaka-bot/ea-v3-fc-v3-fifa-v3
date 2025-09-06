@@ -13,7 +13,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -701,31 +701,7 @@ class Keyboards:
         ]
         return InlineKeyboardMarkup(keyboard)
     
-    @staticmethod
-    def get_main_menu_keyboard():
-        """القائمة الرئيسية - أزرار تفاعلية فقط"""
-        keyboard = [
-            [
-                InlineKeyboardButton("💰 شراء عملات", callback_data="buy_coins"),
-                InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")
-            ],
-            [
-                InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile"),
-                InlineKeyboardButton("💳 المحفظة", callback_data="wallet")
-            ],
-            [
-                InlineKeyboardButton("📊 المعاملات", callback_data="transactions"),
-                InlineKeyboardButton("🎁 العروض", callback_data="offers")
-            ],
-            [
-                InlineKeyboardButton("⚙️ الإعدادات", callback_data="settings"),
-                InlineKeyboardButton("📞 الدعم", callback_data="support")
-            ],
-            [
-                InlineKeyboardButton("🔴 حذف الحساب", callback_data="delete_account")
-            ]
-        ]
-        return InlineKeyboardMarkup(keyboard)
+
     
     @staticmethod
     def get_delete_keyboard():
@@ -1128,8 +1104,10 @@ class SmartRegistrationHandler:
                 )
                 
                 await query.message.reply_text(
-                    "يمكنك الآن استخدام جميع خدمات البوت! 🚀",
-                    reply_markup=Keyboards.get_main_menu_keyboard()
+                    "يمكنك الآن استخدام جميع خدمات البوت! 🚀\n\n"
+                    "استخدم الأوامر:\n"
+                    "/profile - الملف الشخصي\n"
+                    "/help - المساعدة"
                 )
                 
                 context.user_data.clear()
@@ -1226,8 +1204,7 @@ class SmartRegistrationHandler:
         
         await smart_message_manager.send_new_active_message(
             update, context,
-            "تم إلغاء عملية التسجيل. يمكنك البدء من جديد بكتابة /start",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            "تم إلغاء عملية التسجيل. يمكنك البدء من جديد بكتابة /start"
         )
         
         return ConversationHandler.END
@@ -1257,8 +1234,7 @@ class FC26SmartBot:
 كيف يمكنني مساعدتك اليوم؟
 """
             await smart_message_manager.send_new_active_message(
-                update, context, welcome_message,
-                reply_markup=Keyboards.get_main_menu_keyboard()
+                update, context, welcome_message
             )
         else:
             await self.registration_handler.start(update, context)
@@ -1384,9 +1360,7 @@ class FC26SmartBot:
             "👋 استخدم الأوامر التالية:\n\n"
             "/start - البداية\n"
             "/profile - الملف الشخصي\n"
-            "/help - المساعدة\n\n"
-            "أو استخدم الأزرار التفاعلية 👇",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            "/help - المساعدة"
         )
     
     def get_registration_conversation(self):
