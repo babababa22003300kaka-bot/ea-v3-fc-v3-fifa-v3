@@ -42,10 +42,8 @@ logger = logging.getLogger(__name__)
     CHOOSING_PLATFORM,
     ENTERING_WHATSAPP,
     CHOOSING_PAYMENT,
-    ENTERING_PHONE,
-    ENTERING_PAYMENT_INFO,
     CONFIRMING_DATA
-) = range(6)
+) = range(4)
 
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
@@ -84,20 +82,6 @@ MESSAGES = {
 مثال: 01012345678""",
 
     'choose_payment': """💳 اختر طريقة الدفع:""",
-
-    'enter_phone': """📞 رائع! طريقة دفع ممتازة!
-
-أرسل رقم الهاتف:
-
-مثال: 01234567890""",
-
-    'enter_instapay': """أرسل رابط InstaPay (اختياري):
-
-يمكنك كتابة "تخطي" للمتابعة""",
-
-    'enter_payment_info': """أرسل معلومات الدفع (اختياري):
-
-يمكنك كتابة "تخطي" للمتابعة""",
 
 
 
@@ -431,8 +415,8 @@ class Database:
                 data.get('platform'),
                 data.get('whatsapp'),
                 data.get('payment_method'),
-                data.get('phone'),
-                data.get('payment_info'),
+                None,  # phone - لم يعد مطلوباً
+                None,  # payment_info - لم يعد مطلوباً
                 user_id
             ))
 
@@ -569,18 +553,7 @@ class Validators:
 
 
 
-    @staticmethod
-    def extract_instapay_link(text: str) -> Optional[str]:
-        """استخراج رابط InstaPay"""
-        pattern = r'(https?://[^\s]+instapay[^\s]+)'
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1)
 
-        # إذا لم نجد رابط، نرجع النص كما هو إذا كان قصيراً
-        if len(text) < 100:
-            return text
-        return None
 
 # ================================ لوحات المفاتيح ================================
 class Keyboards:
@@ -613,12 +586,6 @@ class Keyboards:
             keyboard.append([
                 InlineKeyboardButton(method['name'], callback_data=f"payment_{key}")
             ])
-        return InlineKeyboardMarkup(keyboard)
-
-    @staticmethod
-    def get_skip_keyboard():
-        """لوحة التخطي"""
-        keyboard = [[InlineKeyboardButton("⏭️ تخطي", callback_data="skip_step")]]
         return InlineKeyboardMarkup(keyboard)
 
     @staticmethod
@@ -674,9 +641,7 @@ class SmartRegistrationHandler:
 
             step_names = {
                 ENTERING_WHATSAPP: "إدخال واتساب",
-                CHOOSING_PAYMENT: "اختيار طريقة الدفع",
-                ENTERING_PHONE: "إدخال رقم الهاتف",
-                ENTERING_PAYMENT_INFO: "معلومات الدفع"
+                CHOOSING_PAYMENT: "اختيار طريقة الدفع"
             }
             last_step = step_names.get(step, "غير معروف")
 
@@ -824,89 +789,14 @@ class SmartRegistrationHandler:
 
         self.db.save_temp_registration(
             context.user_data['registration']['telegram_id'],
-            'payment_chosen', ENTERING_PHONE,
-            context.user_data['registration']
-        )
-
-        await smart_message_manager.send_new_active_message(
-            update, context,
-            f"✅ تم اختيار: {payment_name}\n\n" + MESSAGES['enter_phone'],
-            choice_made=payment_name
-        )
-
-        return ENTERING_PHONE
-
-    async def handle_phone_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """إدخال رقم الهاتف"""
-        phone = update.message.text.strip()
-
-        is_valid, result = Validators.validate_phone(phone)
-
-        if not is_valid:
-            await smart_message_manager.send_new_active_message(
-                update, context,
-                f"❌ {result}\n\n" + MESSAGES['error_invalid_phone'],
-                disable_previous=False
-            )
-            return ENTERING_PHONE
-
-        context.user_data['registration']['phone'] = result
-
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'phone_entered', ENTERING_PAYMENT_INFO,
-            context.user_data['registration']
-        )
-
-        payment_method = context.user_data['registration'].get('payment_method')
-
-        if payment_method == 'instapay':
-            message = f"✅ تم حفظ الهاتف: {result}\n{MESSAGES['data_saved']}\n\n{MESSAGES['enter_instapay']}"
-        else:
-            message = f"✅ تم حفظ الهاتف: {result}\n{MESSAGES['data_saved']}\n\n{MESSAGES['enter_payment_info']}"
-
-        await smart_message_manager.send_new_active_message(
-            update, context, message,
-            reply_markup=Keyboards.get_skip_keyboard(),
-            choice_made=f"هاتف: {result}"
-        )
-
-        return ENTERING_PAYMENT_INFO
-
-    async def handle_payment_info_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معلومات الدفع"""
-        if update.callback_query:
-            query = update.callback_query
-            await query.answer()
-
-            if query.data == "skip_step":
-                context.user_data['registration']['payment_info'] = None
-                return await self.show_confirmation(update, context)
-
-        payment_input = update.message.text.strip()
-
-        if payment_input.lower() in ["تخطي", "skip"]:
-            context.user_data['registration']['payment_info'] = None
-            return await self.show_confirmation(update, context)
-
-        payment_method = context.user_data['registration'].get('payment_method')
-
-        if payment_method == 'instapay':
-            extracted = Validators.extract_instapay_link(payment_input)
-            context.user_data['registration']['payment_info'] = extracted or payment_input
-            display_text = f"رابط InstaPay: {(extracted or payment_input)[:30]}..."
-        else:
-            context.user_data['registration']['payment_info'] = payment_input
-            display_text = f"معلومات الدفع: {payment_input[:20]}..."
-
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'payment_info_entered', CONFIRMING_DATA,
+            'payment_chosen', CONFIRMING_DATA,
             context.user_data['registration']
         )
 
         # الذهاب مباشرة للتأكيد
         return await self.show_confirmation(update, context)
+
+
 
     async def show_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض التأكيد"""
@@ -998,9 +888,7 @@ class SmartRegistrationHandler:
 
                 step_messages = {
                     ENTERING_WHATSAPP: MESSAGES['enter_whatsapp'],
-                    CHOOSING_PAYMENT: MESSAGES['choose_payment'],
-                    ENTERING_PHONE: MESSAGES['enter_phone'],
-                    ENTERING_PAYMENT_INFO: self._get_payment_message(temp_data['data'])
+                    CHOOSING_PAYMENT: MESSAGES['choose_payment']
                 }
 
                 message = step_messages.get(step, "")
@@ -1021,11 +909,7 @@ class SmartRegistrationHandler:
                     await smart_message_manager.update_current_message(
                         update, context, message
                     )
-                elif step == ENTERING_PAYMENT_INFO:
-                    await smart_message_manager.update_current_message(
-                        update, context, message,
-                        reply_markup=Keyboards.get_skip_keyboard()
-                    )
+
                 else:
                     await smart_message_manager.update_current_message(
                         update, context, message
@@ -1045,12 +929,7 @@ class SmartRegistrationHandler:
 
             return CHOOSING_PLATFORM
 
-    def _get_payment_message(self, data):
-        """رسالة معلومات الدفع"""
-        if data.get('payment_method') == 'instapay':
-            return MESSAGES['enter_instapay']
-        else:
-            return MESSAGES['enter_payment_info']
+
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء التسجيل"""
@@ -1366,22 +1245,6 @@ class FC26SmartBot:
                     CallbackQueryHandler(
                         self.registration_handler.handle_payment_choice,
                         pattern="^payment_"
-                    )
-                ],
-                ENTERING_PHONE: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self.registration_handler.handle_phone_input
-                    )
-                ],
-                ENTERING_PAYMENT_INFO: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self.registration_handler.handle_payment_info_input
-                    ),
-                    CallbackQueryHandler(
-                        self.registration_handler.handle_payment_info_input,
-                        pattern="^skip_step$"
                     )
                 ],
                 CONFIRMING_DATA: [
