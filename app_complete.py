@@ -44,9 +44,8 @@ logger = logging.getLogger(__name__)
     CHOOSING_PAYMENT,
     ENTERING_PHONE,
     ENTERING_PAYMENT_INFO,
-    ENTERING_EMAILS,
     CONFIRMING_DATA
-) = range(7)
+) = range(6)
 
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
@@ -78,23 +77,13 @@ MESSAGES = {
 
 اضغط على "تسجيل جديد" للبدء! 👇""",
 
-    'choose_platform': """🎮 رائع! هيا نبدأ رحلتك!
+    'choose_platform': """🎮 اختر منصة اللعب:""",
 
-الخطوة 1️⃣ من 6️⃣
-اختر منصة اللعب المفضلة لديك:""",
+    'enter_whatsapp': """📱 أرسل رقم الواتساب:
 
-    'enter_whatsapp': """📱 ممتاز! اختيار موفق!
+مثال: 01012345678""",
 
-الخطوة 2️⃣ من 6️⃣
-الآن أرسل رقم الواتساب الخاص بك:
-
-مثال: 01012345678
-(يجب أن يبدأ بـ 010, 011, 012, أو 015)""",
-
-    'choose_payment': """💳 تمام! الرقم صحيح ✅
-
-الخطوة 3️⃣ من 6️⃣
-اختر طريقة الدفع المفضلة:""",
+    'choose_payment': """💳 اختر طريقة الدفع:""",
 
     'enter_phone': """📞 رائع! طريقة دفع ممتازة!
 
@@ -110,9 +99,7 @@ MESSAGES = {
 
 يمكنك كتابة "تخطي" للمتابعة""",
 
-    'enter_emails': """أرسل بريدك الإلكتروني (اختياري):
 
-يمكنك كتابة "انتهى" لإكمال التسجيل""",
 
     'registration_complete': """🎉 مبروك! تم إنشاء حسابك بنجاح! 🎊
 
@@ -141,12 +128,7 @@ MESSAGES = {
 
 حاول مرة أخرى 👇""",
 
-    'error_invalid_email': """❌ البريد الإلكتروني غير صحيح!
 
-تأكد من كتابته بشكل صحيح:
-مثال: example@gmail.com
-
-حاول مرة أخرى 👇""",
 
     'data_saved': """💾 تم حفظ البيانات تلقائياً ✅
 
@@ -314,15 +296,7 @@ class Database:
             )
         ''')
 
-        # جدول الإيميلات
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS email_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                email TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(user_id)
-            )
-        ''')
+
 
         # جدول التسجيل المؤقت
         cursor.execute('''
@@ -462,11 +436,7 @@ class Database:
                 user_id
             ))
 
-            # حفظ الإيميلات
-            emails = data.get('emails', [])
-            cursor.execute('DELETE FROM email_data WHERE user_id = ?', (user_id,))
-            for email in emails:
-                cursor.execute('INSERT INTO email_data (user_id, email) VALUES (?, ?)', (user_id, email))
+
 
             # تحديث حالة التسجيل
             cursor.execute('''
@@ -569,7 +539,7 @@ class Database:
             # حذف من جميع الجداول
             cursor.execute('DELETE FROM transactions WHERE user_id = ?', (user_id,))
             cursor.execute('DELETE FROM wallet WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM email_data WHERE user_id = ?', (user_id,))
+
             cursor.execute('DELETE FROM registration_data WHERE user_id = ?', (user_id,))
             cursor.execute('DELETE FROM temp_registration WHERE telegram_id = ?', (telegram_id,))
             cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
@@ -597,13 +567,7 @@ class Validators:
             return True, phone
         return False, "رقم غير صحيح"
 
-    @staticmethod
-    def validate_email(email: str) -> Tuple[bool, str]:
-        """التحقق من البريد الإلكتروني"""
-        pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-        if re.match(pattern, email):
-            return True, email.lower()
-        return False, "بريد غير صحيح"
+
 
     @staticmethod
     def extract_instapay_link(text: str) -> Optional[str]:
@@ -675,14 +639,7 @@ class Keyboards:
         ]
         return InlineKeyboardMarkup(keyboard)
 
-    @staticmethod
-    def get_emails_keyboard():
-        """لوحة الإيميلات"""
-        keyboard = [
-            [InlineKeyboardButton("➕ إضافة إيميل آخر", callback_data="add_email")],
-            [InlineKeyboardButton("✅ انتهى", callback_data="finish_emails")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
+
 
 
 
@@ -719,8 +676,7 @@ class SmartRegistrationHandler:
                 ENTERING_WHATSAPP: "إدخال واتساب",
                 CHOOSING_PAYMENT: "اختيار طريقة الدفع",
                 ENTERING_PHONE: "إدخال رقم الهاتف",
-                ENTERING_PAYMENT_INFO: "معلومات الدفع",
-                ENTERING_EMAILS: "البريد الإلكتروني"
+                ENTERING_PAYMENT_INFO: "معلومات الدفع"
             }
             last_step = step_names.get(step, "غير معروف")
 
@@ -925,27 +881,13 @@ class SmartRegistrationHandler:
 
             if query.data == "skip_step":
                 context.user_data['registration']['payment_info'] = None
-
-                await smart_message_manager.send_new_active_message(
-                    update, context,
-                    "⏭️ تم تخطي معلومات الدفع\n\n" + MESSAGES['enter_emails'],
-                    reply_markup=Keyboards.get_skip_keyboard(),
-                    choice_made="تخطي معلومات الدفع"
-                )
-                return ENTERING_EMAILS
+                return await self.show_confirmation(update, context)
 
         payment_input = update.message.text.strip()
 
         if payment_input.lower() in ["تخطي", "skip"]:
             context.user_data['registration']['payment_info'] = None
-
-            await smart_message_manager.send_new_active_message(
-                update, context,
-                "⏭️ تم التخطي\n\n" + MESSAGES['enter_emails'],
-                reply_markup=Keyboards.get_skip_keyboard(),
-                choice_made="تخطي"
-            )
-            return ENTERING_EMAILS
+            return await self.show_confirmation(update, context)
 
         payment_method = context.user_data['registration'].get('payment_method')
 
@@ -959,69 +901,12 @@ class SmartRegistrationHandler:
 
         self.db.save_temp_registration(
             context.user_data['registration']['telegram_id'],
-            'payment_info_entered', ENTERING_EMAILS,
+            'payment_info_entered', CONFIRMING_DATA,
             context.user_data['registration']
         )
 
-        await smart_message_manager.send_new_active_message(
-            update, context,
-            "✅ تم الحفظ\n" + MESSAGES['data_saved'] + "\n\n" + MESSAGES['enter_emails'],
-            reply_markup=Keyboards.get_skip_keyboard(),
-            choice_made=display_text
-        )
-
-        return ENTERING_EMAILS
-
-    async def handle_email_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """إدخال البريد الإلكتروني"""
-        if 'emails' not in context.user_data['registration']:
-            context.user_data['registration']['emails'] = []
-
-        if update.callback_query:
-            query = update.callback_query
-            await query.answer()
-
-            if query.data in ["skip_step", "finish_emails"]:
-                return await self.show_confirmation(update, context)
-
-            elif query.data == "add_email":
-                await smart_message_manager.update_current_message(
-                    update, context, "📧 أرسل البريد الإلكتروني الإضافي:"
-                )
-                return ENTERING_EMAILS
-
-        email_input = update.message.text.strip()
-
-        if email_input.lower() in ["انتهى", "تخطي", "finish", "skip"]:
-            return await self.show_confirmation(update, context)
-
-        is_valid, result = Validators.validate_email(email_input)
-
-        if not is_valid:
-            await smart_message_manager.send_new_active_message(
-                update, context, MESSAGES['error_invalid_email'],
-                disable_previous=False
-            )
-            return ENTERING_EMAILS
-
-        context.user_data['registration']['emails'].append(result)
-
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'emails_entered', ENTERING_EMAILS,
-            context.user_data['registration']
-        )
-
-        emails_list = '\n'.join([f"• {e}" for e in context.user_data['registration']['emails']])
-
-        await smart_message_manager.send_new_active_message(
-            update, context,
-            f"✅ تم إضافة: {result}\n\n📧 الإيميلات المسجلة:\n{emails_list}",
-            reply_markup=Keyboards.get_emails_keyboard(),
-            choice_made=f"إيميل: {result}"
-        )
-
-        return ENTERING_EMAILS
+        # الذهاب مباشرة للتأكيد
+        return await self.show_confirmation(update, context)
 
     async def show_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض التأكيد"""
@@ -1029,7 +914,6 @@ class SmartRegistrationHandler:
 
         platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
         payment = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
-        emails = ', '.join(reg_data.get('emails', [])) or 'لا يوجد'
 
         summary = f"""
 📊 **ملخص بياناتك:**
@@ -1116,8 +1000,7 @@ class SmartRegistrationHandler:
                     ENTERING_WHATSAPP: MESSAGES['enter_whatsapp'],
                     CHOOSING_PAYMENT: MESSAGES['choose_payment'],
                     ENTERING_PHONE: MESSAGES['enter_phone'],
-                    ENTERING_PAYMENT_INFO: self._get_payment_message(temp_data['data']),
-                    ENTERING_EMAILS: MESSAGES['enter_emails']
+                    ENTERING_PAYMENT_INFO: self._get_payment_message(temp_data['data'])
                 }
 
                 message = step_messages.get(step, "")
@@ -1138,7 +1021,7 @@ class SmartRegistrationHandler:
                     await smart_message_manager.update_current_message(
                         update, context, message
                     )
-                elif step in [ENTERING_PAYMENT_INFO, ENTERING_EMAILS]:
+                elif step == ENTERING_PAYMENT_INFO:
                     await smart_message_manager.update_current_message(
                         update, context, message,
                         reply_markup=Keyboards.get_skip_keyboard()
@@ -1499,16 +1382,6 @@ class FC26SmartBot:
                     CallbackQueryHandler(
                         self.registration_handler.handle_payment_info_input,
                         pattern="^skip_step$"
-                    )
-                ],
-                ENTERING_EMAILS: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self.registration_handler.handle_email_input
-                    ),
-                    CallbackQueryHandler(
-                        self.registration_handler.handle_email_input,
-                        pattern="^(skip_step|add_email|finish_emails)$"
                     )
                 ],
                 CONFIRMING_DATA: [
