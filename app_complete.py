@@ -50,24 +50,24 @@ logger = logging.getLogger(__name__)
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
     'playstation': {'name': 'PlayStation 🎮', 'emoji': '🎮'},
-    'xbox': {'name': 'Xbox 🎯', 'emoji': '🎯'},
+    'xbox': {'name': 'Xbox ❎', 'emoji': '❎'},
     'pc': {'name': 'PC 💻', 'emoji': '💻'}
 }
 
 PAYMENT_METHODS = {
-    'vodafone': {'name': 'فودافون كاش 📱', 'emoji': '📱'},
-    'instapay': {'name': 'InstaPay 🏦', 'emoji': '🏦'},
-    'visa': {'name': 'فيزا 💳', 'emoji': '💳'},
-    'paypal': {'name': 'PayPal 💰', 'emoji': '💰'},
-    'etisalat': {'name': 'اتصالات كاش 📲', 'emoji': '📲'},
-    'orange': {'name': 'أورانج كاش 📳', 'emoji': '📳'},
-    'other': {'name': 'طريقة أخرى 💸', 'emoji': '💸'}
+    'vodafone_cash': {'name': '⭕️ فودافون كاش', 'emoji': '⭕️'},
+    'etisalat_cash': {'name': '🟢 اتصالات كاش', 'emoji': '🟢'},
+    'orange_cash': {'name': '🍊 أورانج كاش', 'emoji': '🍊'},
+    'we_cash': {'name': '🟣 وي كاش', 'emoji': '🟣'},
+    'bank_wallet': {'name': '🏦 محفظة بنكية', 'emoji': '🏦'},
+    'telda': {'name': '💳 تيلدا', 'emoji': '💳'},
+    'instapay': {'name': '🔗 إنستا باي', 'emoji': '🔗'}
 }
 
 MESSAGES = {
     'welcome': """🌟 أهلاً وسهلاً في بوت FC 26! 🎮
 
-البوت الأول في مصر لتداول عملات FC 26 🇪🇬
+البوت الأول في مصر لبيع كوينز FC 26 🇪🇬
 
 ✨ مميزاتنا:
 • أسعار منافسة جداً 💰
@@ -1233,13 +1233,13 @@ class FC26SmartBot:
             welcome_message = f"""
 👋 أهلاً بعودتك!
 
-🎮 بوت FC 26 - أفضل مكان لتداول العملات
+🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
 
 كيف يمكنني مساعدتك اليوم؟
 """
             # أزرار تفاعلية
             keyboard = [
-                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")],
                 [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
@@ -1364,13 +1364,13 @@ class FC26SmartBot:
             welcome_message = f"""
 ✅ تم الإلغاء. سعداء لبقائك معنا! 😊
 
-🎮 بوت FC 26 - أفضل مكان لتداول العملات
+🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
 
 كيف يمكنني مساعدتك اليوم؟
 """
             
             keyboard = [
-                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")],
                 [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
@@ -1443,8 +1443,8 @@ class FC26SmartBot:
             
         elif query.data == "sell_coins":
             await smart_message_manager.update_current_message(
-                update, context, "🚧 قريباً... خدمة بيع العملات",
-                choice_made="بيع العملات"
+                update, context, "🚧 قريباً... خدمة بيع كوينز",
+                choice_made="بيع كوينز"
             )
             
         elif query.data == "support":
@@ -1458,13 +1458,13 @@ class FC26SmartBot:
             welcome_message = f"""
 👋 أهلاً بعودتك!
 
-🎮 بوت FC 26 - أفضل مكان لتداول العملات
+🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
 
 كيف يمكنني مساعدتك اليوم؟
 """
             
             keyboard = [
-                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")],
                 [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
