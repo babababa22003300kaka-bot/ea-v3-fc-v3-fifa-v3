@@ -1221,12 +1221,13 @@ class FC26SmartBot:
         self.registration_handler = SmartRegistrationHandler()
     
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """أمر البداية"""
+        """أمر البداية مع النظام الذكي الموحد"""
         telegram_id = update.effective_user.id
         
         user = self.db.get_user_by_telegram_id(telegram_id)
         
         if user and user.get('registration_status') == 'complete':
+            # مستخدم مسجل - عرض القائمة الرئيسية مع النظام الذكي
             profile = self.db.get_user_profile(telegram_id)
             
             welcome_message = f"""
@@ -1236,7 +1237,7 @@ class FC26SmartBot:
 
 كيف يمكنني مساعدتك اليوم؟
 """
-            # أزرار تفاعلية فقط للخدمات المتاحة
+            # أزرار تفاعلية
             keyboard = [
                 [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
@@ -1245,22 +1246,17 @@ class FC26SmartBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            # إزالة أي كيبورد موجود
-            if update.message:
-                await update.message.reply_text(
-                    welcome_message,
-                    reply_markup=reply_markup
-                )
-            else:
-                await smart_message_manager.send_new_active_message(
-                    update, context, welcome_message,
-                    reply_markup=reply_markup
-                )
+            # استخدام النظام الذكي دائماً
+            await smart_message_manager.send_new_active_message(
+                update, context, welcome_message,
+                reply_markup=reply_markup
+            )
         else:
+            # مستخدم جديد - استخدام النظام الذكي للتسجيل
             await self.registration_handler.start(update, context)
     
     async def profile_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """عرض الملف الشخصي"""
+        """عرض الملف الشخصي مع النظام الذكي"""
         telegram_id = update.effective_user.id
         profile = self.db.get_user_profile(telegram_id)
         
@@ -1284,8 +1280,15 @@ class FC26SmartBot:
 🔐 بياناتك محمية
 """
         
+        # أزرار العودة
+        keyboard = [
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await smart_message_manager.send_new_active_message(
-            update, context, profile_text
+            update, context, profile_text,
+            reply_markup=reply_markup
         )
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1318,7 +1321,7 @@ class FC26SmartBot:
         )
     
     async def delete_account_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """حذف الحساب"""
+        """حذف الحساب مع النظام الذكي"""
         warning = """
 ⚠️ **تحذير مهم!**
 ━━━━━━━━━━━━━━━━
@@ -1336,7 +1339,7 @@ class FC26SmartBot:
         )
     
     async def handle_delete_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """تأكيد حذف الحساب"""
+        """تأكيد حذف الحساب مع النظام الذكي"""
         query = update.callback_query
         await query.answer()
         
@@ -1357,31 +1360,121 @@ class FC26SmartBot:
                 )
         
         elif query.data == "cancel_delete":
+            # العودة للقائمة الرئيسية
+            welcome_message = f"""
+✅ تم الإلغاء. سعداء لبقائك معنا! 😊
+
+🎮 بوت FC 26 - أفضل مكان لتداول العملات
+
+كيف يمكنني مساعدتك اليوم؟
+"""
+            
+            keyboard = [
+                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
+                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await smart_message_manager.update_current_message(
-                update, context,
-                "✅ تم الإلغاء. سعداء لبقائك معنا! 😊"
+                update, context, welcome_message,
+                reply_markup=reply_markup
             )
     
     async def handle_menu_buttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة أزرار القائمة التفاعلية"""
+        """معالجة أزرار القائمة التفاعلية مع النظام الذكي"""
         query = update.callback_query
         await query.answer()
         
         if query.data == "profile":
-            await self.profile_command(update, context)
+            # استخدام النظام الذكي لعرض الملف الشخصي
+            telegram_id = query.from_user.id
+            profile = self.db.get_user_profile(telegram_id)
+            
+            if not profile:
+                await smart_message_manager.update_current_message(
+                    update, context,
+                    "❌ يجب عليك التسجيل أولاً!\n\nاكتب /start للبدء"
+                )
+                return
+            
+            profile_text = f"""
+👤 **الملف الشخصي**
+━━━━━━━━━━━━━━━━
+
+🎮 المنصة: {profile.get('platform', 'غير محدد')}
+📱 واتساب: {profile.get('whatsapp', 'غير محدد')}
+💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
+📞 الهاتف: {profile.get('phone', 'غير محدد')}
+
+━━━━━━━━━━━━━━━━
+🔐 بياناتك محمية
+"""
+            
+            # أزرار العودة
+            keyboard = [
+                [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await smart_message_manager.update_current_message(
+                update, context, profile_text,
+                reply_markup=reply_markup
+            )
+            
         elif query.data == "delete_account":
-            await self.delete_account_command(update, context)
+            warning = """
+⚠️ **تحذير مهم!**
+━━━━━━━━━━━━━━━━
+
+هل أنت متأكد من حذف حسابك؟
+
+سيتم حذف:
+• جميع بياناتك 🗑️
+
+لا يمكن التراجع! ⛔
+"""
+            
+            await smart_message_manager.update_current_message(
+                update, context, warning,
+                reply_markup=Keyboards.get_delete_keyboard()
+            )
+            
         elif query.data == "sell_coins":
             await smart_message_manager.update_current_message(
-                update, context, "🚧 قريباً... خدمة بيع العملات"
+                update, context, "🚧 قريباً... خدمة بيع العملات",
+                choice_made="بيع العملات"
             )
+            
         elif query.data == "support":
             await smart_message_manager.update_current_message(
-                update, context, "📞 للدعم: @FC26Support"
+                update, context, "📞 للدعم: @FC26Support",
+                choice_made="الدعم الفني"
             )
+            
         elif query.data == "main_menu":
-            # العودة للقائمة الرئيسية
-            await self.start(update, context)
+            # العودة للقائمة الرئيسية باستخدام النظام الذكي
+            welcome_message = f"""
+👋 أهلاً بعودتك!
+
+🎮 بوت FC 26 - أفضل مكان لتداول العملات
+
+كيف يمكنني مساعدتك اليوم؟
+"""
+            
+            keyboard = [
+                [InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")],
+                [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
+                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await smart_message_manager.update_current_message(
+                update, context, welcome_message,
+                reply_markup=reply_markup
+            )
     
     async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
