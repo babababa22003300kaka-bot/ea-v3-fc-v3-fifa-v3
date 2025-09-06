@@ -703,15 +703,29 @@ class Keyboards:
     
     @staticmethod
     def get_main_menu_keyboard():
-        """القائمة الرئيسية"""
+        """القائمة الرئيسية - أزرار تفاعلية فقط"""
         keyboard = [
-            ["💰 شراء عملات", "💸 بيع عملات"],
-            ["👤 الملف الشخصي", "💳 المحفظة"],
-            ["📊 المعاملات", "🎁 العروض"],
-            ["⚙️ الإعدادات", "📞 الدعم"],
-            ["🔴 حذف الحساب"]
+            [
+                InlineKeyboardButton("💰 شراء عملات", callback_data="buy_coins"),
+                InlineKeyboardButton("💸 بيع عملات", callback_data="sell_coins")
+            ],
+            [
+                InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile"),
+                InlineKeyboardButton("💳 المحفظة", callback_data="wallet")
+            ],
+            [
+                InlineKeyboardButton("📊 المعاملات", callback_data="transactions"),
+                InlineKeyboardButton("🎁 العروض", callback_data="offers")
+            ],
+            [
+                InlineKeyboardButton("⚙️ الإعدادات", callback_data="settings"),
+                InlineKeyboardButton("📞 الدعم", callback_data="support")
+            ],
+            [
+                InlineKeyboardButton("🔴 حذف الحساب", callback_data="delete_account")
+            ]
         ]
-        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
     def get_delete_keyboard():
@@ -1238,11 +1252,9 @@ class FC26SmartBot:
             welcome_message = f"""
 👋 أهلاً بعودتك!
 
-💰 رصيدك: {profile.get('coin_balance', 0)} عملة
-🏆 المستوى: {profile.get('level_name', 'مبتدئ')}
-⭐ نقاط الولاء: {profile.get('loyalty_points', 0)}
+🎮 بوت FC 26 - أفضل مكان لتداول العملات
 
-اختر من القائمة 👇
+كيف يمكنني مساعدتك اليوم؟
 """
             await smart_message_manager.send_new_active_message(
                 update, context, welcome_message,
@@ -1271,11 +1283,6 @@ class FC26SmartBot:
 📱 واتساب: {profile.get('whatsapp', 'غير محدد')}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
 📞 الهاتف: {profile.get('phone', 'غير محدد')}
-
-💰 رصيد العملات: {profile.get('coin_balance', 0)}
-⭐ نقاط الولاء: {profile.get('loyalty_points', 0)}
-🏆 المستوى: {profile.get('level_name', 'مبتدئ')}
-📊 المعاملات: {profile.get('transaction_count', 0)}
 
 ━━━━━━━━━━━━━━━━
 🔐 بياناتك محمية
@@ -1332,39 +1339,55 @@ class FC26SmartBot:
                 "✅ تم الإلغاء. سعداء لبقائك معنا! 😊"
             )
     
-    async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة الرسائل النصية"""
-        text = update.message.text
+    async def handle_menu_buttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة أزرار القائمة التفاعلية"""
+        query = update.callback_query
+        await query.answer()
         
-        responses = {
-            "🔴 حذف الحساب": self.delete_account_command,
-            "👤 الملف الشخصي": self.profile_command,
-            "💰 شراء عملات": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "🚧 قريباً... خدمة شراء العملات"
-            ),
-            "💸 بيع عملات": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "🚧 قريباً... خدمة بيع العملات"
-            ),
-            "💳 المحفظة": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "💳 محفظتك فارغة حالياً. قريباً!"
-            ),
-            "📊 المعاملات": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "📊 لا توجد معاملات حتى الآن"
-            ),
-            "🎁 العروض": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "🎁 عروض قادمة قريباً!"
-            ),
-            "⚙️ الإعدادات": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "⚙️ الإعدادات قيد التطوير"
-            ),
-            "📞 الدعم": lambda u, c: smart_message_manager.send_new_active_message(
-                u, c, "📞 للدعم: @FC26Support"
+        if query.data == "profile":
+            await self.profile_command(update, context)
+        elif query.data == "delete_account":
+            await self.delete_account_command(update, context)
+        elif query.data == "buy_coins":
+            await smart_message_manager.update_current_message(
+                update, context, "🚧 قريباً... خدمة شراء العملات"
             )
-        }
-        
-        handler = responses.get(text)
-        if handler:
-            await handler(update, context)
+        elif query.data == "sell_coins":
+            await smart_message_manager.update_current_message(
+                update, context, "🚧 قريباً... خدمة بيع العملات"
+            )
+        elif query.data == "wallet":
+            await smart_message_manager.update_current_message(
+                update, context, "💳 محفظتك فارغة حالياً. قريباً!"
+            )
+        elif query.data == "transactions":
+            await smart_message_manager.update_current_message(
+                update, context, "📊 لا توجد معاملات حتى الآن"
+            )
+        elif query.data == "offers":
+            await smart_message_manager.update_current_message(
+                update, context, "🎁 عروض قادمة قريباً!"
+            )
+        elif query.data == "settings":
+            await smart_message_manager.update_current_message(
+                update, context, "⚙️ الإعدادات قيد التطوير"
+            )
+        elif query.data == "support":
+            await smart_message_manager.update_current_message(
+                update, context, "📞 للدعم: @FC26Support"
+            )
+    
+    async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
+        await smart_message_manager.send_new_active_message(
+            update, context,
+            "👋 استخدم الأوامر التالية:\n\n"
+            "/start - البداية\n"
+            "/profile - الملف الشخصي\n"
+            "/help - المساعدة\n\n"
+            "أو استخدم الأزرار التفاعلية 👇",
+            reply_markup=Keyboards.get_main_menu_keyboard()
+        )
     
     def get_registration_conversation(self):
         """معالج المحادثة للتسجيل"""
@@ -1454,6 +1477,12 @@ class FC26SmartBot:
         app.add_handler(CallbackQueryHandler(
             self.handle_delete_confirmation,
             pattern="^(confirm_delete|cancel_delete)$"
+        ))
+        
+        # أزرار القائمة الرئيسية
+        app.add_handler(CallbackQueryHandler(
+            self.handle_menu_buttons,
+            pattern="^(profile|delete_account|buy_coins|sell_coins|wallet|transactions|offers|settings|support)$"
         ))
         
         # الرسائل النصية (يجب أن يكون آخراً)
