@@ -135,22 +135,25 @@ class SmartMessageManager:
             old_message_info = self.user_active_messages[user_id]
 
             if old_message_info.get('message_id') and old_message_info.get('chat_id'):
-                old_text = old_message_info.get('text', '')
-
-                if choice_made:
-                    updated_text = f"{old_text}\n\n✅ **تم الاختيار:** {choice_made}"
-                else:
-                    updated_text = f"{old_text}\n\n✅ **تم**"
-
-                try:
-                    await context.bot.edit_message_text(
-                        chat_id=old_message_info['chat_id'],
-                        message_id=old_message_info['message_id'],
-                        text=updated_text,
-                        parse_mode='Markdown'
-                    )
-                except:
-                    pass
+                # إذا كانت الرسالة القديمة فيها أزرار، نحذفها ونضع "تم"
+                if old_message_info.get('has_keyboard', False):
+                    try:
+                        # تحديث الرسالة بدون أزرار وإضافة "تم"
+                        await context.bot.edit_message_text(
+                            chat_id=old_message_info['chat_id'],
+                            message_id=old_message_info['message_id'],
+                            text=old_message_info.get('text', '') + "\n\n✅ **تم**",
+                            parse_mode='Markdown'
+                        )
+                    except Exception as e:
+                        # إذا فشل التحديث، نحاول حذف الرسالة
+                        try:
+                            await context.bot.delete_message(
+                                chat_id=old_message_info['chat_id'],
+                                message_id=old_message_info['message_id']
+                            )
+                        except:
+                            pass
 
                 del self.user_active_messages[user_id]
         except Exception as e:
@@ -188,12 +191,13 @@ class SmartMessageManager:
                     parse_mode='Markdown'
                 )
 
-            if reply_markup:
-                self.user_active_messages[user_id] = {
-                    'message_id': sent_message.message_id,
-                    'chat_id': sent_message.chat_id,
-                    'text': text
-                }
+            # حفظ معلومات الرسالة الجديدة
+            self.user_active_messages[user_id] = {
+                'message_id': sent_message.message_id,
+                'chat_id': sent_message.chat_id,
+                'text': text,
+                'has_keyboard': reply_markup is not None
+            }
 
             return sent_message
 
@@ -953,17 +957,19 @@ class FC26SmartBot:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية مع النظام الذكي الموحد"""
         telegram_id = update.effective_user.id
+        
+        # إذا كان هناك callback_query، نتجاهل الطلب (منع التكرار)
+        if update.callback_query:
+            return
 
         user = self.db.get_user_by_telegram_id(telegram_id)
 
         if user and user.get('registration_status') == 'complete':
             # مستخدم مسجل - عرض القائمة الرئيسية مع النظام الذكي
-            profile = self.db.get_user_profile(telegram_id)
-
             welcome_message = f"""
 👋 أهلاً بعودتك!
 
-🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
+🎮 بوت FC 26 - أفضل مكان لبيع كوينز
 
 كيف يمكنني مساعدتك اليوم؟
 """
@@ -979,7 +985,8 @@ class FC26SmartBot:
             # استخدام النظام الذكي دائماً
             await smart_message_manager.send_new_active_message(
                 update, context, welcome_message,
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
+                disable_previous=True  # تعطيل الرسالة السابقة
             )
         else:
             # مستخدم جديد - استخدام النظام الذكي للتسجيل
