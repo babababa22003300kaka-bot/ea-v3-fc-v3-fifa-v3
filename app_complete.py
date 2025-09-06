@@ -47,9 +47,9 @@ logger = logging.getLogger(__name__)
 
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
-    'playstation': {'name': 'PlayStation 🎮', 'emoji': '🎮'},
-    'xbox': {'name': 'Xbox ❎', 'emoji': '❎'},
-    'pc': {'name': 'PC 💻', 'emoji': '💻'}
+    'playstation': {'name': '🎮 PlayStation', 'emoji': '🎮'},
+    'xbox': {'name': '❎ Xbox', 'emoji': '❎'},
+    'pc': {'name': '💻 PC', 'emoji': '💻'}
 }
 
 PAYMENT_METHODS = {
