@@ -790,54 +790,81 @@ class PaymentValidationSystem:
         return result
     
     def validate_instapay(self, text: str) -> Dict[str, Any]:
-        """التحقق من رابط إنستاباي"""
+        """التحقق من رابط إنستاباي واستخلاص الرابط من النص"""
         result = {
             'is_valid': False,
             'cleaned_data': '',
             'error_message': ''
         }
         
-        # البحث عن رابط في النص
-        url_pattern = r'(?:https?://)?(?:www\.)?([a-zA-Z0-9\-\.]+\.(?:com|eg|net|org|io)[^\s]*)'
-        urls = re.findall(url_pattern, text, re.IGNORECASE)
+        # تنظيف النص
+        text = text.strip()
         
-        # فحص وجود كلمات مفتاحية
+        # البحث عن @ لاستخلاص اسم المستخدم
+        if '@' in text:
+            # استخلاص اسم المستخدم بعد @
+            parts = text.split('@')
+            if len(parts) > 1:
+                # أخذ الجزء بعد @ وتنظيفه
+                username_part = parts[1].split()[0] if parts[1] else ''
+                if username_part:
+                    # إذا كان يحتوي على instapay، استخدمه مباشرة
+                    if 'instapay' in username_part.lower():
+                        result['is_valid'] = True
+                        result['cleaned_data'] = f"https://{username_part}"
+                        return result
+        
+        # البحث عن روابط instapay أو ipn
+        # أولاً نبحث عن أي رابط يحتوي على instapay أو ipn
+        instapay_pattern = r'(?:https?://)?(?:www\.)?([a-zA-Z0-9\-\.]*(?:instapay|ipn)[a-zA-Z0-9\-\.]*\.[a-zA-Z]{2,}[^\s]*)'
+        matches = re.findall(instapay_pattern, text, re.IGNORECASE)
+        
+        if matches:
+            # وجدنا رابط instapay
+            link = matches[0]
+            if not link.startswith('http'):
+                link = f"https://{link}"
+            result['is_valid'] = True
+            result['cleaned_data'] = link
+            return result
+        
+        # إذا لم نجد رابط، نبحث عن اسم مستخدم فقط
+        # مثل: senioraa أو أي نص يبدو كاسم مستخدم
+        username_pattern = r'^[a-zA-Z0-9_\-\.]+$'
+        
+        # إزالة أي مسافات أو رموز غير ضرورية
+        cleaned_text = re.sub(r'[^\w\-\.]', '', text)
+        
+        if cleaned_text and re.match(username_pattern, cleaned_text):
+            # يبدو كاسم مستخدم، نضيفه لـ instapay
+            result['is_valid'] = True
+            result['cleaned_data'] = f"https://instapay.com/{cleaned_text}"
+            return result
+        
+        # فحص وجود كلمات مفتاحية في النص الأصلي
         keywords = ['instapay', 'ipn.eg', 'ipn']
-        found_keyword = False
-        
         for keyword in keywords:
             if keyword.lower() in text.lower():
-                found_keyword = True
-                break
+                # يحتوي على كلمة مفتاحية، نحاول استخلاص الرابط
+                # نأخذ النص كما هو ونضيف https إذا لزم
+                if not text.startswith('http'):
+                    text = f"https://{text}"
+                result['is_valid'] = True
+                result['cleaned_data'] = text
+                return result
         
-        if not found_keyword and not urls:
-            result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
+        # فشل التحقق
+        result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
 
 📍 **يجب إدخال رابط صحيح يحتوي على:**
 • instapay أو ipn.eg
-• رابط كامل أو سيتم إضافة https تلقائياً
+• اسم المستخدم أو الرابط الكامل
 
 ✅ **أمثلة صحيحة:**
 • `https://instapay.com/username`
-• `https://ipn.eg/S/ABC123`
-• `instapay.com/username`"""
-            return result
-        
-        # استخلاص أو بناء الرابط
-        cleaned_url = text.strip()
-        
-        # إضافة https إذا لم يكن موجود
-        if not cleaned_url.startswith('http'):
-            if 'instapay' in cleaned_url.lower():
-                cleaned_url = f"https://{cleaned_url}"
-            elif 'ipn' in cleaned_url.lower():
-                cleaned_url = f"https://{cleaned_url}"
-            else:
-                cleaned_url = f"https://instapay.com/{cleaned_url}"
-        
-        # النجاح
-        result['is_valid'] = True
-        result['cleaned_data'] = cleaned_url
+• `username@instapay`
+• `senioraa`
+• `https://ipn.eg/S/ABC123`"""
         
         return result
     
@@ -1036,24 +1063,47 @@ class Database:
 
             user_id = user['user_id']
 
+            # محاولة إضافة الحقول الجديدة إذا لم تكن موجودة
+            try:
+                cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_details TEXT")
+            except:
+                pass
+            try:
+                cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_details_type TEXT")
+            except:
+                pass
+            try:
+                cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_network TEXT")
+            except:
+                pass
+            
             # تحديث بيانات التسجيل
             cursor.execute('''
                 UPDATE registration_data
-                SET platform = ?, whatsapp = ?, payment_method = ?, 
-                    payment_details = ?, payment_details_type = ?, payment_network = ?,
-                    phone = ?, payment_info = ?
+                SET platform = ?, whatsapp = ?, payment_method = ?
                 WHERE user_id = ?
             ''', (
                 data.get('platform'),
                 data.get('whatsapp'),
                 data.get('payment_method'),
-                data.get('payment_details'),  # البيانات المشفرة
-                data.get('payment_details_type'),
-                data.get('payment_network'),
-                None,  # phone - لم يعد مطلوباً
-                None,  # payment_info - لم يعد مطلوباً
                 user_id
             ))
+            
+            # محاولة تحديث الحقول الجديدة إذا كانت موجودة
+            if data.get('payment_details'):
+                try:
+                    cursor.execute('''
+                        UPDATE registration_data
+                        SET payment_details = ?, payment_details_type = ?, payment_network = ?
+                        WHERE user_id = ?
+                    ''', (
+                        data.get('payment_details'),
+                        data.get('payment_details_type'),
+                        data.get('payment_network'),
+                        user_id
+                    ))
+                except:
+                    pass
 
 
 
@@ -1615,10 +1665,12 @@ class SmartRegistrationHandler:
 • بدون مسافات أو رموز
 
 ✅ **أمثلة صحيحة:**
-• `01012345678` (فودافون)
-• `01112345678` (اتصالات)
-• `01212345678` (أورانج)
-• `01512345678` (وي)"""
+• `01012345678` - يقبل جميع الشبكات
+• `01112345678` - يقبل جميع الشبكات
+• `01212345678` - يقبل جميع الشبكات
+• `01512345678` - يقبل جميع الشبكات
+
+📌 **ملاحظة:** المحفظة البنكية تقبل أي رقم من الشبكات الأربعة"""
         
         elif payment_key == 'telda':
             return """💳 **تيلدا**
@@ -1775,12 +1827,11 @@ class SmartRegistrationHandler:
 
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'card':
-            # عرض آخر 4 أرقام فقط من الكارت
-            card_display = f"****-****-****-{validation_result['cleaned_data'][-4:]}"
+            # عرض الكارت كامل للعميل
             success_message = f"""✅ **تم حفظ كارت تيلدا!**
 
 💳 **النوع:** تيلدا
-💳 **الكارت:** `{card_display}`
+💳 **الكارت:** `{validation_result['cleaned_data']}`
 🔒 **البيانات محمية بالتشفير**
 
 ━━━━━━━━━━━━━━━━"""
@@ -1843,11 +1894,10 @@ class SmartRegistrationHandler:
 • الرقم: `{decrypted_data}`
 • الشبكة: {network}"""
                     elif payment_type == 'card':
-                        # عرض آخر 4 أرقام فقط
-                        card_display = f"****-****-****-{decrypted_data[-4:]}"
+                        # عرض الكارت كامل للعميل
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
-• الكارت: `{card_display}`"""
+• الكارت: `{decrypted_data}`"""
                     elif payment_type == 'link':
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
