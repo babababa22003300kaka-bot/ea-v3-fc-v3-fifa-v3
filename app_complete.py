@@ -13,8 +13,10 @@ import hashlib
 import json
 import re
 import asyncio
+import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
+from collections import defaultdict
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
@@ -77,9 +79,15 @@ MESSAGES = {
 
     'choose_platform': """🎮 اختر منصة اللعب:""",
 
-    'enter_whatsapp': """📱 أرسل رقم الواتساب:
+    'enter_whatsapp': """📱 **أرسل رقم الواتساب:**
 
-مثال: 01012345678""",
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يبدأ بـ: 010 / 011 / 012 / 015
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **مثال صحيح:** `01012345678`""",
 
     'choose_payment': """💳 اختر طريقة الدفع:""",
 
@@ -102,15 +110,7 @@ MESSAGES = {
 
 هل تريد المتابعة من حيث توقفت؟""",
 
-    'error_invalid_phone': """❌ رقم الهاتف غير صحيح!
 
-يجب أن يكون:
-• 11 رقم
-• يبدأ بـ 010, 011, 012, أو 015
-
-مثال: 01012345678
-
-حاول مرة أخرى 👇""",
 
 
 
@@ -297,6 +297,226 @@ class SmartMessageManager:
 
 # إنشاء المدير الذكي
 smart_message_manager = SmartMessageManager()
+
+# ================================ نظام الحماية المتقدم للواتساب ================================
+class WhatsAppSecuritySystem:
+    """نظام حماية متقدم للتحقق من أرقام الواتساب"""
+    
+    def __init__(self):
+        # تتبع المحاولات لكل مستخدم
+        self.user_attempts: Dict[int, List[datetime]] = defaultdict(list)
+        self.failed_attempts: Dict[int, int] = defaultdict(int)
+        self.blocked_users: Dict[int, datetime] = {}
+        self.last_numbers: Dict[int, str] = {}
+        
+        # إعدادات الحماية
+        self.MAX_ATTEMPTS_PER_MINUTE = 5
+        self.MAX_FAILED_ATTEMPTS = 3
+        self.BLOCK_DURATION_MINUTES = 15
+        self.RATE_LIMIT_WINDOW = 60  # ثانية
+        
+        # شبكات الاتصال المصرية
+        self.EGYPTIAN_NETWORKS = {
+            '010': {'name': 'فودافون', 'emoji': '⭕️'},
+            '011': {'name': 'اتصالات', 'emoji': '🟢'},
+            '012': {'name': 'أورانج', 'emoji': '🍊'},
+            '015': {'name': 'وي', 'emoji': '🟣'}
+        }
+    
+    def is_user_blocked(self, user_id: int) -> Tuple[bool, Optional[int]]:
+        """التحقق من حظر المستخدم"""
+        if user_id in self.blocked_users:
+            block_time = self.blocked_users[user_id]
+            elapsed = (datetime.now() - block_time).total_seconds() / 60
+            
+            if elapsed < self.BLOCK_DURATION_MINUTES:
+                remaining = self.BLOCK_DURATION_MINUTES - int(elapsed)
+                return True, remaining
+            else:
+                # انتهت فترة الحظر
+                del self.blocked_users[user_id]
+                self.failed_attempts[user_id] = 0
+        
+        return False, None
+    
+    def check_rate_limit(self, user_id: int) -> Tuple[bool, Optional[str]]:
+        """فحص معدل الطلبات"""
+        now = datetime.now()
+        
+        # تنظيف المحاولات القديمة
+        if user_id in self.user_attempts:
+            self.user_attempts[user_id] = [
+                attempt for attempt in self.user_attempts[user_id]
+                if (now - attempt).total_seconds() < self.RATE_LIMIT_WINDOW
+            ]
+        
+        # فحص عدد المحاولات
+        attempts_count = len(self.user_attempts[user_id])
+        
+        if attempts_count >= self.MAX_ATTEMPTS_PER_MINUTE:
+            return False, f"⚠️ لقد تجاوزت الحد المسموح ({self.MAX_ATTEMPTS_PER_MINUTE} محاولات في الدقيقة)\\n\\n⏰ انتظر قليلاً ثم حاول مرة أخرى"
+        
+        # تسجيل المحاولة الجديدة
+        self.user_attempts[user_id].append(now)
+        return True, None
+    
+    def check_duplicate(self, user_id: int, phone: str) -> bool:
+        """فحص الأرقام المكررة"""
+        if user_id in self.last_numbers:
+            if self.last_numbers[user_id] == phone:
+                return True
+        return False
+    
+    def analyze_input(self, text: str) -> Dict[str, Any]:
+        """تحليل المدخل بشكل تفصيلي"""
+        analysis = {
+            'original': text,
+            'has_letters': False,
+            'has_symbols': False,
+            'has_spaces': False,
+            'has_arabic_numbers': False,
+            'extracted_digits': '',
+            'all_chars': [],
+            'invalid_chars': []
+        }
+        
+        # استخراج الأرقام فقط
+        digits_only = re.sub(r'[^\d]', '', text)
+        analysis['extracted_digits'] = digits_only
+        
+        # تحليل كل حرف
+        for char in text:
+            analysis['all_chars'].append(char)
+            
+            # فحص الأحرف
+            if char.isalpha():
+                analysis['has_letters'] = True
+                analysis['invalid_chars'].append(char)
+            
+            # فحص الرموز
+            elif not char.isdigit() and not char.isspace():
+                analysis['has_symbols'] = True
+                analysis['invalid_chars'].append(char)
+            
+            # فحص المسافات
+            elif char.isspace():
+                analysis['has_spaces'] = True
+                analysis['invalid_chars'].append(char)
+            
+            # فحص الأرقام العربية
+            elif char in '٠١٢٣٤٥٦٧٨٩':
+                analysis['has_arabic_numbers'] = True
+                analysis['invalid_chars'].append(char)
+        
+        return analysis
+    
+    def validate_whatsapp(self, text: str, user_id: int) -> Dict[str, Any]:
+        """التحقق الشامل من رقم الواتساب"""
+        result = {
+            'is_valid': False,
+            'cleaned_number': '',
+            'error_type': None,
+            'error_message': '',
+            'network_info': None,
+            'analysis': None
+        }
+        
+        # التحليل التفصيلي للمدخل
+        analysis = self.analyze_input(text)
+        result['analysis'] = analysis
+        
+        # 1. فحص وجود أحرف أو رموز
+        if analysis['has_letters'] or analysis['has_symbols'] or analysis['has_spaces'] or analysis['has_arabic_numbers']:
+            invalid_chars_display = ''.join(set(analysis['invalid_chars']))
+            result['error_type'] = 'invalid_chars'
+            result['error_message'] = f"""❌ **رقم الواتساب يجب أن يكون أرقام فقط**
+
+📍 **المدخل الخاطئ:** `{text}`
+🚫 **الأحرف/الرموز الغير مسموحة:** `{invalid_chars_display}`
+📊 **الأرقام المستخرجة:** `{analysis['extracted_digits'] or 'لا توجد أرقام'}`
+
+✅ **مثال صحيح:** `01094591331`
+
+💡 **تلميح:** استخدم الأرقام الإنجليزية فقط (0-9) بدون مسافات أو رموز"""
+            return result
+        
+        cleaned = analysis['extracted_digits']
+        
+        # 2. فحص الطول
+        if len(cleaned) < 11:
+            result['error_type'] = 'too_short'
+            result['error_message'] = f"""❌ **طول الرقم غير صحيح**
+
+📏 **المطلوب:** 11 رقم بالضبط
+📍 **أنت أدخلت:** {len(cleaned)} رقم فقط
+🔢 **الرقم المدخل:** `{cleaned}`
+
+✅ **مثال صحيح:** `01012345678`"""
+            return result
+        
+        elif len(cleaned) > 11:
+            result['error_type'] = 'too_long'
+            result['error_message'] = f"""❌ **طول الرقم غير صحيح**
+
+📏 **المطلوب:** 11 رقم بالضبط
+📍 **أنت أدخلت:** {len(cleaned)} رقم (أكثر من المطلوب)
+🔢 **الرقم المدخل:** `{cleaned}`
+
+✅ **مثال صحيح:** `01012345678`"""
+            return result
+        
+        # 3. فحص البداية
+        prefix = cleaned[:3]
+        if prefix not in self.EGYPTIAN_NETWORKS:
+            result['error_type'] = 'invalid_prefix'
+            result['error_message'] = f"""❌ **بداية الرقم غير صحيحة**
+
+📍 **يجب أن يبدأ بـ:** 010 / 011 / 012 / 015
+🚫 **رقمك يبدأ بـ:** `{prefix}`
+🔢 **الرقم المدخل:** `{cleaned}`
+
+📱 **الشبكات المدعومة:**
+⭕️ **010** - فودافون
+🟢 **011** - اتصالات  
+🍊 **012** - أورانج
+🟣 **015** - وي
+
+✅ **مثال صحيح:** `01012345678`"""
+            return result
+        
+        # النجاح!
+        network = self.EGYPTIAN_NETWORKS[prefix]
+        result['is_valid'] = True
+        result['cleaned_number'] = cleaned
+        result['network_info'] = network
+        
+        # حفظ الرقم لمنع التكرار
+        self.last_numbers[user_id] = cleaned
+        
+        return result
+    
+    def record_failure(self, user_id: int):
+        """تسجيل محاولة فاشلة"""
+        self.failed_attempts[user_id] += 1
+        
+        if self.failed_attempts[user_id] >= self.MAX_FAILED_ATTEMPTS:
+            self.blocked_users[user_id] = datetime.now()
+            return True  # تم الحظر
+        
+        return False
+    
+    def reset_user_failures(self, user_id: int):
+        """إعادة تعيين المحاولات الفاشلة عند النجاح"""
+        self.failed_attempts[user_id] = 0
+        if user_id in self.blocked_users:
+            del self.blocked_users[user_id]
+    
+    def get_remaining_attempts(self, user_id: int) -> int:
+        """الحصول على عدد المحاولات المتبقية"""
+        return self.MAX_FAILED_ATTEMPTS - self.failed_attempts.get(user_id, 0)
+
+# إنشاء نظام الحماية
+whatsapp_security = WhatsAppSecuritySystem()
 
 # ================================ قاعدة البيانات ================================
 class Database:
@@ -599,18 +819,7 @@ class Database:
             logger.error(f"خطأ في حذف الحساب: {e}")
             return False
 
-# ================================ المدققات ================================
-class Validators:
-    """مدققات البيانات"""
 
-    @staticmethod
-    def validate_phone(phone: str) -> Tuple[bool, str]:
-        """التحقق من رقم الهاتف"""
-        phone = re.sub(r'[^\d]', '', phone)
-
-        if len(phone) == 11 and phone[:3] in ['010', '011', '012', '015']:
-            return True, phone
-        return False, "رقم غير صحيح"
 
 
 
@@ -809,38 +1018,99 @@ class SmartRegistrationHandler:
         return ENTERING_WHATSAPP
 
     async def handle_whatsapp_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """إدخال واتساب"""
-        whatsapp = update.message.text.strip()
-
-        # تنظيف الرقم من أي رموز
-        cleaned_phone = re.sub(r'[^\d]', '', whatsapp)
-
-        # التحقق من صحة الرقم
-        if len(cleaned_phone) == 11 and cleaned_phone[:3] in ['010', '011', '012', '015']:
-            is_valid = True
-            result = cleaned_phone
-        else:
-            is_valid = False
-            result = "رقم غير صحيح"
-
-        if not is_valid:
+        """إدخال واتساب مع نظام الحماية المتقدم"""
+        user_id = update.effective_user.id
+        whatsapp_input = update.message.text.strip()
+        
+        # 1. فحص الحظر
+        is_blocked, remaining_minutes = whatsapp_security.is_user_blocked(user_id)
+        if is_blocked:
             await smart_message_manager.send_new_active_message(
                 update, context,
-                f"❌ {result}\n\n" + MESSAGES['error_invalid_phone'],
+                f"""🚫 **أنت محظور مؤقتاً**
+
+⏰ **المدة المتبقية:** {remaining_minutes} دقيقة
+
+📝 **السبب:** تجاوز عدد المحاولات الخاطئة المسموح بها
+
+💡 **نصيحة:** تأكد من إدخال رقم واتساب صحيح عند المحاولة مرة أخرى""",
                 disable_previous=False
             )
             return ENTERING_WHATSAPP
+        
+        # 2. فحص معدل الطلبات
+        rate_ok, rate_message = whatsapp_security.check_rate_limit(user_id)
+        if not rate_ok:
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                rate_message,
+                disable_previous=False
+            )
+            return ENTERING_WHATSAPP
+        
+        # 3. فحص التكرار
+        if whatsapp_security.check_duplicate(user_id, whatsapp_input):
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                f"""⚠️ **لقد أدخلت هذا الرقم بالفعل**
 
+🔢 **الرقم:** `{whatsapp_input}`
+
+💡 **نصيحة:** إذا كان الرقم صحيحاً، انتظر رسالة التأكيد
+إذا كنت تريد تغييره، أدخل رقماً مختلفاً""",
+                disable_previous=False
+            )
+            return ENTERING_WHATSAPP
+        
+        # 4. التحقق الشامل من الرقم
+        validation = whatsapp_security.validate_whatsapp(whatsapp_input, user_id)
+        
+        if not validation['is_valid']:
+            # تسجيل المحاولة الفاشلة
+            was_blocked = whatsapp_security.record_failure(user_id)
+            remaining = whatsapp_security.get_remaining_attempts(user_id)
+            
+            # إضافة معلومات المحاولات المتبقية للرسالة
+            error_msg = validation['error_message']
+            
+            if was_blocked:
+                error_msg += f"""
+
+🚫 **تم حظرك مؤقتاً لمدة {whatsapp_security.BLOCK_DURATION_MINUTES} دقيقة**
+السبب: تجاوز عدد المحاولات الخاطئة"""
+            elif remaining > 0:
+                error_msg += f"""
+
+⚠️ **تحذير:** لديك {remaining} محاولات متبقية"""
+            
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                error_msg,
+                disable_previous=False
+            )
+            
+            # تسجيل المحاولة في السجلات
+            logger.warning(f"محاولة فاشلة من المستخدم {user_id}: {validation['error_type']} - Input: {whatsapp_input}")
+            
+            return ENTERING_WHATSAPP
+        
+        # 5. النجاح! إعادة تعيين المحاولات الفاشلة
+        whatsapp_security.reset_user_failures(user_id)
+        
         # التأكد من وجود registration في context
         if 'registration' not in context.user_data:
             context.user_data['registration'] = {
-                'telegram_id': update.effective_user.id
+                'telegram_id': user_id
             }
-
-        # حفظ الرقم في السياق
-        context.user_data['registration']['whatsapp'] = result
-
-        # حفظ في قاعدة البيانات المؤقتة مع معالجة الأخطاء
+        
+        # حفظ الرقم المنظف في السياق
+        cleaned_number = validation['cleaned_number']
+        network_info = validation['network_info']
+        
+        context.user_data['registration']['whatsapp'] = cleaned_number
+        context.user_data['registration']['whatsapp_network'] = network_info['name']
+        
+        # حفظ في قاعدة البيانات المؤقتة
         try:
             self.db.save_temp_registration(
                 context.user_data['registration']['telegram_id'],
@@ -850,16 +1120,28 @@ class SmartRegistrationHandler:
             )
         except Exception as e:
             logger.error(f"Error saving temp registration: {e}")
+        
+        # رسالة النجاح المفصلة
+        success_message = f"""✅ **تم حفظ رقم الواتساب بنجاح!**
 
-        # إرسال رسالة التأكيد مع لوحة المفاتيح للخطوة التالية
+📱 **الرقم:** `{cleaned_number}`
+🌐 **الشبكة:** {network_info['emoji']} {network_info['name']}
+💾 **تم الحفظ التلقائي** ✅
+
+━━━━━━━━━━━━━━━━
+⏭️ **الخطوة التالية:** اختر طريقة الدفع المفضلة"""
+        
+        # إرسال رسالة النجاح مع خيارات الدفع
         await smart_message_manager.send_new_active_message(
             update, context,
-            f"✅ تم حفظ الواتساب: {result}\n" + MESSAGES['data_saved'] +
-            "\n\n" + MESSAGES['choose_payment'],
+            success_message + "\n\n" + MESSAGES['choose_payment'],
             reply_markup=Keyboards.get_payment_keyboard(),
-            choice_made=f"واتساب: {result}"
+            choice_made=f"واتساب: {cleaned_number}"
         )
-
+        
+        # تسجيل النجاح
+        logger.info(f"تم حفظ رقم واتساب للمستخدم {user_id}: {cleaned_number} - شبكة: {network_info['name']}")
+        
         return CHOOSING_PAYMENT
 
     async def handle_payment_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1099,12 +1381,22 @@ class FC26SmartBot:
             )
             return
 
+        # الحصول على معلومات الشبكة إذا كان الرقم موجود
+        whatsapp_display = profile.get('whatsapp', 'غير محدد')
+        network_display = ""
+        
+        if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
+            prefix = whatsapp_display[:3]
+            if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
+                network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
+                network_display = f" ({network['emoji']} {network['name']})"
+        
         profile_text = f"""
 👤 **الملف الشخصي**
 ━━━━━━━━━━━━━━━━
 
 🎮 المنصة: {profile.get('platform', 'غير محدد')}
-📱 واتساب: {profile.get('whatsapp', 'غير محدد')}
+📱 واتساب: {whatsapp_display}{network_display}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
 
 ━━━━━━━━━━━━━━━━
@@ -1230,12 +1522,22 @@ class FC26SmartBot:
                 )
                 return
 
+            # الحصول على معلومات الشبكة إذا كان الرقم موجود
+            whatsapp_display = profile.get('whatsapp', 'غير محدد')
+            network_display = ""
+            
+            if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
+                prefix = whatsapp_display[:3]
+                if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
+                    network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
+                    network_display = f" ({network['emoji']} {network['name']})"
+            
             profile_text = f"""
 👤 **الملف الشخصي**
 ━━━━━━━━━━━━━━━━
 
 🎮 المنصة: {profile.get('platform', 'غير محدد')}
-📱 واتساب: {profile.get('whatsapp', 'غير محدد')}
+📱 واتساب: {whatsapp_display}{network_display}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
 
 ━━━━━━━━━━━━━━━━
