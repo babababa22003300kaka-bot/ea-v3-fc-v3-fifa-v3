@@ -797,6 +797,15 @@ class SmartRegistrationHandler:
         """عرض التأكيد والحفظ التلقائي"""
         reg_data = context.user_data['registration']
         telegram_id = reg_data['telegram_id']
+        
+        # الحصول على اسم المستخدم
+        if update.callback_query:
+            username = update.callback_query.from_user.username
+        else:
+            username = update.effective_user.username
+        
+        # إضافة @ للمستخدم إذا كان موجود
+        username_display = f"@{username}" if username else "غير محدد"
 
         # حفظ البيانات مباشرة
         success = self.db.complete_registration(telegram_id, reg_data)
@@ -805,7 +814,7 @@ class SmartRegistrationHandler:
             platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
             payment = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
             
-            # رسالة النجاح مع معرف التليجرام
+            # رسالة النجاح مع اسم المستخدم ومعرف التليجرام
             success_message = f"""
 ✅ **تم حفظ بياناتك بنجاح!**
 
@@ -816,6 +825,7 @@ class SmartRegistrationHandler:
 💳 طريقة الدفع: {payment}
 ━━━━━━━━━━━━━━━━
 
+👤 **اسم المستخدم:** {username_display}
 🆔 **معرف التليجرام:** `{telegram_id}`
 
 🎉 مرحباً بك في عائلة FC 26! 🚀
