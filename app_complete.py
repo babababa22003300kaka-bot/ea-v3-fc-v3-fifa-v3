@@ -12,6 +12,7 @@ import sqlite3
 import hashlib
 import json
 import re
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
@@ -120,43 +121,65 @@ MESSAGES = {
 
 # ================================ نظام إدارة الرسائل الذكي ================================
 class SmartMessageManager:
-    """مدير الرسائل الذكي - رسالة واحدة نشطة فقط"""
+    """مدير الرسائل الذكي - رسالة واحدة نشطة فقط مع حماية من Race Conditions"""
 
     def __init__(self):
         self.user_active_messages: Dict[int, Dict[str, Any]] = {}
+        # إضافة قفل لكل مستخدم لمنع Race Conditions
+        self.user_locks: Dict[int, asyncio.Lock] = {}
+
+    async def get_or_create_lock(self, user_id: int) -> asyncio.Lock:
+        """الحصول على قفل المستخدم أو إنشاء واحد جديد"""
+        if user_id not in self.user_locks:
+            self.user_locks[user_id] = asyncio.Lock()
+        return self.user_locks[user_id]
+    
+    async def cleanup_user_data(self, user_id: int):
+        """تنظيف بيانات المستخدم عند انتهاء المحادثة"""
+        # حذف القفل إذا كان موجوداً
+        if user_id in self.user_locks:
+            del self.user_locks[user_id]
+        
+        # حذف الرسائل النشطة إذا كانت موجودة
+        if user_id in self.user_active_messages:
+            del self.user_active_messages[user_id]
 
     async def disable_old_message(self, user_id: int, context: ContextTypes.DEFAULT_TYPE, choice_made: str = None):
         """إلغاء تفعيل الرسالة القديمة وتحويلها لسجل تاريخي"""
-        if user_id not in self.user_active_messages:
-            return
+        # الحصول على القفل للمستخدم
+        lock = await self.get_or_create_lock(user_id)
+        
+        async with lock:  # استخدام القفل لحماية العملية
+            if user_id not in self.user_active_messages:
+                return
 
-        try:
-            old_message_info = self.user_active_messages[user_id]
+            try:
+                old_message_info = self.user_active_messages[user_id]
 
-            if old_message_info.get('message_id') and old_message_info.get('chat_id'):
-                # إذا كانت الرسالة القديمة فيها أزرار، نحذفها ونضع "تم"
-                if old_message_info.get('has_keyboard', False):
-                    try:
-                        # تحديث الرسالة بدون أزرار وإضافة "تم"
-                        await context.bot.edit_message_text(
-                            chat_id=old_message_info['chat_id'],
-                            message_id=old_message_info['message_id'],
-                            text=old_message_info.get('text', '') + "\n\n✅ **تم**",
-                            parse_mode='Markdown'
-                        )
-                    except Exception as e:
-                        # إذا فشل التحديث، نحاول حذف الرسالة
+                if old_message_info.get('message_id') and old_message_info.get('chat_id'):
+                    # إذا كانت الرسالة القديمة فيها أزرار، نحذفها ونضع "تم"
+                    if old_message_info.get('has_keyboard', False):
                         try:
-                            await context.bot.delete_message(
+                            # تحديث الرسالة بدون أزرار وإضافة "تم"
+                            await context.bot.edit_message_text(
                                 chat_id=old_message_info['chat_id'],
-                                message_id=old_message_info['message_id']
+                                message_id=old_message_info['message_id'],
+                                text=old_message_info.get('text', '') + "\n\n✅ **تم**",
+                                parse_mode='Markdown'
                             )
-                        except:
-                            pass
+                        except Exception as e:
+                            # إذا فشل التحديث، نحاول حذف الرسالة
+                            try:
+                                await context.bot.delete_message(
+                                    chat_id=old_message_info['chat_id'],
+                                    message_id=old_message_info['message_id']
+                                )
+                            except:
+                                pass
 
-                del self.user_active_messages[user_id]
-        except Exception as e:
-            logger.debug(f"تعذر تعديل الرسالة القديمة: {e}")
+                    del self.user_active_messages[user_id]
+            except Exception as e:
+                logger.debug(f"تعذر تعديل الرسالة القديمة: {e}")
 
     async def send_new_active_message(
         self,
@@ -168,41 +191,54 @@ class SmartMessageManager:
         disable_previous: bool = True,
         remove_keyboard: bool = True
     ):
-        """إرسال رسالة جديدة نشطة"""
+        """إرسال رسالة جديدة نشطة مع حماية من Race Conditions"""
         user_id = update.effective_user.id
+        
+        # الحصول على القفل للمستخدم
+        lock = await self.get_or_create_lock(user_id)
 
         if disable_previous:
             await self.disable_old_message(user_id, context, choice_made)
 
-        try:
-            if update.callback_query:
-                sent_message = await update.callback_query.message.reply_text(
-                    text=text,
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
-            else:
-                # إزالة الكيبورد إذا لم يكن هناك reply_markup
-                final_markup = reply_markup if reply_markup else (ReplyKeyboardRemove() if remove_keyboard else None)
-                sent_message = await update.message.reply_text(
-                    text=text,
-                    reply_markup=final_markup,
-                    parse_mode='Markdown'
-                )
+        async with lock:  # استخدام القفل لحماية عملية الإرسال والحفظ
+            try:
+                # التحقق من عدم وجود رسالة مطابقة نشطة بالفعل
+                if user_id in self.user_active_messages:
+                    existing_msg = self.user_active_messages[user_id]
+                    if existing_msg.get('text') == text:
+                        # نفس الرسالة موجودة بالفعل، لا نرسل مرة أخرى
+                        logger.debug(f"تجاهل إرسال رسالة مكررة للمستخدم {user_id}")
+                        return None
+                
+                if update.callback_query:
+                    sent_message = await update.callback_query.message.reply_text(
+                        text=text,
+                        reply_markup=reply_markup,
+                        parse_mode='Markdown'
+                    )
+                else:
+                    # إزالة الكيبورد إذا لم يكن هناك reply_markup
+                    final_markup = reply_markup if reply_markup else (ReplyKeyboardRemove() if remove_keyboard else None)
+                    sent_message = await update.message.reply_text(
+                        text=text,
+                        reply_markup=final_markup,
+                        parse_mode='Markdown'
+                    )
 
-            # حفظ معلومات الرسالة الجديدة
-            self.user_active_messages[user_id] = {
-                'message_id': sent_message.message_id,
-                'chat_id': sent_message.chat_id,
-                'text': text,
-                'has_keyboard': reply_markup is not None
-            }
+                # حفظ معلومات الرسالة الجديدة
+                self.user_active_messages[user_id] = {
+                    'message_id': sent_message.message_id,
+                    'chat_id': sent_message.chat_id,
+                    'text': text,
+                    'has_keyboard': reply_markup is not None,
+                    'timestamp': datetime.now()  # إضافة timestamp للتتبع
+                }
 
-            return sent_message
+                return sent_message
 
-        except Exception as e:
-            logger.error(f"خطأ في إرسال رسالة: {e}")
-            return None
+            except Exception as e:
+                logger.error(f"خطأ في إرسال رسالة: {e}")
+                return None
 
     async def update_current_message(
         self,
@@ -211,40 +247,53 @@ class SmartMessageManager:
         text: str,
         reply_markup: Optional[InlineKeyboardMarkup] = None
     ):
-        """تحديث الرسالة الحالية"""
+        """تحديث الرسالة الحالية مع حماية من Race Conditions"""
         if not update.callback_query:
             return await self.send_new_active_message(update, context, text, reply_markup)
 
-        try:
-            user_id = update.effective_user.id
-            
-            # التحقق من عدم تكرار نفس الرسالة
-            if user_id in self.user_active_messages:
-                old_msg = self.user_active_messages[user_id]
-                if old_msg.get('text') == text and old_msg.get('message_id') == update.callback_query.message.message_id:
-                    # نفس الرسالة، لا نحدث
-                    return
+        user_id = update.effective_user.id
+        
+        # الحصول على القفل للمستخدم
+        lock = await self.get_or_create_lock(user_id)
+        
+        async with lock:  # استخدام القفل لحماية عملية التحديث
+            try:
+                # التحقق من عدم تكرار نفس الرسالة
+                if user_id in self.user_active_messages:
+                    old_msg = self.user_active_messages[user_id]
+                    if old_msg.get('text') == text and old_msg.get('message_id') == update.callback_query.message.message_id:
+                        # نفس الرسالة، لا نحدث
+                        logger.debug(f"تجاهل تحديث رسالة مطابقة للمستخدم {user_id}")
+                        return
+                    
+                    # التحقق من الـ timestamp لمنع التحديثات السريعة جداً
+                    if 'timestamp' in old_msg:
+                        time_diff = (datetime.now() - old_msg['timestamp']).total_seconds()
+                        if time_diff < 0.5:  # أقل من نصف ثانية
+                            logger.debug(f"تجاهل تحديث سريع جداً للمستخدم {user_id}")
+                            return
 
-            await update.callback_query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
+                await update.callback_query.edit_message_text(
+                    text=text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
 
-            # حفظ معلومات الرسالة المحدثة
-            self.user_active_messages[user_id] = {
-                'message_id': update.callback_query.message.message_id,
-                'chat_id': update.callback_query.message.chat_id,
-                'text': text,
-                'has_keyboard': reply_markup is not None
-            }
+                # حفظ معلومات الرسالة المحدثة
+                self.user_active_messages[user_id] = {
+                    'message_id': update.callback_query.message.message_id,
+                    'chat_id': update.callback_query.message.chat_id,
+                    'text': text,
+                    'has_keyboard': reply_markup is not None,
+                    'timestamp': datetime.now()  # إضافة timestamp للتتبع
+                }
 
-        except Exception as e:
-            # إذا كان الخطأ "لم يتغير النص"، نتجاهله
-            if "message is not modified" in str(e).lower():
-                pass
-            else:
-                logger.debug(f"تحديث الرسالة: {e}")
+            except Exception as e:
+                # إذا كان الخطأ "لم يتغير النص"، نتجاهله
+                if "message is not modified" in str(e).lower():
+                    logger.debug(f"الرسالة لم تتغير للمستخدم {user_id}")
+                else:
+                    logger.debug(f"خطأ في تحديث الرسالة للمستخدم {user_id}: {e}")
 
 # إنشاء المدير الذكي
 smart_message_manager = SmartMessageManager()
@@ -673,23 +722,37 @@ class SmartRegistrationHandler:
         return ConversationHandler.END
 
     async def handle_registration_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """بدء التسجيل الجديد"""
+        """بدء التسجيل الجديد مع حماية من الضغط المتكرر"""
         query = update.callback_query
+        
+        # الرد على الـ callback query بسرعة
         await query.answer()
-
+        
         telegram_id = query.from_user.id
         username = query.from_user.username
         full_name = query.from_user.full_name
+        
+        # التحقق من عدم وجود تسجيل قيد المعالجة
+        if 'registration' in context.user_data and context.user_data['registration'].get('in_progress'):
+            logger.debug(f"تجاهل محاولة بدء تسجيل مكرر للمستخدم {telegram_id}")
+            return
+
+        # وضع علامة أن التسجيل قيد المعالجة
+        context.user_data['registration'] = {
+            'in_progress': True,
+            'telegram_id': telegram_id
+        }
 
         # مسح أي بيانات تسجيل قديمة
         self.db.clear_temp_registration(telegram_id)
 
         user_id = self.db.create_user(telegram_id, username, full_name)
 
-        context.user_data['registration'] = {
+        # تحديث بيانات التسجيل
+        context.user_data['registration'].update({
             'user_id': user_id,
-            'telegram_id': telegram_id
-        }
+            'in_progress': False  # إلغاء العلامة بعد اكتمال المعالجة
+        })
 
         await smart_message_manager.update_current_message(
             update, context, MESSAGES['choose_platform'],
@@ -699,12 +762,35 @@ class SmartRegistrationHandler:
         return CHOOSING_PLATFORM
 
     async def handle_platform_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """اختيار المنصة"""
+        """اختيار المنصة مع حماية من الضغط المتكرر"""
         query = update.callback_query
+        
+        # الرد على الـ callback query بسرعة لمنع ظهور رمز التحميل
         await query.answer()
-
+        
+        # التحقق من أن البيانات صحيحة
+        if not query.data.startswith("platform_"):
+            return
+        
         platform_key = query.data.replace("platform_", "")
+        
+        # التحقق من صحة المنصة
+        if platform_key not in GAMING_PLATFORMS:
+            await query.answer("❌ منصة غير صحيحة", show_alert=True)
+            return
+        
         platform_name = GAMING_PLATFORMS[platform_key]['name']
+
+        # التحقق من وجود بيانات التسجيل
+        if 'registration' not in context.user_data:
+            context.user_data['registration'] = {
+                'telegram_id': query.from_user.id
+            }
+        
+        # التحقق من عدم تكرار نفس الاختيار
+        if context.user_data['registration'].get('platform') == platform_key:
+            logger.debug(f"تجاهل اختيار منصة مكرر: {platform_key}")
+            return
 
         context.user_data['registration']['platform'] = platform_key
 
@@ -777,16 +863,36 @@ class SmartRegistrationHandler:
         return CHOOSING_PAYMENT
 
     async def handle_payment_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """اختيار طريقة الدفع"""
+        """اختيار طريقة الدفع مع حماية من الضغط المتكرر"""
         query = update.callback_query
+        
+        # الرد على الـ callback query بسرعة
         await query.answer()
-
+        
+        # التحقق من أن البيانات صحيحة
+        if not query.data.startswith("payment_"):
+            return
+        
         payment_key = query.data.replace("payment_", "")
+        
+        # التحقق من صحة طريقة الدفع
+        if payment_key not in PAYMENT_METHODS:
+            await query.answer("❌ طريقة دفع غير صحيحة", show_alert=True)
+            return
+        
         payment_name = PAYMENT_METHODS[payment_key]['name']
+        
+        # التحقق من وجود بيانات التسجيل
+        if 'registration' not in context.user_data:
+            await query.answer("❌ يجب البدء من جديد", show_alert=True)
+            return ConversationHandler.END
+        
+        # التحقق من عدم تكرار نفس الاختيار
+        if context.user_data['registration'].get('payment_method') == payment_key:
+            logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
+            return
 
         context.user_data['registration']['payment_method'] = payment_key
-
-        # لا حاجة لحفظ مؤقت لأننا سنحفظ مباشرة
 
         # الذهاب مباشرة للتأكيد
         return await self.show_confirmation(update, context)
@@ -843,6 +949,9 @@ class SmartRegistrationHandler:
             
             # مسح البيانات المؤقتة
             context.user_data.clear()
+            
+            # تنظيف بيانات المستخدم في SmartMessageManager
+            await smart_message_manager.cleanup_user_data(telegram_id)
             
             return ConversationHandler.END
         else:
