@@ -41,9 +41,8 @@ logger = logging.getLogger(__name__)
 (
     CHOOSING_PLATFORM,
     ENTERING_WHATSAPP,
-    CHOOSING_PAYMENT,
-    CONFIRMING_DATA
-) = range(4)
+    CHOOSING_PAYMENT
+) = range(3)
 
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
@@ -611,19 +610,6 @@ class Keyboards:
         return InlineKeyboardMarkup(keyboard)
 
     @staticmethod
-    def get_confirm_keyboard():
-        """لوحة التأكيد"""
-        keyboard = [
-            [InlineKeyboardButton("✅ تأكيد وإنهاء", callback_data="confirm_registration")],
-            [InlineKeyboardButton("✏️ تعديل", callback_data="edit_registration")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
-
-
-
-
-
-    @staticmethod
     def get_delete_keyboard():
         """لوحة حذف الحساب"""
         keyboard = [
@@ -800,11 +786,7 @@ class SmartRegistrationHandler:
 
         context.user_data['registration']['payment_method'] = payment_key
 
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'payment_chosen', CONFIRMING_DATA,
-            context.user_data['registration']
-        )
+        # لا حاجة لحفظ مؤقت لأننا سنحفظ مباشرة
 
         # الذهاب مباشرة للتأكيد
         return await self.show_confirmation(update, context)
@@ -812,84 +794,63 @@ class SmartRegistrationHandler:
 
 
     async def show_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """عرض التأكيد"""
+        """عرض التأكيد والحفظ التلقائي"""
         reg_data = context.user_data['registration']
+        telegram_id = reg_data['telegram_id']
 
-        platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
-        payment = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
+        # حفظ البيانات مباشرة
+        success = self.db.complete_registration(telegram_id, reg_data)
 
-        summary = f"""
-📊 **ملخص بياناتك:**
+        if success:
+            platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
+            payment = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
+            
+            # رسالة النجاح مع معرف التليجرام
+            success_message = f"""
+✅ **تم حفظ بياناتك بنجاح!**
+
+📊 **ملخص البيانات المحفوظة:**
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
 📱 واتساب: {reg_data.get('whatsapp', 'غير محدد')}
 💳 طريقة الدفع: {payment}
 ━━━━━━━━━━━━━━━━
-        """
 
-        self.db.save_temp_registration(
-            reg_data['telegram_id'], 'confirming',
-            CONFIRMING_DATA, reg_data
-        )
+🆔 **معرف التليجرام:** `{telegram_id}`
 
-        # استخدام update_current_message إذا كان من callback
-        if update.callback_query:
-            await smart_message_manager.update_current_message(
-                update, context, summary,
-                reply_markup=Keyboards.get_confirm_keyboard()
-            )
-        else:
-            await smart_message_manager.send_new_active_message(
-                update, context, summary,
-                reply_markup=Keyboards.get_confirm_keyboard()
-            )
+🎉 مرحباً بك في عائلة FC 26! 🚀
+"""
 
-        return CONFIRMING_DATA
-
-    async def handle_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """تأكيد التسجيل"""
-        query = update.callback_query
-        await query.answer()
-
-        if query.data == "confirm_registration":
-            reg_data = context.user_data['registration']
-
-            success = self.db.complete_registration(reg_data['telegram_id'], reg_data)
-
-            if success:
-                completion_message = MESSAGES['registration_complete'].format(
-                    platform=GAMING_PLATFORMS[reg_data['platform']]['name'],
-                    whatsapp=reg_data['whatsapp'],
-                    payment=PAYMENT_METHODS[reg_data['payment_method']]['name']
-                )
-
+            # استخدام update_current_message إذا كان من callback
+            if update.callback_query:
                 await smart_message_manager.update_current_message(
-                    update, context, completion_message
+                    update, context, success_message
                 )
-
-                await query.message.reply_text(
-                    "يمكنك الآن استخدام جميع خدمات البوت! 🚀\n\n"
-                    "استخدم الأوامر:\n"
-                    "/profile - الملف الشخصي\n"
-                    "/help - المساعدة"
-                )
-
-                context.user_data.clear()
-
-                return ConversationHandler.END
             else:
-                await smart_message_manager.update_current_message(
-                    update, context,
-                    "❌ حدث خطأ في حفظ البيانات. الرجاء المحاولة مرة أخرى."
+                await smart_message_manager.send_new_active_message(
+                    update, context, success_message
                 )
-                return CONFIRMING_DATA
+            
+            # مسح البيانات المؤقتة
+            context.user_data.clear()
+            
+            return ConversationHandler.END
+        else:
+            # في حالة الفشل
+            error_message = "❌ حدث خطأ في حفظ البيانات. الرجاء المحاولة مرة أخرى."
+            
+            if update.callback_query:
+                await smart_message_manager.update_current_message(
+                    update, context, error_message
+                )
+            else:
+                await smart_message_manager.send_new_active_message(
+                    update, context, error_message
+                )
+            
+            return ConversationHandler.END
 
-        elif query.data == "edit_registration":
-            await smart_message_manager.update_current_message(
-                update, context, "📝 سنبدأ من جديد...",
-                reply_markup=Keyboards.get_platform_keyboard()
-            )
-            return CHOOSING_PLATFORM
+
 
     async def handle_continue_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """استكمال التسجيل"""
@@ -1267,12 +1228,6 @@ class FC26SmartBot:
                     CallbackQueryHandler(
                         self.registration_handler.handle_payment_choice,
                         pattern="^payment_"
-                    )
-                ],
-                CONFIRMING_DATA: [
-                    CallbackQueryHandler(
-                        self.registration_handler.handle_confirmation,
-                        pattern="^(confirm_registration|edit_registration)$"
                     )
                 ]
             },
