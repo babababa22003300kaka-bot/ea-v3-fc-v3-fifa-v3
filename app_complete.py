@@ -790,7 +790,7 @@ class PaymentValidationSystem:
         return result
     
     def validate_instapay(self, text: str) -> Dict[str, Any]:
-        """التحقق من رابط إنستاباي - يقبل الروابط فقط"""
+        """التحقق من رابط إنستاباي واستخراج الرابط الصحيح فقط"""
         result = {
             'is_valid': False,
             'cleaned_data': '',
@@ -800,19 +800,44 @@ class PaymentValidationSystem:
         # تنظيف النص
         text = text.strip()
         
-        # التحقق من أن النص يبدأ بـ http أو https
-        if text.startswith(('http://', 'https://')):
-            # التحقق من أن الرابط يحتوي على instapay أو ipn
-            if any(keyword in text.lower() for keyword in ['instapay', 'ipn.eg', 'ipn']):
+        # البحث عن روابط InstaPay أو IPN في النص
+        import re
+        
+        # نمط للبحث عن روابط ipn.eg أو instapay
+        # يبحث عن روابط كاملة مثل https://ipn.eg/S/username/instapay/ABC123
+        url_patterns = [
+            r'https?://ipn\.eg/[^\s]+',  # روابط ipn.eg
+            r'https?://instapay\.com/[^\s]+',  # روابط instapay.com
+            r'ipn\.eg/[^\s]+',  # روابط ipn.eg بدون https
+            r'instapay\.com/[^\s]+',  # روابط instapay.com بدون https
+        ]
+        
+        # البحث عن أول رابط مطابق
+        for pattern in url_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                found_url = match.group(0)
+                # إضافة https:// إذا لم يكن موجوداً
+                if not found_url.startswith('http'):
+                    found_url = f"https://{found_url}"
                 result['is_valid'] = True
-                result['cleaned_data'] = text
+                result['cleaned_data'] = found_url
                 return result
-        # إذا لم يبدأ بـ http، نتحقق من أنه يحتوي على instapay أو ipn
-        elif any(keyword in text.lower() for keyword in ['instapay.com', 'ipn.eg']):
-            # نضيف https:// للرابط
-            result['is_valid'] = True
-            result['cleaned_data'] = f"https://{text}"
-            return result
+        
+        # إذا لم يتم العثور على رابط، نتحقق من النص بشكل عام
+        if any(keyword in text.lower() for keyword in ['instapay', 'ipn.eg', 'ipn']):
+            # إذا كان النص يحتوي على كلمات مفتاحية لكن ليس بتنسيق رابط صحيح
+            # نحاول تنظيف النص وأخذ أول رابط
+            lines = text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if 'https://' in line or 'http://' in line:
+                    # استخراج الرابط من السطر
+                    url_match = re.search(r'https?://[^\s]+', line)
+                    if url_match:
+                        result['is_valid'] = True
+                        result['cleaned_data'] = url_match.group(0)
+                        return result
         
         # فشل التحقق
         result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
@@ -1795,23 +1820,19 @@ class SmartRegistrationHandler:
             success_message = f"""✅ **تم حفظ {payment_name}!**
 
 📱 **الرقم:** `{validation_result['cleaned_data']}`
-🌐 **الشبكة:** {validation_result.get('network', '')}
 
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'card':
             # عرض رقم الكارت كامل للعميل بدون إخفاء
             success_message = f"""✅ **تم حفظ كارت تيلدا!**
 
-💳 **النوع:** تيلدا
-💳 **رقم الكارت الكامل:** `{validation_result['cleaned_data']}`
-🔒 ** **
+💳 **رقم الكارت:** `{validation_result['cleaned_data']}`
 
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'link':
             success_message = f"""✅ **تم حفظ رابط إنستاباي!**
 
 🔗 **الرابط:** `{validation_result['cleaned_data']}`
-🔒 ** **
 
 ━━━━━━━━━━━━━━━━"""
         
@@ -1860,16 +1881,14 @@ class SmartRegistrationHandler:
                     payment_type = reg_data.get('payment_details_type', '')
                     
                     if payment_type == 'wallet':
-                        network = reg_data.get('payment_network', '')
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
-• الرقم: `{decrypted_data}`
-• الشبكة: {network}"""
+• الرقم: `{decrypted_data}`"""
                     elif payment_type == 'card':
                         # عرض رقم الكارت كامل للعميل بدون إخفاء
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
-• رقم الكارت الكامل: `{decrypted_data}`"""
+• رقم الكارت: `{decrypted_data}`"""
                     elif payment_type == 'link':
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
