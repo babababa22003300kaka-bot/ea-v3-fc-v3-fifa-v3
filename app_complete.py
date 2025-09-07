@@ -218,6 +218,13 @@ class SmartMessageManager:
 
         try:
             user_id = update.effective_user.id
+            
+            # التحقق من عدم تكرار نفس الرسالة
+            if user_id in self.user_active_messages:
+                old_msg = self.user_active_messages[user_id]
+                if old_msg.get('text') == text and old_msg.get('message_id') == update.callback_query.message.message_id:
+                    # نفس الرسالة، لا نحدث
+                    return
 
             await update.callback_query.edit_message_text(
                 text=text,
@@ -225,18 +232,20 @@ class SmartMessageManager:
                 parse_mode='Markdown'
             )
 
-            if reply_markup:
-                self.user_active_messages[user_id] = {
-                    'message_id': update.callback_query.message.message_id,
-                    'chat_id': update.callback_query.message.chat_id,
-                    'text': text
-                }
-            else:
-                if user_id in self.user_active_messages:
-                    del self.user_active_messages[user_id]
+            # حفظ معلومات الرسالة المحدثة
+            self.user_active_messages[user_id] = {
+                'message_id': update.callback_query.message.message_id,
+                'chat_id': update.callback_query.message.chat_id,
+                'text': text,
+                'has_keyboard': reply_markup is not None
+            }
 
         except Exception as e:
-            logger.error(f"خطأ في تحديث الرسالة: {e}")
+            # إذا كان الخطأ "لم يتغير النص"، نتجاهله
+            if "message is not modified" in str(e).lower():
+                pass
+            else:
+                logger.debug(f"تحديث الرسالة: {e}")
 
 # إنشاء المدير الذكي
 smart_message_manager = SmartMessageManager()
@@ -719,10 +728,10 @@ class SmartRegistrationHandler:
             context.user_data['registration']
         )
 
-        await smart_message_manager.send_new_active_message(
+        # استخدام update_current_message لتحديث الرسالة الحالية بدلاً من إرسال جديدة
+        await smart_message_manager.update_current_message(
             update, context,
-            f"✅ تم اختيار: {platform_name}\n\n" + MESSAGES['enter_whatsapp'],
-            choice_made=platform_name
+            f"✅ تم اختيار: {platform_name}\n\n" + MESSAGES['enter_whatsapp']
         )
 
         return ENTERING_WHATSAPP
@@ -823,11 +832,17 @@ class SmartRegistrationHandler:
             CONFIRMING_DATA, reg_data
         )
 
-        await smart_message_manager.send_new_active_message(
-            update, context, summary,
-            reply_markup=Keyboards.get_confirm_keyboard(),
-            choice_made="عرض الملخص"
-        )
+        # استخدام update_current_message إذا كان من callback
+        if update.callback_query:
+            await smart_message_manager.update_current_message(
+                update, context, summary,
+                reply_markup=Keyboards.get_confirm_keyboard()
+            )
+        else:
+            await smart_message_manager.send_new_active_message(
+                update, context, summary,
+                reply_markup=Keyboards.get_confirm_keyboard()
+            )
 
         return CONFIRMING_DATA
 
