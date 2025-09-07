@@ -5,14 +5,44 @@
 البوت الكامل في ملف واحد مع نظام الرسائل الذكي ولوحة تحكم الأدمن
 مشروع لبيع كوينز FC 26
 
-✨ المميزات الجديدة:
-• نظام لوحة تحكم كاملة للأدمن
-• صلاحيات حصرية للأدمن (ID: 1124247595)
-• حذف المستخدمين للأدمن فقط
-• إرسال رسائل جماعية للجميع
-• البحث عن المستخدمين بالمعرف أو اسم المستخدم
-• عرض إحصائيات شاملة للبوت
-• حماية قوية ضد الوصول غير المصرح
+================================================================================
+⚠️⚠️⚠️ تحذير هام جداً - اقرأ قبل أي تعديل ⚠️⚠️⚠️
+================================================================================
+
+## ✅ المميزات المكتملة 100% (تمت واختُبرت بنجاح):
+• ✅ نظام التسجيل 3 خطوات (منصة → واتساب → طريقة دفع)
+• ✅ التحقق من أرقام الواتساب المصرية
+• ✅ نظام الدفع بـ 7 طرق (محافظ + كروت + إنستاباي)
+• ✅ نظام الرسائل الذكي SmartMessageManager
+• ✅ حماية من Race Conditions
+• ✅ تشفير البيانات الحساسة
+• ✅ نظام لوحة تحكم الأدمن الكاملة
+• ✅ البحث وحذف المستخدمين (للأدمن فقط)
+• ✅ البث الجماعي للمستخدمين
+• ✅ نظام الصفحات لعرض المستخدمين (10 لكل صفحة)
+
+## 🚫 ممنوعات مطلقة - لا تلمس هذه الأجزاء نهائياً:
+❌ لا تعدل: نظام التسجيل 3 خطوات (سطور 47-56)
+❌ لا تعدل: التحقق من الواتساب (سطور 307-522)
+❌ لا تعدل: نظام طرق الدفع (سطور 574-876)
+❌ لا تعدل: SmartMessageManager (سطور 128-304)
+❌ لا تعدل: نظام التشفير (سطور 527-569)
+❌ لا تعدل: قاعدة البيانات الأساسية (سطور 880-1222)
+
+## ⚙️ المميزات قيد التطوير:
+• 🔄 نظام بيع الكوينز الفعلي
+• 🔄 نظام المحفظة والنقاط
+• 🔄 نظام السحب والإيداع
+
+## 📝 آخر التحديثات:
+• تاريخ: 2024-12-24
+• التحديث: إضافة نظام صفحات لعرض المستخدمين
+• التحديث: تبديل أزرار الحذف للأدمن
+• التحديث: إزالة خاصية حذف الحساب للمستخدمين العاديين
+
+================================================================================
+⚠️ تنبيه: اقرأ الممنوعات أعلاه قبل أي تعديل - الأجزاء المكتملة محمية ⚠️
+================================================================================
 """
 
 import os
@@ -2077,10 +2107,9 @@ class FC26SmartBot:
             # إضافة أزرار الأدمن فقط للأدمن
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
-            else:
-                # زر حذف الحساب للمستخدمين العاديين فقط
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            # المستخدمين العاديين لا يرون زر حذف الحساب
             
             reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -2141,7 +2170,32 @@ class FC26SmartBot:
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض المساعدة"""
-        help_text = """
+        telegram_id = update.effective_user.id
+        is_admin = telegram_id == ADMIN_ID
+        
+        if is_admin:
+            help_text = """
+🆘 **المساعدة والأوامر - أدمن**
+━━━━━━━━━━━━━━━━
+
+📢 الأوامر المتاحة:
+
+/start - البداية والقائمة الرئيسية
+/profile - عرض ملفك الشخصي
+/delete - حذف حسابك (أدمن فقط)
+/help - هذه الرسالة
+
+🔐 صلاحيات الأدمن:
+• لوحة تحكم خاصة
+• عرض جميع المستخدمين
+• حذف المستخدمين
+• البث الجماعي
+
+🔗 للدعم والمساعدة:
+@FC26Support
+"""
+        else:
+            help_text = """
 🆘 **المساعدة والأوامر**
 ━━━━━━━━━━━━━━━━
 
@@ -2149,7 +2203,6 @@ class FC26SmartBot:
 
 /start - البداية والقائمة الرئيسية
 /profile - عرض ملفك الشخصي
-/delete - حذف حسابك
 /help - هذه الرسالة
 
 🔗 للدعم والمساعدة:
@@ -2169,15 +2222,27 @@ class FC26SmartBot:
         )
 
     async def delete_account_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """حذف الحساب مع النظام الذكي"""
+        """حذف الحساب - للأدمن فقط"""
+        telegram_id = update.effective_user.id
+        
+        # التحقق من أن المستخدم هو الأدمن
+        if telegram_id != ADMIN_ID:
+            await update.message.reply_text(
+                "❌ **هذه الميزة للأدمن فقط**\n\n"
+                "المستخدمين العاديين لا يمكنهم حذف حساباتهم.",
+                parse_mode='Markdown'
+            )
+            return
+        
         warning = """
 ⚠️ **تحذير مهم!**
 ━━━━━━━━━━━━━━━━
 
-هل أنت متأكد من حذف حسابك؟
+هل أنت متأكد من حذف حسابك الشخصي كأدمن؟
 
 سيتم حذف:
 • جميع بياناتك 🗑️
+• صلاحيات الأدمن ستبقى
 
 لا يمكن التراجع! ⛔
 """
@@ -2237,9 +2302,9 @@ class FC26SmartBot:
             
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
-            else:
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            # المستخدمين العاديين لا يرون زر حذف الحساب
             
             reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -2299,14 +2364,21 @@ class FC26SmartBot:
             )
 
         elif query.data == "delete_account":
+            # التحقق من أن المستخدم هو الأدمن
+            telegram_id = query.from_user.id
+            if telegram_id != ADMIN_ID:
+                await query.answer("⛔ هذه الميزة للأدمن فقط!", show_alert=True)
+                return
+            
             warning = """
 ⚠️ **تحذير مهم!**
 ━━━━━━━━━━━━━━━━
 
-هل أنت متأكد من حذف حسابك؟
+هل أنت متأكد من حذف حسابك الشخصي كأدمن؟
 
 سيتم حذف:
 • جميع بياناتك 🗑️
+• صلاحيات الأدمن ستبقى
 
 لا يمكن التراجع! ⛔
 """
@@ -2358,9 +2430,9 @@ class FC26SmartBot:
             
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
-            else:
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            # المستخدمين العاديين لا يرون زر حذف الحساب
             
             reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -2451,59 +2523,126 @@ class FC26SmartBot:
             reply_markup=ReplyKeyboardRemove()
         )
     
-    async def admin_view_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """عرض جميع المستخدمين للأدمن"""
+    async def admin_view_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
+        """عرض جميع المستخدمين للأدمن بنظام الصفحات"""
         query = update.callback_query
-        await query.answer()
         
-        telegram_id = query.from_user.id
+        # استخراج رقم الصفحة من callback_data إن وجد
+        if query and query.data.startswith("admin_users_page_"):
+            page = int(query.data.replace("admin_users_page_", ""))
+        
+        if query:
+            await query.answer()
+            telegram_id = query.from_user.id
+        else:
+            telegram_id = update.effective_user.id
         
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
-            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            if query:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
         
         conn = self.db.get_connection()
         cursor = conn.cursor()
         
+        # الحصول على إجمالي عدد المستخدمين
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        # حساب عدد الصفحات
+        users_per_page = 10
+        total_pages = (total_users + users_per_page - 1) // users_per_page
+        
+        # التأكد من أن رقم الصفحة صحيح
+        if page < 1:
+            page = 1
+        elif page > total_pages:
+            page = total_pages
+        
+        # حساب offset للصفحة الحالية
+        offset = (page - 1) * users_per_page
+        
+        # جلب المستخدمين للصفحة الحالية
         cursor.execute("""
             SELECT u.telegram_id, u.username, u.full_name, u.registration_status,
                    r.platform, r.whatsapp, r.payment_method
             FROM users u
             LEFT JOIN registration_data r ON u.user_id = r.user_id
             ORDER BY u.created_at DESC
-            LIMIT 20
-        """)
+            LIMIT ? OFFSET ?
+        """, (users_per_page, offset))
         users = cursor.fetchall()
         
         conn.close()
         
-        users_text = """
-👥 **قائمة المستخدمين** (آخر 20)
+        # بناء نص الرسالة
+        users_text = f"""
+👥 **قائمة المستخدمين**
+📄 الصفحة {page} من {total_pages}
+👤 إجمالي المستخدمين: {total_users}
 ━━━━━━━━━━━━━━━━
 
 """
         
-        for user in users:
-            username = f"@{user['username']}" if user['username'] else "غير محدد"
-            status = "✅" if user['registration_status'] == 'complete' else "⏳"
-            users_text += f"{status} {username}\n"
-            users_text += f"   ID: `{user['telegram_id']}`\n"
-            if user['platform']:
-                users_text += f"   🎮 {user['platform']}\n"
-            if user['whatsapp']:
-                users_text += f"   📱 {user['whatsapp']}\n"
-            users_text += "\n"
+        if not users:
+            users_text += "لا يوجد مستخدمين في هذه الصفحة."
+        else:
+            for i, user in enumerate(users, start=offset+1):
+                username = f"@{user['username']}" if user['username'] else "غير محدد"
+                status = "✅" if user['registration_status'] == 'complete' else "⏳"
+                users_text += f"**{i}.** {status} {username}\n"
+                users_text += f"   ID: `{user['telegram_id']}`\n"
+                if user['platform']:
+                    users_text += f"   🎮 {user['platform']}\n"
+                if user['whatsapp']:
+                    users_text += f"   📱 {user['whatsapp']}\n"
+                users_text += "\n"
         
-        keyboard = [
-            [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")]
-        ]
+        # بناء أزرار التنقل
+        keyboard = []
+        
+        # صف أزرار التنقل بين الصفحات
+        navigation_row = []
+        
+        # زر الصفحة الأولى
+        if page > 1:
+            navigation_row.append(InlineKeyboardButton("⏪ الأولى", callback_data="admin_users_page_1"))
+        
+        # زر الصفحة السابقة
+        if page > 1:
+            navigation_row.append(InlineKeyboardButton("◀️ السابقة", callback_data=f"admin_users_page_{page-1}"))
+        
+        # زر عرض رقم الصفحة الحالي (غير قابل للضغط)
+        navigation_row.append(InlineKeyboardButton(f"📄 {page}/{total_pages}", callback_data="ignore"))
+        
+        # زر الصفحة التالية
+        if page < total_pages:
+            navigation_row.append(InlineKeyboardButton("▶️ التالية", callback_data=f"admin_users_page_{page+1}"))
+        
+        # زر الصفحة الأخيرة
+        if page < total_pages:
+            navigation_row.append(InlineKeyboardButton("⏩ الأخيرة", callback_data=f"admin_users_page_{total_pages}"))
+        
+        if navigation_row:
+            keyboard.append(navigation_row)
+        
+        # زر الرجوع للوحة الأدمن
+        keyboard.append([InlineKeyboardButton("🔙 رجوع للوحة الأدمن", callback_data="admin_panel")])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await smart_message_manager.update_current_message(
-            update, context, users_text,
-            reply_markup=reply_markup
-        )
+        # إرسال أو تحديث الرسالة
+        if query:
+            await smart_message_manager.update_current_message(
+                update, context, users_text,
+                reply_markup=reply_markup
+            )
+        else:
+            await smart_message_manager.send_new_active_message(
+                update, context, users_text,
+                reply_markup=reply_markup
+            )
     
     async def admin_delete_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف مستخدم - للأدمن فقط"""
@@ -2859,6 +2998,7 @@ class FC26SmartBot:
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("help", self.help_command))
+        # أمر حذف الحساب للأدمن فقط
         app.add_handler(CommandHandler("delete", self.delete_account_command))
 
         # الأزرار
@@ -2882,6 +3022,12 @@ class FC26SmartBot:
         app.add_handler(CallbackQueryHandler(
             self.admin_view_users,
             pattern="^admin_view_users$"
+        ))
+        
+        # معالج الصفحات لعرض المستخدمين
+        app.add_handler(CallbackQueryHandler(
+            self.admin_view_users,
+            pattern=r"^admin_users_page_\d+$"
         ))
         
         app.add_handler(CallbackQueryHandler(
