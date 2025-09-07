@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🔥 FC 26 Trading Bot - النسخة الكاملة المتكاملة
-البوت الكامل في ملف واحد مع نظام الرسائل الذكي
+🔥 FC 26 Trading Bot - النسخة الكاملة المتكاملة مع نظام الأدمن
+البوت الكامل في ملف واحد مع نظام الرسائل الذكي ولوحة تحكم الأدمن
 مشروع لبيع كوينز FC 26
+
+✨ المميزات الجديدة:
+• نظام لوحة تحكم كاملة للأدمن
+• صلاحيات حصرية للأدمن (ID: 1124247595)
+• حذف المستخدمين للأدمن فقط
+• إرسال رسائل جماعية للجميع
+• البحث عن المستخدمين بالمعرف أو اسم المستخدم
+• عرض إحصائيات شاملة للبوت
+• حماية قوية ضد الوصول غير المصرح
 """
 
 import os
@@ -2037,20 +2046,42 @@ class FC26SmartBot:
 
         if user and user.get('registration_status') == 'complete':
             # مستخدم مسجل - عرض القائمة الرئيسية مع النظام الذكي
-            welcome_message = f"""
+            
+            # التحقق من صلاحيات الأدمن
+            is_admin = telegram_id == ADMIN_ID
+            
+            if is_admin:
+                welcome_message = f"""
+👋 مرحباً بالأدمن!
+
+🎮 بوت FC 26 - لوحة التحكم
+
+⚡ لديك صلاحيات كاملة
+"""
+            else:
+                welcome_message = f"""
 👋 أهلاً بعودتك!
 
 🎮 بوت FC 26 - أفضل مكان لبيع كوينز
 
 كيف يمكنني مساعدتك اليوم؟
 """
-            # أزرار تفاعلية
+            
+            # أزرار تفاعلية حسب الصلاحيات
             keyboard = [
                 [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
-                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
-                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
+            
+            # إضافة أزرار الأدمن فقط للأدمن
+            if is_admin:
+                keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            else:
+                # زر حذف الحساب للمستخدمين العاديين فقط
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+            
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             # استخدام النظام الذكي دائماً
@@ -2177,8 +2208,20 @@ class FC26SmartBot:
                 )
 
         elif query.data == "cancel_delete":
+            telegram_id = query.from_user.id
+            is_admin = telegram_id == ADMIN_ID
+            
             # العودة للقائمة الرئيسية
-            welcome_message = f"""
+            if is_admin:
+                welcome_message = f"""
+✅ تم الإلغاء.
+
+🎮 بوت FC 26 - لوحة التحكم
+
+⚡ لديك صلاحيات كاملة
+"""
+            else:
+                welcome_message = f"""
 ✅ تم الإلغاء. سعداء لبقائك معنا! 😊
 
 🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
@@ -2189,9 +2232,15 @@ class FC26SmartBot:
             keyboard = [
                 [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
-                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
-                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
+            
+            if is_admin:
+                keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            else:
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+            
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smart_message_manager.update_current_message(
@@ -2280,8 +2329,20 @@ class FC26SmartBot:
             )
 
         elif query.data == "main_menu":
+            telegram_id = query.from_user.id
+            is_admin = telegram_id == ADMIN_ID
+            
             # العودة للقائمة الرئيسية باستخدام النظام الذكي
-            welcome_message = f"""
+            if is_admin:
+                welcome_message = f"""
+👋 مرحباً بالأدمن!
+
+🎮 بوت FC 26 - لوحة التحكم
+
+⚡ لديك صلاحيات كاملة
+"""
+            else:
+                welcome_message = f"""
 👋 أهلاً بعودتك!
 
 🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
@@ -2292,9 +2353,15 @@ class FC26SmartBot:
             keyboard = [
                 [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
-                [InlineKeyboardButton("📞 الدعم", callback_data="support")],
-                [InlineKeyboardButton("🗑️ حذف الحساب", callback_data="delete_account")]
+                [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
+            
+            if is_admin:
+                keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
+            else:
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
+            
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smart_message_manager.update_current_message(
@@ -2302,6 +2369,77 @@ class FC26SmartBot:
                 reply_markup=reply_markup
             )
 
+    async def admin_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """لوحة تحكم الأدمن"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        # جلب إحصائيات البوت
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # عدد المستخدمين
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        # عدد المستخدمين المسجلين بالكامل
+        cursor.execute("SELECT COUNT(*) FROM users WHERE registration_status = 'complete'")
+        registered_users = cursor.fetchone()[0]
+        
+        # آخر المستخدمين المسجلين
+        cursor.execute("""
+            SELECT telegram_id, username, full_name, created_at 
+            FROM users 
+            WHERE registration_status = 'complete'
+            ORDER BY created_at DESC 
+            LIMIT 5
+        """)
+        recent_users = cursor.fetchall()
+        
+        conn.close()
+        
+        # بناء رسالة الإحصائيات
+        admin_text = f"""
+🔐 **لوحة تحكم الأدمن**
+━━━━━━━━━━━━━━━━
+
+📊 **إحصائيات البوت:**
+• إجمالي المستخدمين: {total_users}
+• مستخدمين مسجلين: {registered_users}
+• غير مكتملين: {total_users - registered_users}
+
+🕔 **آخر التسجيلات:**
+"""
+        
+        for user in recent_users:
+            username = f"@{user['username']}" if user['username'] else "غير محدد"
+            admin_text += f"• {username} (ID: {user['telegram_id']})\n"
+        
+        if not recent_users:
+            admin_text += "• لا يوجد تسجيلات جديدة\n"
+        
+        # أزرار لوحة الأدمن
+        keyboard = [
+            [InlineKeyboardButton("👥 عرض جميع المستخدمين", callback_data="admin_view_users")],
+            [InlineKeyboardButton("🔍 بحث عن مستخدم", callback_data="admin_search_user")],
+            [InlineKeyboardButton("📢 إرسال رسالة للجميع", callback_data="admin_broadcast")],
+            [InlineKeyboardButton("🗑️ حذف مستخدم", callback_data="admin_delete_user")],
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await smart_message_manager.update_current_message(
+            update, context, admin_text,
+            reply_markup=reply_markup
+        )
+    
     async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
         # إزالة أي كيبورد موجود
@@ -2312,6 +2450,357 @@ class FC26SmartBot:
             "/help - المساعدة",
             reply_markup=ReplyKeyboardRemove()
         )
+    
+    async def admin_view_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """عرض جميع المستخدمين للأدمن"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT u.telegram_id, u.username, u.full_name, u.registration_status,
+                   r.platform, r.whatsapp, r.payment_method
+            FROM users u
+            LEFT JOIN registration_data r ON u.user_id = r.user_id
+            ORDER BY u.created_at DESC
+            LIMIT 20
+        """)
+        users = cursor.fetchall()
+        
+        conn.close()
+        
+        users_text = """
+👥 **قائمة المستخدمين** (آخر 20)
+━━━━━━━━━━━━━━━━
+
+"""
+        
+        for user in users:
+            username = f"@{user['username']}" if user['username'] else "غير محدد"
+            status = "✅" if user['registration_status'] == 'complete' else "⏳"
+            users_text += f"{status} {username}\n"
+            users_text += f"   ID: `{user['telegram_id']}`\n"
+            if user['platform']:
+                users_text += f"   🎮 {user['platform']}\n"
+            if user['whatsapp']:
+                users_text += f"   📱 {user['whatsapp']}\n"
+            users_text += "\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await smart_message_manager.update_current_message(
+            update, context, users_text,
+            reply_markup=reply_markup
+        )
+    
+    async def admin_delete_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """حذف مستخدم - للأدمن فقط"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        # وضع البوت في وضع انتظار إدخال ID المستخدم
+        context.user_data['admin_action'] = 'delete_user'
+        
+        await smart_message_manager.update_current_message(
+            update, context,
+            "🗑️ **حذف مستخدم**\n\n"
+            "أدخل معرف التليجرام (ID) للمستخدم المراد حذفه:\n\n"
+            "مثال: `123456789`\n\n"
+            "⚠️ تحذير: سيتم حذف جميع بيانات المستخدم نهائياً!"
+        )
+    
+    async def admin_confirm_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """تأكيد حذف المستخدم"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        # استخراج ID المستخدم من callback_data
+        user_to_delete = int(query.data.replace("admin_confirm_delete_", ""))
+        
+        # حذف المستخدم
+        success = self.db.delete_user_account(user_to_delete)
+        
+        if success:
+            await smart_message_manager.update_current_message(
+                update, context,
+                f"✅ **تم حذف المستخدم بنجاح!**\n\n"
+                f"ID: `{user_to_delete}`\n\n"
+                f"تم حذف جميع البيانات المرتبطة بهذا المستخدم."
+            )
+        else:
+            await smart_message_manager.update_current_message(
+                update, context,
+                "❌ **فشل حذف المستخدم**\n\n"
+                "قد يكون المستخدم غير موجود أو حدث خطأ."
+            )
+        
+        # مسح حالة الأدمن
+        context.user_data.pop('admin_action', None)
+    
+    async def admin_broadcast(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """إرسال رسالة للجميع - للأدمن فقط"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        # وضع البوت في وضع انتظار الرسالة
+        context.user_data['admin_action'] = 'broadcast'
+        
+        await smart_message_manager.update_current_message(
+            update, context,
+            "📢 **إرسال رسالة للجميع**\n\n"
+            "اكتب الرسالة التي تريد إرسالها لجميع المستخدمين:\n\n"
+            "📝 ملاحظة: سيتم إرسال الرسالة لجميع المستخدمين المسجلين.\n"
+            "⚠️ استخدم هذه الميزة بحذر!"
+        )
+    
+    async def admin_search_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """البحث عن مستخدم - للأدمن فقط"""
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+        
+        # وضع البوت في وضع انتظار البحث
+        context.user_data['admin_action'] = 'search_user'
+        
+        await smart_message_manager.update_current_message(
+            update, context,
+            "🔍 **البحث عن مستخدم**\n\n"
+            "أدخل واحد من التالي للبحث:\n\n"
+            "• معرف التليجرام (ID)\n"
+            "• اسم المستخدم (@username)\n\n"
+            "مثال: `123456789` أو `@username`"
+        )
+    
+    async def handle_admin_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج إدخال النص من الأدمن"""
+        telegram_id = update.effective_user.id
+        
+        # التحقق من أن المرسل هو الأدمن
+        if telegram_id != ADMIN_ID:
+            # إذا لم يكن أدمن، نعامله كمستخدم عادي
+            await self.handle_text_messages(update, context)
+            return
+        
+        # التحقق من وجود إجراء أدمن نشط
+        admin_action = context.user_data.get('admin_action')
+        
+        if not admin_action:
+            # لا يوجد إجراء نشط، نعامله كرسالة عادية
+            await self.handle_text_messages(update, context)
+            return
+        
+        text = update.message.text.strip()
+        
+        if admin_action == 'delete_user':
+            # محاولة حذف المستخدم
+            try:
+                user_id_to_delete = int(text)
+                
+                # التحقق من أن الأدمن لا يحذف نفسه
+                if user_id_to_delete == ADMIN_ID:
+                    await smart_message_manager.send_new_active_message(
+                        update, context,
+                        "❌ **لا يمكنك حذف حسابك الخاص!**\n\n"
+                        "أنت الأدمن الرئيسي للبوت."
+                    )
+                    context.user_data.pop('admin_action', None)
+                    return
+                
+                # التحقق من وجود المستخدم
+                user = self.db.get_user_by_telegram_id(user_id_to_delete)
+                
+                if user:
+                    # عرض تأكيد الحذف
+                    username = f"@{user['username']}" if user['username'] else "غير محدد"
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("✅ تأكيد الحذف", callback_data=f"admin_confirm_delete_{user_id_to_delete}")],
+                        [InlineKeyboardButton("❌ إلغاء", callback_data="admin_panel")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await smart_message_manager.send_new_active_message(
+                        update, context,
+                        f"⚠️ **تأكيد حذف المستخدم**\n\n"
+                        f"👤 الاسم: {user['full_name']}\n"
+                        f"🆔 المعرف: `{user_id_to_delete}`\n"
+                        f"📝 اسم المستخدم: {username}\n\n"
+                        f"هل أنت متأكد من حذف هذا المستخدم؟",
+                        reply_markup=reply_markup
+                    )
+                else:
+                    await smart_message_manager.send_new_active_message(
+                        update, context,
+                        f"❌ **المستخدم غير موجود**\n\n"
+                        f"لا يوجد مستخدم بالمعرف: `{user_id_to_delete}`"
+                    )
+                
+            except ValueError:
+                await smart_message_manager.send_new_active_message(
+                    update, context,
+                    "❌ **معرف غير صحيح**\n\n"
+                    "يجب إدخال رقم صحيح فقط."
+                )
+            
+            context.user_data.pop('admin_action', None)
+        
+        elif admin_action == 'broadcast':
+            # إرسال الرسالة لجميع المستخدمين
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT telegram_id FROM users WHERE registration_status = 'complete'")
+            users = cursor.fetchall()
+            
+            conn.close()
+            
+            success_count = 0
+            fail_count = 0
+            
+            broadcast_msg = f"📢 **رسالة من الإدارة**\n\n{text}"
+            
+            for user in users:
+                try:
+                    await context.bot.send_message(
+                        chat_id=user['telegram_id'],
+                        text=broadcast_msg,
+                        parse_mode='Markdown'
+                    )
+                    success_count += 1
+                    await asyncio.sleep(0.1)  # تأخير بسيط لتجنب حدود التليجرام
+                except Exception as e:
+                    fail_count += 1
+                    logger.error(f"فشل إرسال رسالة للمستخدم {user['telegram_id']}: {e}")
+            
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                f"✅ **تمت عملية البث**\n\n"
+                f"📊 الإحصائيات:\n"
+                f"• نجح الإرسال: {success_count}\n"
+                f"• فشل الإرسال: {fail_count}\n"
+                f"• الإجمالي: {len(users)}"
+            )
+            
+            context.user_data.pop('admin_action', None)
+        
+        elif admin_action == 'search_user':
+            # البحث عن مستخدم
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            
+            # البحث بالمعرف أو اسم المستخدم
+            if text.startswith('@'):
+                # البحث باسم المستخدم
+                username = text[1:]  # إزالة @
+                cursor.execute("""
+                    SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                    FROM users u
+                    LEFT JOIN registration_data r ON u.user_id = r.user_id
+                    WHERE u.username = ?
+                """, (username,))
+            else:
+                # البحث بالمعرف
+                try:
+                    search_id = int(text)
+                    cursor.execute("""
+                        SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                        FROM users u
+                        LEFT JOIN registration_data r ON u.user_id = r.user_id
+                        WHERE u.telegram_id = ?
+                    """, (search_id,))
+                except ValueError:
+                    await smart_message_manager.send_new_active_message(
+                        update, context,
+                        "❌ **بحث غير صحيح**\n\n"
+                        "يجب إدخال معرف رقمي أو اسم مستخدم يبدأ بـ @"
+                    )
+                    context.user_data.pop('admin_action', None)
+                    conn.close()
+                    return
+            
+            user = cursor.fetchone()
+            conn.close()
+            
+            if user:
+                username_display = f"@{user['username']}" if user['username'] else "غير محدد"
+                status = "✅ مكتمل" if user['registration_status'] == 'complete' else "⏳ غير مكتمل"
+                
+                user_info = f"""
+🔍 **نتيجة البحث**
+━━━━━━━━━━━━━━━━
+
+👤 **معلومات المستخدم:**
+• الاسم: {user['full_name']}
+• المعرف: `{user['telegram_id']}`
+• اسم المستخدم: {username_display}
+• الحالة: {status}
+• تاريخ التسجيل: {user['created_at']}
+"""
+                
+                if user['platform']:
+                    user_info += f"\n🎮 **المنصة:** {user['platform']}"
+                if user['whatsapp']:
+                    user_info += f"\n📱 **واتساب:** {user['whatsapp']}"
+                if user['payment_method']:
+                    user_info += f"\n💳 **طريقة الدفع:** {user['payment_method']}"
+                
+                keyboard = [
+                    [InlineKeyboardButton("🗑️ حذف هذا المستخدم", callback_data=f"admin_confirm_delete_{user['telegram_id']}")],
+                    [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await smart_message_manager.send_new_active_message(
+                    update, context, user_info,
+                    reply_markup=reply_markup
+                )
+            else:
+                await smart_message_manager.send_new_active_message(
+                    update, context,
+                    f"❌ **لم يتم العثور على المستخدم**\n\n"
+                    f"لا يوجد مستخدم بـ: `{text}`"
+                )
+            
+            context.user_data.pop('admin_action', None)
 
     def get_registration_conversation(self):
         """معالج المحادثة للتسجيل"""
@@ -2383,12 +2872,45 @@ class FC26SmartBot:
             self.handle_menu_buttons,
             pattern="^(profile|delete_account|sell_coins|support|main_menu)$"
         ))
-
-        # الرسائل النصية (يجب أن يكون آخراً)
+        
+        # أزرار لوحة الأدمن
+        app.add_handler(CallbackQueryHandler(
+            self.admin_panel,
+            pattern="^admin_panel$"
+        ))
+        
+        app.add_handler(CallbackQueryHandler(
+            self.admin_view_users,
+            pattern="^admin_view_users$"
+        ))
+        
+        app.add_handler(CallbackQueryHandler(
+            self.admin_delete_user,
+            pattern="^admin_delete_user$"
+        ))
+        
+        app.add_handler(CallbackQueryHandler(
+            self.admin_confirm_delete,
+            pattern=r"^admin_confirm_delete_\d+$"
+        ))
+        
+        app.add_handler(CallbackQueryHandler(
+            self.admin_broadcast,
+            pattern="^admin_broadcast$"
+        ))
+        
+        app.add_handler(CallbackQueryHandler(
+            self.admin_search_user,
+            pattern="^admin_search_user$"
+        ))
+        
+        # معالج رسائل البحث والبث للأدمن
         app.add_handler(MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            self.handle_text_messages
+            self.handle_admin_text_input
         ))
+
+
 
         # التشغيل
         logger.info("🚀 بدء تشغيل FC 26 Smart Bot...")
