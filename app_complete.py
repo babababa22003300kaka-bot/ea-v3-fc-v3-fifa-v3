@@ -626,7 +626,7 @@ class PaymentValidationSystem:
                 'prefix': ['010', '011', '012', '015'],
                 'name': 'محفظة بنكية',
                 'example': '01012345678',
-                'network': 'متعدد الشبكات'
+                'network': 'جميع الشبكات المصرية'
             },
             'telda': {
                 'type': 'card',
@@ -705,7 +705,7 @@ class PaymentValidationSystem:
 ✅ **مثال صحيح:** `{rules['example']}`"""
             
             if payment_method == 'bank_wallet':
-                result['error_message'] += "\n\n📍 **يقبل جميع الشبكات:** 010/011/012/015"
+                result['error_message'] += "\n\n📍 **تنبيه:** المحفظة البنكية تقبل جميع الشبكات المصرية (010/011/012/015)"
             
             return result
         
@@ -730,7 +730,7 @@ class PaymentValidationSystem:
 ✅ **مثال صحيح:** `{rules['example']}`"""
             
             if payment_method == 'bank_wallet':
-                result['error_message'] += "\n\n📍 **يقبل جميع الشبكات:** 010/011/012/015"
+                result['error_message'] += "\n\n📍 **تنبيه:** المحفظة البنكية تقبل جميع الشبكات المصرية (010/011/012/015)"
             
             return result
         
@@ -800,19 +800,20 @@ class PaymentValidationSystem:
         # تنظيف النص
         text = text.strip()
         
-        # البحث عن @ لاستخلاص اسم المستخدم
+        # البحث عن @ لاستخلاص اسم المستخدم (مثل senioraa@instapay)
         if '@' in text:
-            # استخلاص اسم المستخدم بعد @
+            # استخلاص الجزء قبل @ كاسم مستخدم
             parts = text.split('@')
-            if len(parts) > 1:
-                # أخذ الجزء بعد @ وتنظيفه
-                username_part = parts[1].split()[0] if parts[1] else ''
-                if username_part:
-                    # إذا كان يحتوي على instapay، استخدمه مباشرة
-                    if 'instapay' in username_part.lower():
-                        result['is_valid'] = True
-                        result['cleaned_data'] = f"https://{username_part}"
-                        return result
+            if len(parts) >= 2:
+                username = parts[0].strip()
+                domain_part = parts[1].strip().lower()
+                
+                # التحقق من أن الجزء بعد @ يحتوي على instapay
+                if 'instapay' in domain_part and username:
+                    # تحويل إلى رابط صحيح
+                    result['is_valid'] = True
+                    result['cleaned_data'] = f"https://instapay.com/{username}"
+                    return result
         
         # البحث عن روابط instapay أو ipn
         # أولاً نبحث عن أي رابط يحتوي على instapay أو ipn
@@ -854,16 +855,17 @@ class PaymentValidationSystem:
                 return result
         
         # فشل التحقق
-        result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
+        result['error_message'] = """❌ **بيانات إنستاباي غير صحيحة**
 
-📍 **يجب إدخال رابط صحيح يحتوي على:**
-• instapay أو ipn.eg
-• اسم المستخدم أو الرابط الكامل
+📍 **يمكنك إدخال:**
+• اسم المستخدم مباشرة (مثل: senioraa)
+• اسم المستخدم مع @ (مثل: senioraa@instapay)
+• الرابط الكامل (مثل: https://instapay.com/username)
 
 ✅ **أمثلة صحيحة:**
+• `senioraa` ← سيصبح https://instapay.com/senioraa
+• `senioraa@instapay` ← سيصبح https://instapay.com/senioraa
 • `https://instapay.com/username`
-• `username@instapay`
-• `senioraa`
 • `https://ipn.eg/S/ABC123`"""
         
         return result
@@ -1063,18 +1065,29 @@ class Database:
 
             user_id = user['user_id']
 
-            # محاولة إضافة الحقول الجديدة إذا لم تكن موجودة
+            # محاولة إضافة الحقول الجديدة إذا لم تكن موجودة (مع حماية من الأخطاء)
             try:
                 cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_details TEXT")
-            except:
+            except sqlite3.OperationalError:
+                pass  # العمود موجود بالفعل
+            except Exception as e:
+                logger.debug(f"Column payment_details may already exist: {e}")
                 pass
+            
             try:
                 cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_details_type TEXT")
-            except:
+            except sqlite3.OperationalError:
+                pass  # العمود موجود بالفعل
+            except Exception as e:
+                logger.debug(f"Column payment_details_type may already exist: {e}")
                 pass
+            
             try:
                 cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_network TEXT")
-            except:
+            except sqlite3.OperationalError:
+                pass  # العمود موجود بالفعل
+            except Exception as e:
+                logger.debug(f"Column payment_network may already exist: {e}")
                 pass
             
             # تحديث بيانات التسجيل
@@ -1665,12 +1678,13 @@ class SmartRegistrationHandler:
 • بدون مسافات أو رموز
 
 ✅ **أمثلة صحيحة:**
-• `01012345678` - يقبل جميع الشبكات
-• `01112345678` - يقبل جميع الشبكات
-• `01212345678` - يقبل جميع الشبكات
-• `01512345678` - يقبل جميع الشبكات
+• `01012345678` - فودافون ⭕
+• `01112345678` - اتصالات 🟢
+• `01212345678` - أورانج 🍊
+• `01512345678` - وي 🟣
 
-📌 **ملاحظة:** المحفظة البنكية تقبل أي رقم من الشبكات الأربعة"""
+📌 **ملاحظة مهمة:** المحفظة البنكية تقبل جميع الشبكات المصرية
+✅ **يمكنك استخدام أي رقم من الشبكات الأربعة**"""
         
         elif payment_key == 'telda':
             return """💳 **تيلدا**
@@ -1693,15 +1707,16 @@ class SmartRegistrationHandler:
 🔗 **أدخل رابط إنستاباي:**
 
 📝 **القواعد:**
-• رابط صحيح يحتوي على instapay أو ipn.eg
-• يمكن إدخال الرابط كامل أو جزء منه
-• سيتم إضافة https:// تلقائياً إذا لم تكن موجودة
+• يمكن إدخال اسم المستخدم مباشرة
+• أو username@instapay
+• أو الرابط الكامل
+• سيتم التحويل تلقائياً لرابط صحيح
 
 ✅ **أمثلة صحيحة:**
+• `senioraa` (سيصبح https://instapay.com/senioraa)
+• `senioraa@instapay` (سيصبح https://instapay.com/senioraa)
 • `https://instapay.com/username`
-• `https://ipn.eg/S/ABC123`
-• `instapay.com/username`
-• `username` (سيتم تحويله تلقائياً)"""
+• `https://ipn.eg/S/ABC123`"""
         
         return "طريقة دفع غير معروفة"
     
@@ -1827,11 +1842,11 @@ class SmartRegistrationHandler:
 
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'card':
-            # عرض الكارت كامل للعميل
+            # عرض رقم الكارت كامل للعميل بدون إخفاء
             success_message = f"""✅ **تم حفظ كارت تيلدا!**
 
 💳 **النوع:** تيلدا
-💳 **الكارت:** `{validation_result['cleaned_data']}`
+💳 **رقم الكارت الكامل:** `{validation_result['cleaned_data']}`
 🔒 **البيانات محمية بالتشفير**
 
 ━━━━━━━━━━━━━━━━"""
@@ -1894,10 +1909,10 @@ class SmartRegistrationHandler:
 • الرقم: `{decrypted_data}`
 • الشبكة: {network}"""
                     elif payment_type == 'card':
-                        # عرض الكارت كامل للعميل
+                        # عرض رقم الكارت كامل للعميل بدون إخفاء
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
-• الكارت: `{decrypted_data}`"""
+• رقم الكارت الكامل: `{decrypted_data}`"""
                     elif payment_type == 'link':
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
