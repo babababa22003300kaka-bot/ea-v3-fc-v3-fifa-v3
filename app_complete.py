@@ -14,6 +14,10 @@ import json
 import re
 import asyncio
 import time
+import base64
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 from collections import defaultdict
@@ -44,8 +48,9 @@ logger = logging.getLogger(__name__)
 (
     CHOOSING_PLATFORM,
     ENTERING_WHATSAPP,
-    CHOOSING_PAYMENT
-) = range(3)
+    CHOOSING_PAYMENT,
+    ENTERING_PAYMENT_DETAILS
+) = range(4)
 
 # ================================ البيانات الثابتة ================================
 GAMING_PLATFORMS = {
@@ -518,6 +523,347 @@ class WhatsAppSecuritySystem:
 # إنشاء نظام الحماية
 whatsapp_security = WhatsAppSecuritySystem()
 
+# ================================ نظام التشفير المتقدم ================================
+class EncryptionSystem:
+    """نظام تشفير متقدم للبيانات الحساسة"""
+    
+    def __init__(self):
+        # استخدام مفتاح ثابت آمن (في الإنتاج يجب استخدام مفتاح من متغيرات البيئة)
+        self.master_key = b'FC26_BOT_SECURE_ENCRYPTION_KEY_2025_PRODUCTION'
+        self._init_cipher()
+    
+    def _init_cipher(self):
+        """تهيئة نظام التشفير"""
+        # إنشاء KDF للحصول على مفتاح قوي
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b'FC26_SALT_2025',
+            iterations=100000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(self.master_key))
+        self.cipher = Fernet(key)
+    
+    def encrypt(self, data: str) -> str:
+        """تشفير البيانات"""
+        if not data:
+            return ""
+        try:
+            encrypted = self.cipher.encrypt(data.encode())
+            return base64.urlsafe_b64encode(encrypted).decode()
+        except Exception as e:
+            logger.error(f"خطأ في التشفير: {e}")
+            return data  # إرجاع البيانات بدون تشفير في حالة الخطأ
+    
+    def decrypt(self, encrypted_data: str) -> str:
+        """فك تشفير البيانات"""
+        if not encrypted_data:
+            return ""
+        try:
+            decoded = base64.urlsafe_b64decode(encrypted_data.encode())
+            decrypted = self.cipher.decrypt(decoded)
+            return decrypted.decode()
+        except Exception as e:
+            logger.error(f"خطأ في فك التشفير: {e}")
+            return encrypted_data  # إرجاع البيانات كما هي في حالة الخطأ
+
+# إنشاء نظام التشفير
+encryption_system = EncryptionSystem()
+
+# ================================ نظام التحقق من طرق الدفع ================================
+class PaymentValidationSystem:
+    """نظام التحقق المتقدم من طرق الدفع"""
+    
+    def __init__(self):
+        # تتبع المحاولات لكل مستخدم
+        self.user_attempts: Dict[int, List[datetime]] = defaultdict(list)
+        self.failed_attempts: Dict[int, int] = defaultdict(int)
+        self.blocked_users: Dict[int, datetime] = {}
+        
+        # إعدادات الحماية
+        self.MAX_ATTEMPTS_PER_MINUTE = 8
+        self.MAX_FAILED_ATTEMPTS = 4
+        self.BLOCK_DURATION_MINUTES = 10
+        self.RATE_LIMIT_WINDOW = 60  # ثانية
+        
+        # قواعد التحقق لكل طريقة دفع
+        self.PAYMENT_RULES = {
+            'vodafone_cash': {
+                'type': 'wallet',
+                'length': 11,
+                'prefix': ['010'],
+                'name': 'فودافون كاش',
+                'example': '01012345678',
+                'network': 'فودافون'
+            },
+            'etisalat_cash': {
+                'type': 'wallet',
+                'length': 11,
+                'prefix': ['011'],
+                'name': 'اتصالات كاش',
+                'example': '01112345678',
+                'network': 'اتصالات'
+            },
+            'orange_cash': {
+                'type': 'wallet',
+                'length': 11,
+                'prefix': ['012'],
+                'name': 'أورانج كاش',
+                'example': '01212345678',
+                'network': 'أورانج'
+            },
+            'we_cash': {
+                'type': 'wallet',
+                'length': 11,
+                'prefix': ['015'],
+                'name': 'وي كاش',
+                'example': '01512345678',
+                'network': 'وي'
+            },
+            'bank_wallet': {
+                'type': 'wallet',
+                'length': 11,
+                'prefix': ['010', '011', '012', '015'],
+                'name': 'محفظة بنكية',
+                'example': '01012345678',
+                'network': 'متعدد الشبكات'
+            },
+            'telda': {
+                'type': 'card',
+                'length': 16,
+                'name': 'تيلدا',
+                'example': '1234567890123456'
+            },
+            'instapay': {
+                'type': 'link',
+                'name': 'إنستا باي',
+                'keywords': ['instapay', 'ipn.eg'],
+                'example': 'https://instapay.com/username'
+            }
+        }
+    
+    def is_user_blocked(self, user_id: int) -> Tuple[bool, Optional[int]]:
+        """التحقق من حظر المستخدم"""
+        if user_id in self.blocked_users:
+            block_time = self.blocked_users[user_id]
+            elapsed = (datetime.now() - block_time).total_seconds() / 60
+            
+            if elapsed < self.BLOCK_DURATION_MINUTES:
+                remaining = self.BLOCK_DURATION_MINUTES - int(elapsed)
+                return True, remaining
+            else:
+                # انتهت فترة الحظر
+                del self.blocked_users[user_id]
+                self.failed_attempts[user_id] = 0
+        
+        return False, None
+    
+    def check_rate_limit(self, user_id: int) -> Tuple[bool, Optional[str]]:
+        """فحص معدل الطلبات"""
+        now = datetime.now()
+        
+        # تنظيف المحاولات القديمة
+        if user_id in self.user_attempts:
+            self.user_attempts[user_id] = [
+                attempt for attempt in self.user_attempts[user_id]
+                if (now - attempt).total_seconds() < self.RATE_LIMIT_WINDOW
+            ]
+        
+        # فحص عدد المحاولات
+        attempts_count = len(self.user_attempts[user_id])
+        
+        if attempts_count >= self.MAX_ATTEMPTS_PER_MINUTE:
+            return False, f"⚠️ لقد تجاوزت الحد المسموح ({self.MAX_ATTEMPTS_PER_MINUTE} محاولات في الدقيقة)\\n\\n⏰ انتظر قليلاً ثم حاول مرة أخرى"
+        
+        # تسجيل المحاولة الجديدة
+        self.user_attempts[user_id].append(now)
+        return True, None
+    
+    def validate_wallet(self, text: str, payment_method: str) -> Dict[str, Any]:
+        """التحقق من رقم المحفظة الإلكترونية"""
+        result = {
+            'is_valid': False,
+            'cleaned_data': '',
+            'error_message': '',
+            'network': ''
+        }
+        
+        # تنظيف الرقم من الرموز
+        cleaned = re.sub(r'[^\d]', '', text)
+        
+        rules = self.PAYMENT_RULES[payment_method]
+        
+        # فحص وجود أحرف أو رموز
+        if re.search(r'[a-zA-Z]', text):
+            result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
+
+📍 **يجب أن يكون:**
+• أرقام فقط (بدون حروف أو رموز)
+• 11 رقم بالضبط
+• يبدأ بـ {'/'.join(rules['prefix'])} فقط
+
+✅ **مثال صحيح:** `{rules['example']}`"""
+            
+            if payment_method == 'bank_wallet':
+                result['error_message'] += "\n\n📍 **يقبل جميع الشبكات:** 010/011/012/015"
+            
+            return result
+        
+        # فحص الطول
+        if len(cleaned) != rules['length']:
+            result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
+
+📏 **الطول المطلوب:** {rules['length']} رقم
+📍 **أنت أدخلت:** {len(cleaned)} رقم
+
+✅ **مثال صحيح:** `{rules['example']}`"""
+            return result
+        
+        # فحص البداية
+        prefix = cleaned[:3]
+        if prefix not in rules['prefix']:
+            result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
+
+📍 **يجب أن يبدأ بـ:** {'/'.join(rules['prefix'])} فقط
+🚫 **رقمك يبدأ بـ:** `{prefix}`
+
+✅ **مثال صحيح:** `{rules['example']}`"""
+            
+            if payment_method == 'bank_wallet':
+                result['error_message'] += "\n\n📍 **يقبل جميع الشبكات:** 010/011/012/015"
+            
+            return result
+        
+        # النجاح
+        result['is_valid'] = True
+        result['cleaned_data'] = cleaned
+        result['network'] = rules['network']
+        
+        return result
+    
+    def validate_telda(self, text: str) -> Dict[str, Any]:
+        """التحقق من رقم كارت تيلدا"""
+        result = {
+            'is_valid': False,
+            'cleaned_data': '',
+            'error_message': ''
+        }
+        
+        # السماح بالمسافات والشرطات ثم إزالتها
+        cleaned = re.sub(r'[\s\-]', '', text)
+        
+        # إزالة أي شيء غير الأرقام
+        digits_only = re.sub(r'[^\d]', '', cleaned)
+        
+        # فحص وجود أحرف
+        if re.search(r'[a-zA-Z]', text):
+            result['error_message'] = """❌ **رقم كارت تيلدا غير صحيح**
+
+📍 **يجب أن يكون:**
+• 16 رقم بالضبط
+• أرقام فقط (يُسمح بالمسافات والشرطات)
+• بدون حروف أو رموز غريبة
+
+✅ **أمثلة صحيحة:**
+• `1234567890123456`
+• `1234-5678-9012-3456`
+• `1234 5678 9012 3456`"""
+            return result
+        
+        # فحص الطول
+        if len(digits_only) != 16:
+            result['error_message'] = f"""❌ **رقم كارت تيلدا غير صحيح**
+
+📏 **المطلوب:** 16 رقم بالضبط
+📍 **أنت أدخلت:** {len(digits_only)} رقم
+
+✅ **أمثلة صحيحة:**
+• `1234567890123456`
+• `1234-5678-9012-3456`
+• `1234 5678 9012 3456`"""
+            return result
+        
+        # النجاح
+        result['is_valid'] = True
+        result['cleaned_data'] = digits_only
+        
+        return result
+    
+    def validate_instapay(self, text: str) -> Dict[str, Any]:
+        """التحقق من رابط إنستاباي"""
+        result = {
+            'is_valid': False,
+            'cleaned_data': '',
+            'error_message': ''
+        }
+        
+        # البحث عن رابط في النص
+        url_pattern = r'(?:https?://)?(?:www\.)?([a-zA-Z0-9\-\.]+\.(?:com|eg|net|org|io)[^\s]*)'
+        urls = re.findall(url_pattern, text, re.IGNORECASE)
+        
+        # فحص وجود كلمات مفتاحية
+        keywords = ['instapay', 'ipn.eg', 'ipn']
+        found_keyword = False
+        
+        for keyword in keywords:
+            if keyword.lower() in text.lower():
+                found_keyword = True
+                break
+        
+        if not found_keyword and not urls:
+            result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
+
+📍 **يجب إدخال رابط صحيح يحتوي على:**
+• instapay أو ipn.eg
+• رابط كامل أو سيتم إضافة https تلقائياً
+
+✅ **أمثلة صحيحة:**
+• `https://instapay.com/username`
+• `https://ipn.eg/S/ABC123`
+• `instapay.com/username`"""
+            return result
+        
+        # استخلاص أو بناء الرابط
+        cleaned_url = text.strip()
+        
+        # إضافة https إذا لم يكن موجود
+        if not cleaned_url.startswith('http'):
+            if 'instapay' in cleaned_url.lower():
+                cleaned_url = f"https://{cleaned_url}"
+            elif 'ipn' in cleaned_url.lower():
+                cleaned_url = f"https://{cleaned_url}"
+            else:
+                cleaned_url = f"https://instapay.com/{cleaned_url}"
+        
+        # النجاح
+        result['is_valid'] = True
+        result['cleaned_data'] = cleaned_url
+        
+        return result
+    
+    def record_failure(self, user_id: int):
+        """تسجيل محاولة فاشلة"""
+        self.failed_attempts[user_id] += 1
+        
+        if self.failed_attempts[user_id] >= self.MAX_FAILED_ATTEMPTS:
+            self.blocked_users[user_id] = datetime.now()
+            return True  # تم الحظر
+        
+        return False
+    
+    def reset_user_failures(self, user_id: int):
+        """إعادة تعيين المحاولات الفاشلة عند النجاح"""
+        self.failed_attempts[user_id] = 0
+        if user_id in self.blocked_users:
+            del self.blocked_users[user_id]
+    
+    def get_remaining_attempts(self, user_id: int) -> int:
+        """الحصول على عدد المحاولات المتبقية"""
+        return self.MAX_FAILED_ATTEMPTS - self.failed_attempts.get(user_id, 0)
+
+# إنشاء نظام التحقق من طرق الدفع
+payment_validation = PaymentValidationSystem()
+
 # ================================ قاعدة البيانات ================================
 class Database:
     """مدير قاعدة البيانات"""
@@ -555,6 +901,9 @@ class Database:
                 platform TEXT,
                 whatsapp TEXT,
                 payment_method TEXT,
+                payment_details TEXT,
+                payment_details_type TEXT,
+                payment_network TEXT,
                 phone TEXT,
                 payment_info TEXT,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -690,12 +1039,17 @@ class Database:
             # تحديث بيانات التسجيل
             cursor.execute('''
                 UPDATE registration_data
-                SET platform = ?, whatsapp = ?, payment_method = ?, phone = ?, payment_info = ?
+                SET platform = ?, whatsapp = ?, payment_method = ?, 
+                    payment_details = ?, payment_details_type = ?, payment_network = ?,
+                    phone = ?, payment_info = ?
                 WHERE user_id = ?
             ''', (
                 data.get('platform'),
                 data.get('whatsapp'),
                 data.get('payment_method'),
+                data.get('payment_details'),  # البيانات المشفرة
+                data.get('payment_details_type'),
+                data.get('payment_network'),
                 None,  # phone - لم يعد مطلوباً
                 None,  # payment_info - لم يعد مطلوباً
                 user_id
@@ -1175,14 +1529,286 @@ class SmartRegistrationHandler:
             return
 
         context.user_data['registration']['payment_method'] = payment_key
+        
+        # حفظ في قاعدة البيانات المؤقتة
+        self.db.save_temp_registration(
+            context.user_data['registration']['telegram_id'],
+            'payment_method_chosen',
+            ENTERING_PAYMENT_DETAILS,
+            context.user_data['registration']
+        )
+        
+        # عرض التعليمات حسب نوع طريقة الدفع
+        instructions = self.get_payment_instructions(payment_key)
+        
+        await smart_message_manager.update_current_message(
+            update, context,
+            instructions
+        )
+        
+        return ENTERING_PAYMENT_DETAILS
+    
+    def get_payment_instructions(self, payment_key: str) -> str:
+        """الحصول على التعليمات المناسبة لكل طريقة دفع"""
+        
+        if payment_key == 'vodafone_cash':
+            return """⭕️ **فودافون كاش**
 
-        # الذهاب مباشرة للتأكيد
+📱 **أدخل رقم فودافون كاش:**
+
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يبدأ بـ 010 فقط
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **مثال صحيح:** `01012345678`"""
+        
+        elif payment_key == 'etisalat_cash':
+            return """🟢 **اتصالات كاش**
+
+📱 **أدخل رقم اتصالات كاش:**
+
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يبدأ بـ 011 فقط
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **مثال صحيح:** `01112345678`"""
+        
+        elif payment_key == 'orange_cash':
+            return """🍊 **أورانج كاش**
+
+📱 **أدخل رقم أورانج كاش:**
+
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يبدأ بـ 012 فقط
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **مثال صحيح:** `01212345678`"""
+        
+        elif payment_key == 'we_cash':
+            return """🟣 **وي كاش**
+
+📱 **أدخل رقم وي كاش:**
+
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يبدأ بـ 015 فقط
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **مثال صحيح:** `01512345678`"""
+        
+        elif payment_key == 'bank_wallet':
+            return """🏦 **محفظة بنكية**
+
+📱 **أدخل رقم المحفظة البنكية:**
+
+📝 **القواعد:**
+• 11 رقم بالضبط
+• يقبل جميع الشبكات: 010/011/012/015
+• أرقام إنجليزية فقط (0-9)
+• بدون مسافات أو رموز
+
+✅ **أمثلة صحيحة:**
+• `01012345678` (فودافون)
+• `01112345678` (اتصالات)
+• `01212345678` (أورانج)
+• `01512345678` (وي)"""
+        
+        elif payment_key == 'telda':
+            return """💳 **تيلدا**
+
+💳 **أدخل رقم كارت تيلدا:**
+
+📝 **القواعد:**
+• 16 رقم بالضبط
+• أرقام فقط
+• يُسمح بالمسافات والشرطات (سيتم إزالتها تلقائياً)
+
+✅ **أمثلة صحيحة:**
+• `1234567890123456`
+• `1234-5678-9012-3456`
+• `1234 5678 9012 3456`"""
+        
+        elif payment_key == 'instapay':
+            return """🔗 **إنستا باي**
+
+🔗 **أدخل رابط إنستاباي:**
+
+📝 **القواعد:**
+• رابط صحيح يحتوي على instapay أو ipn.eg
+• يمكن إدخال الرابط كامل أو جزء منه
+• سيتم إضافة https:// تلقائياً إذا لم تكن موجودة
+
+✅ **أمثلة صحيحة:**
+• `https://instapay.com/username`
+• `https://ipn.eg/S/ABC123`
+• `instapay.com/username`
+• `username` (سيتم تحويله تلقائياً)"""
+        
+        return "طريقة دفع غير معروفة"
+    
+    async def handle_payment_details_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج إدخال بيانات طريقة الدفع مع التشفير"""
+        user_id = update.effective_user.id
+        payment_input = update.message.text.strip()
+        
+        # التحقق من وجود بيانات التسجيل
+        if 'registration' not in context.user_data or 'payment_method' not in context.user_data['registration']:
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
+                disable_previous=False
+            )
+            return ConversationHandler.END
+        
+        payment_method = context.user_data['registration']['payment_method']
+        
+        # 1. فحص الحظر
+        is_blocked, remaining_minutes = payment_validation.is_user_blocked(user_id)
+        if is_blocked:
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                f"""🚫 **أنت محظور مؤقتاً**
+
+⏰ **المدة المتبقية:** {remaining_minutes} دقيقة
+
+📝 **السبب:** تجاوز عدد المحاولات الخاطئة المسموح بها
+
+💡 **نصيحة:** تأكد من إدخال البيانات الصحيحة عند المحاولة مرة أخرى""",
+                disable_previous=False
+            )
+            return ENTERING_PAYMENT_DETAILS
+        
+        # 2. فحص معدل الطلبات
+        rate_ok, rate_message = payment_validation.check_rate_limit(user_id)
+        if not rate_ok:
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                rate_message,
+                disable_previous=False
+            )
+            return ENTERING_PAYMENT_DETAILS
+        
+        # 3. التحقق حسب نوع طريقة الدفع
+        validation_result = None
+        payment_type = None
+        
+        if payment_method in ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_cash', 'bank_wallet']:
+            validation_result = payment_validation.validate_wallet(payment_input, payment_method)
+            payment_type = 'wallet'
+        elif payment_method == 'telda':
+            validation_result = payment_validation.validate_telda(payment_input)
+            payment_type = 'card'
+        elif payment_method == 'instapay':
+            validation_result = payment_validation.validate_instapay(payment_input)
+            payment_type = 'link'
+        
+        # 4. معالجة النتيجة
+        if not validation_result['is_valid']:
+            # تسجيل المحاولة الفاشلة
+            was_blocked = payment_validation.record_failure(user_id)
+            remaining = payment_validation.get_remaining_attempts(user_id)
+            
+            # إضافة معلومات المحاولات المتبقية للرسالة
+            error_msg = validation_result['error_message']
+            
+            if was_blocked:
+                error_msg += f"""
+
+🚫 **تم حظرك مؤقتاً لمدة {payment_validation.BLOCK_DURATION_MINUTES} دقيقة**
+السبب: تجاوز عدد المحاولات الخاطئة"""
+            elif remaining > 0:
+                error_msg += f"""
+
+⚠️ **تحذير:** لديك {remaining} محاولات متبقية"""
+            
+            await smart_message_manager.send_new_active_message(
+                update, context,
+                error_msg,
+                disable_previous=False
+            )
+            
+            # تسجيل المحاولة في السجلات (بدون البيانات الحساسة)
+            logger.warning(f"محاولة فاشلة من المستخدم {user_id} لطريقة دفع: {payment_method}")
+            
+            return ENTERING_PAYMENT_DETAILS
+        
+        # 5. النجاح! إعادة تعيين المحاولات الفاشلة
+        payment_validation.reset_user_failures(user_id)
+        
+        # 6. تشفير البيانات الحساسة
+        encrypted_data = encryption_system.encrypt(validation_result['cleaned_data'])
+        
+        # 7. حفظ البيانات المشفرة
+        context.user_data['registration']['payment_details'] = encrypted_data
+        context.user_data['registration']['payment_details_type'] = payment_type
+        
+        if payment_type == 'wallet':
+            context.user_data['registration']['payment_network'] = validation_result.get('network', '')
+        
+        # 8. حفظ في قاعدة البيانات المؤقتة
+        try:
+            self.db.save_temp_registration(
+                context.user_data['registration']['telegram_id'],
+                'payment_details_entered',
+                ConversationHandler.END,
+                context.user_data['registration']
+            )
+        except Exception as e:
+            logger.error(f"Error saving temp registration: {e}")
+        
+        # 9. إعداد رسالة النجاح
+        payment_name = PAYMENT_METHODS[payment_method]['name']
+        
+        if payment_type == 'wallet':
+            success_message = f"""✅ **تم حفظ {payment_name}!**
+
+📱 **الرقم:** `{validation_result['cleaned_data']}`
+🌐 **الشبكة:** {validation_result.get('network', '')}
+🔒 **البيانات محمية بالتشفير**
+
+━━━━━━━━━━━━━━━━"""
+        elif payment_type == 'card':
+            # عرض آخر 4 أرقام فقط من الكارت
+            card_display = f"****-****-****-{validation_result['cleaned_data'][-4:]}"
+            success_message = f"""✅ **تم حفظ كارت تيلدا!**
+
+💳 **النوع:** تيلدا
+💳 **الكارت:** `{card_display}`
+🔒 **البيانات محمية بالتشفير**
+
+━━━━━━━━━━━━━━━━"""
+        elif payment_type == 'link':
+            success_message = f"""✅ **تم حفظ رابط إنستاباي!**
+
+🔗 **الرابط:** `{validation_result['cleaned_data']}`
+🔒 **البيانات محمية بالتشفير**
+
+━━━━━━━━━━━━━━━━"""
+        
+        # 10. إرسال رسالة النجاح ثم الانتقال للتأكيد النهائي
+        await smart_message_manager.send_new_active_message(
+            update, context,
+            success_message,
+            choice_made=f"{payment_name}: تم الحفظ"
+        )
+        
+        # تسجيل النجاح (بدون البيانات الحساسة)
+        logger.info(f"تم حفظ بيانات دفع للمستخدم {user_id}: نوع {payment_method}")
+        
+        # الانتقال للتأكيد النهائي
         return await self.show_confirmation(update, context)
 
 
 
     async def show_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """عرض التأكيد والحفظ التلقائي"""
+        """عرض التأكيد والحفظ التلقائي مع فك تشفير البيانات"""
         reg_data = context.user_data['registration']
         telegram_id = reg_data['telegram_id']
         
@@ -1200,7 +1826,34 @@ class SmartRegistrationHandler:
 
         if success:
             platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
-            payment = PAYMENT_METHODS.get(reg_data.get('payment_method'), {}).get('name', 'غير محدد')
+            payment_method = reg_data.get('payment_method', '')
+            payment_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'غير محدد')
+            
+            # فك تشفير بيانات الدفع إذا كانت موجودة
+            payment_details_display = ""
+            if 'payment_details' in reg_data:
+                try:
+                    decrypted_data = encryption_system.decrypt(reg_data['payment_details'])
+                    payment_type = reg_data.get('payment_details_type', '')
+                    
+                    if payment_type == 'wallet':
+                        network = reg_data.get('payment_network', '')
+                        payment_details_display = f"""
+💰 **بيانات الدفع:**
+• الرقم: `{decrypted_data}`
+• الشبكة: {network}"""
+                    elif payment_type == 'card':
+                        # عرض آخر 4 أرقام فقط
+                        card_display = f"****-****-****-{decrypted_data[-4:]}"
+                        payment_details_display = f"""
+💰 **بيانات الدفع:**
+• الكارت: `{card_display}`"""
+                    elif payment_type == 'link':
+                        payment_details_display = f"""
+💰 **بيانات الدفع:**
+• الرابط: `{decrypted_data}`"""
+                except:
+                    payment_details_display = ""
             
             # رسالة النجاح مع اسم المستخدم ومعرف التليجرام
             success_message = f"""
@@ -1210,7 +1863,7 @@ class SmartRegistrationHandler:
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
 📱 واتساب: {reg_data.get('whatsapp', 'غير محدد')}
-💳 طريقة الدفع: {payment}
+💳 طريقة الدفع: {payment_name}{payment_details_display}
 ━━━━━━━━━━━━━━━━
 
 👤 **اسم المستخدم:** {username_display}
@@ -1649,6 +2302,12 @@ class FC26SmartBot:
                     CallbackQueryHandler(
                         self.registration_handler.handle_payment_choice,
                         pattern="^payment_"
+                    )
+                ],
+                ENTERING_PAYMENT_DETAILS: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self.registration_handler.handle_payment_details_input
                     )
                 ]
             },
