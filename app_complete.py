@@ -591,34 +591,34 @@ class PaymentValidationSystem:
             'vodafone_cash': {
                 'type': 'wallet',
                 'length': 11,
-                'prefix': ['010'],
+                'prefix': ['010', '011', '012', '015'],
                 'name': 'فودافون كاش',
                 'example': '01012345678',
-                'network': 'فودافون'
+                'network': 'جميع الشبكات'
             },
             'etisalat_cash': {
                 'type': 'wallet',
                 'length': 11,
-                'prefix': ['011'],
+                'prefix': ['010', '011', '012', '015'],
                 'name': 'اتصالات كاش',
                 'example': '01112345678',
-                'network': 'اتصالات'
+                'network': 'جميع الشبكات'
             },
             'orange_cash': {
                 'type': 'wallet',
                 'length': 11,
-                'prefix': ['012'],
+                'prefix': ['010', '011', '012', '015'],
                 'name': 'أورانج كاش',
                 'example': '01212345678',
-                'network': 'أورانج'
+                'network': 'جميع الشبكات'
             },
             'we_cash': {
                 'type': 'wallet',
                 'length': 11,
-                'prefix': ['015'],
+                'prefix': ['010', '011', '012', '015'],
                 'name': 'وي كاش',
                 'example': '01512345678',
-                'network': 'وي'
+                'network': 'جميع الشبكات'
             },
             'bank_wallet': {
                 'type': 'wallet',
@@ -790,7 +790,7 @@ class PaymentValidationSystem:
         return result
     
     def validate_instapay(self, text: str) -> Dict[str, Any]:
-        """التحقق من رابط إنستاباي واستخلاص الرابط من النص"""
+        """التحقق من رابط إنستاباي - يقبل الروابط فقط"""
         result = {
             'is_valid': False,
             'cleaned_data': '',
@@ -800,73 +800,32 @@ class PaymentValidationSystem:
         # تنظيف النص
         text = text.strip()
         
-        # البحث عن @ لاستخلاص اسم المستخدم (مثل senioraa@instapay)
-        if '@' in text:
-            # استخلاص الجزء قبل @ كاسم مستخدم
-            parts = text.split('@')
-            if len(parts) >= 2:
-                username = parts[0].strip()
-                domain_part = parts[1].strip().lower()
-                
-                # التحقق من أن الجزء بعد @ يحتوي على instapay
-                if 'instapay' in domain_part and username:
-                    # تحويل إلى رابط صحيح
-                    result['is_valid'] = True
-                    result['cleaned_data'] = f"https://instapay.com/{username}"
-                    return result
-        
-        # البحث عن روابط instapay أو ipn
-        # أولاً نبحث عن أي رابط يحتوي على instapay أو ipn
-        instapay_pattern = r'(?:https?://)?(?:www\.)?([a-zA-Z0-9\-\.]*(?:instapay|ipn)[a-zA-Z0-9\-\.]*\.[a-zA-Z]{2,}[^\s]*)'
-        matches = re.findall(instapay_pattern, text, re.IGNORECASE)
-        
-        if matches:
-            # وجدنا رابط instapay
-            link = matches[0]
-            if not link.startswith('http'):
-                link = f"https://{link}"
-            result['is_valid'] = True
-            result['cleaned_data'] = link
-            return result
-        
-        # إذا لم نجد رابط، نبحث عن اسم مستخدم فقط
-        # مثل: senioraa أو أي نص يبدو كاسم مستخدم
-        username_pattern = r'^[a-zA-Z0-9_\-\.]+$'
-        
-        # إزالة أي مسافات أو رموز غير ضرورية
-        cleaned_text = re.sub(r'[^\w\-\.]', '', text)
-        
-        if cleaned_text and re.match(username_pattern, cleaned_text):
-            # يبدو كاسم مستخدم، نضيفه لـ instapay
-            result['is_valid'] = True
-            result['cleaned_data'] = f"https://instapay.com/{cleaned_text}"
-            return result
-        
-        # فحص وجود كلمات مفتاحية في النص الأصلي
-        keywords = ['instapay', 'ipn.eg', 'ipn']
-        for keyword in keywords:
-            if keyword.lower() in text.lower():
-                # يحتوي على كلمة مفتاحية، نحاول استخلاص الرابط
-                # نأخذ النص كما هو ونضيف https إذا لزم
-                if not text.startswith('http'):
-                    text = f"https://{text}"
+        # التحقق من أن النص يبدأ بـ http أو https
+        if text.startswith(('http://', 'https://')):
+            # التحقق من أن الرابط يحتوي على instapay أو ipn
+            if any(keyword in text.lower() for keyword in ['instapay', 'ipn.eg', 'ipn']):
                 result['is_valid'] = True
                 result['cleaned_data'] = text
                 return result
+        # إذا لم يبدأ بـ http، نتحقق من أنه يحتوي على instapay أو ipn
+        elif any(keyword in text.lower() for keyword in ['instapay.com', 'ipn.eg']):
+            # نضيف https:// للرابط
+            result['is_valid'] = True
+            result['cleaned_data'] = f"https://{text}"
+            return result
         
         # فشل التحقق
-        result['error_message'] = """❌ **بيانات إنستاباي غير صحيحة**
+        result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
 
-📍 **يمكنك إدخال:**
-• اسم المستخدم مباشرة (مثل: senioraa)
-• اسم المستخدم مع @ (مثل: senioraa@instapay)
-• الرابط الكامل (مثل: https://instapay.com/username)
+📍 **يجب إدخال رابط كامل فقط**
+• لا يُقبل اسم المستخدم بدون رابط
+• يجب أن يحتوي على instapay أو ipn.eg
 
 ✅ **أمثلة صحيحة:**
-• `senioraa` ← سيصبح https://instapay.com/senioraa
-• `senioraa@instapay` ← سيصبح https://instapay.com/senioraa
+• `https://ipn.eg/S/username/instapay/ABC123`
 • `https://instapay.com/username`
-• `https://ipn.eg/S/ABC123`"""
+• `ipn.eg/S/ABC123`
+• `instapay.com/username`"""
         
         return result
     
@@ -1617,11 +1576,11 @@ class SmartRegistrationHandler:
         if payment_key == 'vodafone_cash':
             return """⭕️ **فودافون كاش**
 
-📱 **أدخل رقم فودافون كاش:**
+📱 **أدخل رقم:**
 
 📝 **القواعد:**
 • 11 رقم بالضبط
-• يبدأ بـ 010 فقط
+• يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
 
@@ -1630,11 +1589,11 @@ class SmartRegistrationHandler:
         elif payment_key == 'etisalat_cash':
             return """🟢 **اتصالات كاش**
 
-📱 **أدخل رقم اتصالات كاش:**
+📱 **أدخل رقم:**
 
 📝 **القواعد:**
 • 11 رقم بالضبط
-• يبدأ بـ 011 فقط
+• يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
 
@@ -1643,11 +1602,11 @@ class SmartRegistrationHandler:
         elif payment_key == 'orange_cash':
             return """🍊 **أورانج كاش**
 
-📱 **أدخل رقم أورانج كاش:**
+📱 **أدخل رقم:**
 
 📝 **القواعد:**
 • 11 رقم بالضبط
-• يبدأ بـ 012 فقط
+• يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
 
@@ -1656,11 +1615,11 @@ class SmartRegistrationHandler:
         elif payment_key == 'we_cash':
             return """🟣 **وي كاش**
 
-📱 **أدخل رقم وي كاش:**
+📱 **أدخل رقم:**
 
 📝 **القواعد:**
 • 11 رقم بالضبط
-• يبدأ بـ 015 فقط
+• يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
 
@@ -1704,19 +1663,18 @@ class SmartRegistrationHandler:
         elif payment_key == 'instapay':
             return """🔗 **إنستا باي**
 
-🔗 **أدخل رابط إنستاباي:**
+🔗 **أدخل رابط إنستاباي كامل:**
 
 📝 **القواعد:**
-• يمكن إدخال اسم المستخدم مباشرة
-• أو username@instapay
-• أو الرابط الكامل
-• سيتم التحويل تلقائياً لرابط صحيح
+• يجب إدخال رابط كامل فقط
+• لا يُقبل اسم المستخدم بدون رابط
+• يجب أن يحتوي على instapay أو ipn.eg
 
 ✅ **أمثلة صحيحة:**
-• `senioraa` (سيصبح https://instapay.com/senioraa)
-• `senioraa@instapay` (سيصبح https://instapay.com/senioraa)
+• `https://ipn.eg/S/username/instapay/ABC123`
 • `https://instapay.com/username`
-• `https://ipn.eg/S/ABC123`"""
+• `ipn.eg/S/ABC123`
+• `instapay.com/username`"""
         
         return "طريقة دفع غير معروفة"
     
