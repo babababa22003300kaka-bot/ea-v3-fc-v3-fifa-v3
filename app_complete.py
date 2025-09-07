@@ -67,10 +67,13 @@
 • ✅ صلاحيات الأدمن المحمية
 • ✅ تعديلات أزرار الأدمن (حذف حسابي + إزالة الحذف من المستخدمين)
 • ✅ تعليقات توضيحية للمناطق المحظورة في بداية الملف
+• ✅ زر تعديل الملف الشخصي (منصة فقط حالياً)
+• ✅ تحسين رسالة الخطأ للمستخدمين العاديين
+• ✅ تعديل الواتساب بنظام تفاعلي كامل من البداية للنهاية
+• ✅ تعديل طريقة الدفع بشكل منفصل وتفاعلي
 
 ## 🔄 الميزات قيد الاختبار (منتظر تأكيد المطور):
-• ⏳ زر تعديل الملف الشخصي (منصة/واتساب/دفع)
-• ⏳ تحسين رسالة الخطأ للمستخدمين العاديين
+• ⏳ التأكد من حفظ التعديلات بشكل صحيح
 
 ## 📝 آخر التعديلات:
 • تاريخ: 2024-12-24
@@ -1357,6 +1360,74 @@ class Database:
         else:
             return 'مبتدئ 🌱'
 
+    def update_user_data(self, telegram_id: int, update_data: dict) -> bool:
+        """تحديث بيانات المستخدم"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # الحصول على user_id
+            cursor.execute('SELECT user_id FROM users WHERE telegram_id = ?', (telegram_id,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False
+            
+            user_id = user['user_id']
+            
+            # تحديث بيانات التسجيل
+            if 'platform' in update_data:
+                cursor.execute('''
+                    UPDATE registration_data
+                    SET platform = ?
+                    WHERE user_id = ?
+                ''', (update_data['platform'], user_id))
+            
+            if 'whatsapp' in update_data:
+                cursor.execute('''
+                    UPDATE registration_data
+                    SET whatsapp = ?, whatsapp_network = ?
+                    WHERE user_id = ?
+                ''', (
+                    update_data.get('whatsapp'),
+                    update_data.get('whatsapp_network', ''),
+                    user_id
+                ))
+            
+            if 'payment_method' in update_data:
+                cursor.execute('''
+                    UPDATE registration_data
+                    SET payment_method = ?
+                    WHERE user_id = ?
+                ''', (update_data['payment_method'], user_id))
+            
+            if 'payment_details' in update_data:
+                cursor.execute('''
+                    UPDATE registration_data
+                    SET payment_details = ?, payment_details_type = ?, payment_network = ?
+                    WHERE user_id = ?
+                ''', (
+                    update_data.get('payment_details'),
+                    update_data.get('payment_details_type', ''),
+                    update_data.get('payment_network', ''),
+                    user_id
+                ))
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            logger.error(f"خطأ في تحديث بيانات المستخدم: {e}")
+            return False
+    
+    def update_user_platform(self, telegram_id: int, platform: str) -> bool:
+        """تحديث منصة المستخدم"""
+        return self.update_user_data(telegram_id, {'platform': platform})
+    
     def delete_user_account(self, telegram_id: int) -> bool:
         """حذف حساب المستخدم"""
         conn = self.get_connection()
@@ -1560,31 +1631,50 @@ class SmartRegistrationHandler:
             return
         
         platform_name = GAMING_PLATFORMS[platform_key]['name']
-
-        # التحقق من وجود بيانات التسجيل
-        if 'registration' not in context.user_data:
-            context.user_data['registration'] = {
-                'telegram_id': query.from_user.id
-            }
         
-        # التحقق من عدم تكرار نفس الاختيار
-        if context.user_data['registration'].get('platform') == platform_key:
-            logger.debug(f"تجاهل اختيار منصة مكرر: {platform_key}")
-            return
+        # التحقق من وضع التعديل
+        is_editing = context.user_data.get('editing_mode') == 'whatsapp_full'
+        
+        if is_editing:
+            # في وضع التعديل - نحفظ في edit_registration
+            if 'edit_registration' not in context.user_data:
+                context.user_data['edit_registration'] = {
+                    'telegram_id': query.from_user.id,
+                    'is_editing': True
+                }
+            
+            context.user_data['edit_registration']['platform'] = platform_key
+            
+            # عرض رسالة إدخال رقم الواتساب الجديد
+            await smart_message_manager.update_current_message(
+                update, context,
+                f"✅ تم اختيار: {platform_name}\n\n📱 **أدخل رقم الواتساب الجديد:**\n\n" + MESSAGES['enter_whatsapp']
+            )
+        else:
+            # في وضع التسجيل العادي
+            if 'registration' not in context.user_data:
+                context.user_data['registration'] = {
+                    'telegram_id': query.from_user.id
+                }
+            
+            # التحقق من عدم تكرار نفس الاختيار
+            if context.user_data['registration'].get('platform') == platform_key:
+                logger.debug(f"تجاهل اختيار منصة مكرر: {platform_key}")
+                return
 
-        context.user_data['registration']['platform'] = platform_key
+            context.user_data['registration']['platform'] = platform_key
 
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'platform_chosen', ENTERING_WHATSAPP,
-            context.user_data['registration']
-        )
+            self.db.save_temp_registration(
+                context.user_data['registration']['telegram_id'],
+                'platform_chosen', ENTERING_WHATSAPP,
+                context.user_data['registration']
+            )
 
-        # استخدام update_current_message لتحديث الرسالة الحالية بدلاً من إرسال جديدة
-        await smart_message_manager.update_current_message(
-            update, context,
-            f"✅ تم اختيار: {platform_name}\n\n" + MESSAGES['enter_whatsapp']
-        )
+            # استخدام update_current_message لتحديث الرسالة الحالية بدلاً من إرسال جديدة
+            await smart_message_manager.update_current_message(
+                update, context,
+                f"✅ تم اختيار: {platform_name}\n\n" + MESSAGES['enter_whatsapp']
+            )
 
         return ENTERING_WHATSAPP
 
@@ -1668,29 +1758,43 @@ class SmartRegistrationHandler:
         # 5. النجاح! إعادة تعيين المحاولات الفاشلة
         whatsapp_security.reset_user_failures(user_id)
         
-        # التأكد من وجود registration في context
-        if 'registration' not in context.user_data:
-            context.user_data['registration'] = {
-                'telegram_id': user_id
-            }
-        
         # حفظ الرقم المنظف في السياق
         cleaned_number = validation['cleaned_number']
         network_info = validation['network_info']
         
-        context.user_data['registration']['whatsapp'] = cleaned_number
-        context.user_data['registration']['whatsapp_network'] = network_info['name']
+        # التحقق من وضع التعديل
+        is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
         
-        # حفظ في قاعدة البيانات المؤقتة
-        try:
-            self.db.save_temp_registration(
-                context.user_data['registration']['telegram_id'],
-                'whatsapp_entered',
-                CHOOSING_PAYMENT,
-                context.user_data['registration']
-            )
-        except Exception as e:
-            logger.error(f"Error saving temp registration: {e}")
+        if is_editing:
+            # في وضع التعديل - نحفظ في edit_registration
+            if 'edit_registration' not in context.user_data:
+                context.user_data['edit_registration'] = {
+                    'telegram_id': user_id,
+                    'is_editing': True
+                }
+            
+            context.user_data['edit_registration']['whatsapp'] = cleaned_number
+            context.user_data['edit_registration']['whatsapp_network'] = network_info['name']
+        else:
+            # في وضع التسجيل العادي
+            if 'registration' not in context.user_data:
+                context.user_data['registration'] = {
+                    'telegram_id': user_id
+                }
+            
+            context.user_data['registration']['whatsapp'] = cleaned_number
+            context.user_data['registration']['whatsapp_network'] = network_info['name']
+            
+            # حفظ في قاعدة البيانات المؤقتة
+            try:
+                self.db.save_temp_registration(
+                    context.user_data['registration']['telegram_id'],
+                    'whatsapp_entered',
+                    CHOOSING_PAYMENT,
+                    context.user_data['registration']
+                )
+            except Exception as e:
+                logger.error(f"Error saving temp registration: {e}")
         
         # رسالة النجاح المفصلة
         success_message = f"""✅ **تم حفظ رقم الواتساب بنجاح!**
@@ -1735,25 +1839,41 @@ class SmartRegistrationHandler:
         
         payment_name = PAYMENT_METHODS[payment_key]['name']
         
-        # التحقق من وجود بيانات التسجيل
-        if 'registration' not in context.user_data:
-            await query.answer("❌ يجب البدء من جديد", show_alert=True)
-            return ConversationHandler.END
+        # التحقق من وضع التعديل
+        is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
         
-        # التحقق من عدم تكرار نفس الاختيار
-        if context.user_data['registration'].get('payment_method') == payment_key:
-            logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
-            return
+        if is_editing:
+            # في وضع التعديل - نحفظ في edit_registration
+            if 'edit_registration' not in context.user_data:
+                await query.answer("❌ يجب البدء من جديد", show_alert=True)
+                return ConversationHandler.END
+            
+            # التحقق من عدم تكرار نفس الاختيار
+            if context.user_data['edit_registration'].get('payment_method') == payment_key:
+                logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
+                return
+            
+            context.user_data['edit_registration']['payment_method'] = payment_key
+        else:
+            # في وضع التسجيل العادي
+            if 'registration' not in context.user_data:
+                await query.answer("❌ يجب البدء من جديد", show_alert=True)
+                return ConversationHandler.END
+            
+            # التحقق من عدم تكرار نفس الاختيار
+            if context.user_data['registration'].get('payment_method') == payment_key:
+                logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
+                return
 
-        context.user_data['registration']['payment_method'] = payment_key
-        
-        # حفظ في قاعدة البيانات المؤقتة
-        self.db.save_temp_registration(
-            context.user_data['registration']['telegram_id'],
-            'payment_method_chosen',
-            ENTERING_PAYMENT_DETAILS,
-            context.user_data['registration']
-        )
+            context.user_data['registration']['payment_method'] = payment_key
+            
+            # حفظ في قاعدة البيانات المؤقتة
+            self.db.save_temp_registration(
+                context.user_data['registration']['telegram_id'],
+                'payment_method_chosen',
+                ENTERING_PAYMENT_DETAILS,
+                context.user_data['registration']
+            )
         
         # عرض التعليمات حسب نوع طريقة الدفع
         instructions = self.get_payment_instructions(payment_key)
@@ -1878,16 +1998,31 @@ class SmartRegistrationHandler:
         user_id = update.effective_user.id
         payment_input = update.message.text.strip()
         
-        # التحقق من وجود بيانات التسجيل
-        if 'registration' not in context.user_data or 'payment_method' not in context.user_data['registration']:
-            await smart_message_manager.send_new_active_message(
-                update, context,
-                "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
-                disable_previous=False
-            )
-            return ConversationHandler.END
+        # التحقق من وضع التعديل
+        is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
         
-        payment_method = context.user_data['registration']['payment_method']
+        if is_editing:
+            # في وضع التعديل
+            if 'edit_registration' not in context.user_data or 'payment_method' not in context.user_data['edit_registration']:
+                await smart_message_manager.send_new_active_message(
+                    update, context,
+                    "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
+                    disable_previous=False
+                )
+                return ConversationHandler.END
+            
+            payment_method = context.user_data['edit_registration']['payment_method']
+        else:
+            # في وضع التسجيل العادي
+            if 'registration' not in context.user_data or 'payment_method' not in context.user_data['registration']:
+                await smart_message_manager.send_new_active_message(
+                    update, context,
+                    "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
+                    disable_previous=False
+                )
+                return ConversationHandler.END
+            
+            payment_method = context.user_data['registration']['payment_method']
         
         # 1. فحص الحظر
         is_blocked, remaining_minutes = payment_validation.is_user_blocked(user_id)
@@ -1965,23 +2100,31 @@ class SmartRegistrationHandler:
         # 6. تشفير البيانات الحساسة
         encrypted_data = encryption_system.encrypt(validation_result['cleaned_data'])
         
-        # 7. حفظ البيانات المشفرة
-        context.user_data['registration']['payment_details'] = encrypted_data
-        context.user_data['registration']['payment_details_type'] = payment_type
-        
-        if payment_type == 'wallet':
-            context.user_data['registration']['payment_network'] = validation_result.get('network', '')
-        
-        # 8. حفظ في قاعدة البيانات المؤقتة
-        try:
-            self.db.save_temp_registration(
-                context.user_data['registration']['telegram_id'],
-                'payment_details_entered',
-                ConversationHandler.END,
-                context.user_data['registration']
-            )
-        except Exception as e:
-            logger.error(f"Error saving temp registration: {e}")
+        if is_editing:
+            # في وضع التعديل - نحفظ في edit_registration
+            context.user_data['edit_registration']['payment_details'] = encrypted_data
+            context.user_data['edit_registration']['payment_details_type'] = payment_type
+            
+            if payment_type == 'wallet':
+                context.user_data['edit_registration']['payment_network'] = validation_result.get('network', '')
+        else:
+            # في وضع التسجيل العادي
+            context.user_data['registration']['payment_details'] = encrypted_data
+            context.user_data['registration']['payment_details_type'] = payment_type
+            
+            if payment_type == 'wallet':
+                context.user_data['registration']['payment_network'] = validation_result.get('network', '')
+            
+            # حفظ في قاعدة البيانات المؤقتة
+            try:
+                self.db.save_temp_registration(
+                    context.user_data['registration']['telegram_id'],
+                    'payment_details_entered',
+                    ConversationHandler.END,
+                    context.user_data['registration']
+                )
+            except Exception as e:
+                logger.error(f"Error saving temp registration: {e}")
         
         # 9. إعداد رسالة النجاح
         payment_name = PAYMENT_METHODS[payment_method]['name']
@@ -2023,8 +2166,45 @@ class SmartRegistrationHandler:
 
     async def show_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض التأكيد والحفظ التلقائي مع فك تشفير البيانات"""
-        reg_data = context.user_data['registration']
-        telegram_id = reg_data['telegram_id']
+        # التحقق من وضع التعديل
+        is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
+        
+        if is_editing:
+            # في وضع التعديل - نحدث البيانات في قاعدة البيانات
+            reg_data = context.user_data['edit_registration']
+            telegram_id = reg_data['telegram_id']
+            
+            # تحديث البيانات في قاعدة البيانات
+            update_data = {}
+            
+            if 'platform' in reg_data:
+                update_data['platform'] = reg_data['platform']
+            
+            if 'whatsapp' in reg_data:
+                update_data['whatsapp'] = reg_data['whatsapp']
+                if 'whatsapp_network' in reg_data:
+                    update_data['whatsapp_network'] = reg_data['whatsapp_network']
+            
+            if 'payment_method' in reg_data:
+                update_data['payment_method'] = reg_data['payment_method']
+            
+            if 'payment_details' in reg_data:
+                update_data['payment_details'] = reg_data['payment_details']
+                update_data['payment_details_type'] = reg_data.get('payment_details_type', '')
+                if 'payment_network' in reg_data:
+                    update_data['payment_network'] = reg_data['payment_network']
+            
+            # تحديث البيانات في قاعدة البيانات
+            success = self.db.update_user_data(telegram_id, update_data)
+            
+            # مسح وضع التعديل
+            context.user_data.pop('editing_mode', None)
+            context.user_data.pop('edit_registration', None)
+        else:
+            # في وضع التسجيل العادي
+            reg_data = context.user_data['registration']
+            telegram_id = reg_data['telegram_id']
+            success = self.db.complete_registration(telegram_id, reg_data)
         
         # الحصول على اسم المستخدم
         if update.callback_query:
@@ -2035,13 +2215,20 @@ class SmartRegistrationHandler:
         # إضافة @ للمستخدم إذا كان موجود
         username_display = f"@{username}" if username else "غير محدد"
 
-        # حفظ البيانات مباشرة
-        success = self.db.complete_registration(telegram_id, reg_data)
-
         if success:
-            platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
-            payment_method = reg_data.get('payment_method', '')
-            payment_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'غير محدد')
+            # الحصول على البيانات المحدثة من قاعدة البيانات
+            updated_user_data = self.db.get_user_data(telegram_id)
+            
+            if updated_user_data:
+                platform = GAMING_PLATFORMS.get(updated_user_data.get('platform'), {}).get('name', 'غير محدد')
+                payment_method = updated_user_data.get('payment_method', '')
+                payment_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'غير محدد')
+                whatsapp = updated_user_data.get('whatsapp', 'غير محدد')
+            else:
+                platform = GAMING_PLATFORMS.get(reg_data.get('platform'), {}).get('name', 'غير محدد')
+                payment_method = reg_data.get('payment_method', '')
+                payment_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'غير محدد')
+                whatsapp = reg_data.get('whatsapp', 'غير محدد')
             
             # فك تشفير بيانات الدفع إذا كانت موجودة
             payment_details_display = ""
@@ -2066,14 +2253,31 @@ class SmartRegistrationHandler:
                 except:
                     payment_details_display = ""
             
-            # رسالة النجاح مع اسم المستخدم ومعرف التليجرام
-            success_message = f"""
+            # رسالة النجاح - مختلفة حسب وضع التعديل
+            if is_editing:
+                success_message = f"""
+✅ **تم تحديث بياناتك بنجاح!**
+
+📊 **ملخص البيانات المحدثة:**
+━━━━━━━━━━━━━━━━
+🎮 المنصة: {platform}
+📱 واتساب: {whatsapp}
+💳 طريقة الدفع: {payment_name}{payment_details_display}
+━━━━━━━━━━━━━━━━
+
+👤 **اسم المستخدم:** {username_display}
+🆔 **معرف التليجرام:** `{telegram_id}`
+
+✨ تم تحديث ملفك الشخصي بنجاح!
+"""
+            else:
+                success_message = f"""
 ✅ **تم حفظ بياناتك بنجاح!**
 
 📊 **ملخص البيانات المحفوظة:**
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
-📱 واتساب: {reg_data.get('whatsapp', 'غير محدد')}
+📱 واتساب: {whatsapp}
 💳 طريقة الدفع: {payment_name}{payment_details_display}
 ━━━━━━━━━━━━━━━━
 
@@ -2598,6 +2802,123 @@ class FC26SmartBot:
                 update, context, message,
                 reply_markup=reply_markup
             )
+        
+        elif query.data == "edit_platform":
+            # عرض خيارات المنصات للتعديل
+            message = "🎮 **اختر المنصة الجديدة:**"
+            keyboard = []
+            
+            for key, platform in GAMING_PLATFORMS.items():
+                keyboard.append([
+                    InlineKeyboardButton(
+                        f"{platform['emoji']} {platform['name']}",
+                        callback_data=f"update_platform_{key}"
+                    )
+                ])
+            
+            keyboard.append([InlineKeyboardButton("🔙 رجوع", callback_data="edit_profile")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await smart_message_manager.update_current_message(
+                update, context, message,
+                reply_markup=reply_markup
+            )
+        
+        elif query.data == "edit_whatsapp":
+            # بدء عملية تعديل الواتساب بشكل تفاعلي كامل
+            telegram_id = query.from_user.id
+            
+            # الحصول على بيانات المستخدم الحالية
+            user_data = self.db.get_user_data(telegram_id)
+            if not user_data:
+                await query.answer("❌ لم يتم العثور على بياناتك", show_alert=True)
+                return
+            
+            # بدء عملية تعديل تفاعلية - نبدأ من اختيار المنصة
+            context.user_data['editing_mode'] = 'whatsapp_full'
+            context.user_data['edit_registration'] = {
+                'telegram_id': telegram_id,
+                'is_editing': True,
+                'edit_type': 'whatsapp_full'
+            }
+            
+            # عرض رسالة البداية مع اختيار المنصة
+            message = """
+📱 **تعديل رقم الواتساب وطريقة الدفع**
+━━━━━━━━━━━━━━━━
+
+سنبدأ معك من البداية لتحديث بياناتك.
+
+🎮 **أولاً: اختر منصة الألعاب:**
+"""
+            reply_markup = Keyboards.get_platform_keyboard()
+            
+            await smart_message_manager.update_current_message(
+                update, context, message,
+                reply_markup=reply_markup
+            )
+            
+            return CHOOSING_PLATFORM
+        
+        elif query.data == "edit_payment":
+            # بدء عملية تعديل طريقة الدفع بشكل تفاعلي
+            telegram_id = query.from_user.id
+            
+            # الحصول على بيانات المستخدم الحالية
+            user_data = self.db.get_user_data(telegram_id)
+            if not user_data:
+                await query.answer("❌ لم يتم العثور على بياناتك", show_alert=True)
+                return
+            
+            # بدء عملية تعديل طريقة الدفع فقط
+            context.user_data['editing_mode'] = 'payment_only'
+            context.user_data['edit_registration'] = {
+                'telegram_id': telegram_id,
+                'platform': user_data.get('platform'),
+                'whatsapp': user_data.get('whatsapp'),  # نحتفظ بالواتساب الحالي
+                'is_editing': True,
+                'edit_type': 'payment_only'
+            }
+            
+            # الانتقال مباشرة لاختيار طريقة الدفع
+            message = """
+💳 **تعديل طريقة الدفع**
+━━━━━━━━━━━━━━━━
+
+اختر طريقة الدفع الجديدة:
+"""
+            reply_markup = Keyboards.get_payment_keyboard()
+            
+            await smart_message_manager.update_current_message(
+                update, context, message,
+                reply_markup=reply_markup
+            )
+            
+            return CHOOSING_PAYMENT
+        
+        elif query.data.startswith("update_platform_"):
+            # معالج تحديث المنصة
+            platform_key = query.data.replace("update_platform_", "")
+            telegram_id = query.from_user.id
+            
+            if platform_key in GAMING_PLATFORMS:
+                # تحديث المنصة في قاعدة البيانات
+                success = self.db.update_user_platform(telegram_id, platform_key)
+                
+                if success:
+                    platform_name = GAMING_PLATFORMS[platform_key]['name']
+                    await smart_message_manager.update_current_message(
+                        update, context,
+                        f"✅ تم تحديث المنصة إلى: **{platform_name}**\n\nيتم العودة للملف الشخصي..."
+                    )
+                    
+                    # العودة للملف الشخصي بعد ثانيتين
+                    await asyncio.sleep(2)
+                    return await self.profile(update, context)
+                else:
+                    await query.answer("❌ فشل تحديث المنصة", show_alert=True)
+            else:
+                await query.answer("❌ منصة غير صالحة", show_alert=True)
 
     async def admin_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """لوحة تحكم الأدمن"""
@@ -3144,6 +3465,48 @@ class FC26SmartBot:
             ],
             allow_reentry=True
         )
+    
+    def get_edit_conversation(self):
+        """معالج المحادثة للتعديل"""
+        return ConversationHandler(
+            entry_points=[
+                CallbackQueryHandler(
+                    self.handle_edit_profile,
+                    pattern="^(edit_whatsapp|edit_payment)$"
+                )
+            ],
+            states={
+                CHOOSING_PLATFORM: [
+                    CallbackQueryHandler(
+                        self.registration_handler.handle_platform_choice,
+                        pattern="^platform_"
+                    )
+                ],
+                ENTERING_WHATSAPP: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self.registration_handler.handle_whatsapp_input
+                    )
+                ],
+                CHOOSING_PAYMENT: [
+                    CallbackQueryHandler(
+                        self.registration_handler.handle_payment_choice,
+                        pattern="^payment_"
+                    )
+                ],
+                ENTERING_PAYMENT_DETAILS: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self.registration_handler.handle_payment_details_input
+                    )
+                ]
+            },
+            fallbacks=[
+                CommandHandler('cancel', self.registration_handler.cancel),
+                CommandHandler('profile', self.profile_command)
+            ],
+            allow_reentry=True
+        )
 
     def run(self):
         """تشغيل البوت"""
@@ -3151,6 +3514,9 @@ class FC26SmartBot:
 
         # معالج التسجيل (يجب أن يكون أولاً ليأخذ الأولوية)
         app.add_handler(self.get_registration_conversation())
+        
+        # معالج التعديل (للتعديل التفاعلي)
+        app.add_handler(self.get_edit_conversation())
 
         # الأوامر
         app.add_handler(CommandHandler("start", self.start))
