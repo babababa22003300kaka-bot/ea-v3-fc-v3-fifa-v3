@@ -78,29 +78,31 @@
 • ✅ أزرار تفاعلية لملخص البيانات المحفوظة (مع إصلاح مشكلة parsing)
 
 ## 🔄 الميزات قيد الاختبار (منتظر تأكيد المطور):
-• ⏳ لا يوجد ميزات قيد الاختبار حالياً
+• ⏳ إصلاح مشكلة HTTP 400 وتعديل الملف الشخصي
 
 ## 📝 آخر التعديلات:
 • تاريخ: 2025-09-08
-• التحديث الأخير: إصلاح مشكلة parsing وأزرار الملف الشخصي
+• التحديث الأخير: إصلاح مشكلة HTTP 400 وتعديل الملف الشخصي
 • المساعد الذكي سيحدث هذا القسم تلقائياً بعد كل تعديل
-• آخر تعديل معتمد: أزرار تفاعلية للملخص + رسائل مساعدة
+• آخر تعديل معتمد: أزرار تفاعلية + إصلاح parsing
 
 ## ⏰ آخر تعديل للمساعد (ينتظر التأكيد):
 - التاريخ والوقت: 2025-09-08 
 - الميزات المضافة:
-  • إصلاح مشكلة parsing في رسائل Markdown
-  • إزالة backticks من حول telegram_id
-  • إضافة زر عرض الملف الشخصي
-  • تعديل ترتيب الأزرار في الملخص
+  • إصلاح مشكلة HTTP 400 في editMessageText
+  • إضافة معالجات لتعديل الملف الشخصي
+  • تحسين مقارنة الرسائل في SmartMessageManager
+  • إضافة معالجات لإدخال النص عند التعديل
+  • إزالة return statements الخاطئة من handle_edit_profile
 - الموقع: 
-  • السطور 2355-2372: إصلاح مشكلة parsing
-  • السطور 2377-2390: تحديث الأزرار
-  • السطور 77-78: تحديث قسم الميزات المكتملة
-- التعديل المضاف: إصلاح مشاكل parsing والأزرار
+  • السطور 444-458: تحسين مقارنة الرسائل
+  • السطور 2986-2990: إزالة return statements
+  • السطور 3158-3268: إضافة معالجات التعديل
+  • السطور 3085-3142: إضافة معالج update_payment
+- التعديل المضاف: إصلاح مشكلة HTTP 400 والتعديل
 - الملفات المعدلة: app_complete.py
 - حالة الاختبار: منتظر تأكيد المطور
-- ملاحظات: حل مشكلة parsing والأزرار تعمل الآن 
+- ملاحظات: يجب اختبار من الأدمن والمستخدم العادي 
 
 ## 🎯 خريطة السطور الحقيقية:
 السطور 1-80: الإعدادات والاستيراد
@@ -441,11 +443,18 @@ class SmartMessageManager:
         
         async with lock:  # استخدام القفل لحماية عملية التحديث
             try:
-                # التحقق من عدم تكرار نفس الرسالة
+                # التحقق من عدم تكرار نفس الرسالة والأزرار
                 if user_id in self.user_active_messages:
                     old_msg = self.user_active_messages[user_id]
-                    if old_msg.get('text') == text and old_msg.get('message_id') == update.callback_query.message.message_id:
-                        # نفس الرسالة، لا نحدث
+                    # نتحقق من النص والأزرار معاً
+                    old_markup = old_msg.get('reply_markup')
+                    new_markup = str(reply_markup) if reply_markup else None
+                    old_markup_str = str(old_markup) if old_markup else None
+                    
+                    if (old_msg.get('text') == text and 
+                        old_msg.get('message_id') == update.callback_query.message.message_id and
+                        old_markup_str == new_markup):
+                        # نفس الرسالة والأزرار، لا نحدث
                         logger.debug(f"تجاهل تحديث رسالة مطابقة للمستخدم {user_id}")
                         return
                     
@@ -468,6 +477,7 @@ class SmartMessageManager:
                     'chat_id': update.callback_query.message.chat_id,
                     'text': text,
                     'has_keyboard': reply_markup is not None,
+                    'reply_markup': reply_markup,  # حفظ الأزرار للمقارنة
                     'timestamp': datetime.now()  # إضافة timestamp للتتبع
                 }
 
@@ -2978,13 +2988,16 @@ class FC26SmartBot:
 • 015 (وي)
 """
             
+            # إضافة زر إلغاء
+            keyboard = [[InlineKeyboardButton("❌ إلغاء", callback_data="edit_profile")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await smart_message_manager.update_current_message(
                 update, context, message,
-                reply_markup=None  # لا نحتاج أزرار هنا
+                reply_markup=reply_markup
             )
             
-            # ننتظر إدخال الرقم
-            return ENTERING_WHATSAPP
+            # لا نرجع أي state لأن هذا ليس ConversationHandler
         
         elif query.data == "edit_payment":
             # بدء عملية تعديل طريقة الدفع بشكل تفاعلي
@@ -3020,7 +3033,7 @@ class FC26SmartBot:
                 reply_markup=reply_markup
             )
             
-            return CHOOSING_PAYMENT
+            # لا نرجع أي state لأن هذا ليس ConversationHandler
         
         elif query.data.startswith("update_platform_"):
             # معالج تحديث المنصة
@@ -3073,6 +3086,65 @@ class FC26SmartBot:
                     await query.answer("❌ فشل تحديث المنصة", show_alert=True)
             else:
                 await query.answer("❌ منصة غير صالحة", show_alert=True)
+        
+        elif query.data.startswith("update_payment_"):
+            # معالج اختيار طريقة الدفع عند التعديل
+            payment_key = query.data.replace("update_payment_", "")
+            telegram_id = query.from_user.id
+            
+            if payment_key in PAYMENT_METHODS:
+                payment_info = PAYMENT_METHODS[payment_key]
+                
+                # التحقق من نوع طريقة الدفع
+                if payment_key in ['vodafone_cash', 'orange_cash', 'we_pay', 'etisalat_cash', 'tilda', 'instapay']:
+                    # تحتاج إدخال تفاصيل
+                    context.user_data['editing_mode'] = 'payment_details'
+                    context.user_data['edit_payment_method'] = payment_key
+                    
+                    if payment_key == 'tilda':
+                        prompt = "💳 **أرسل رقم كارت تيلدا:**\n\nمثال: 0000 0000 0000 0000"
+                    elif payment_key == 'instapay':
+                        prompt = "🔗 **أرسل رابط إنستاباي:**\n\nمثال: https://instapay.app/Ahmed123"
+                    else:
+                        prompt = f"📱 **أرسل رقم {payment_info['name']}:**\n\nمثال: 01234567890"
+                    
+                    keyboard = [[InlineKeyboardButton("❌ إلغاء", callback_data="edit_payment")]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await smart_message_manager.update_current_message(
+                        update, context, prompt,
+                        reply_markup=reply_markup
+                    )
+                else:
+                    # طريقة دفع بسيطة (بنك)
+                    success = self.db.update_user_data(telegram_id, {
+                        'payment_method': payment_key,
+                        'payment_details': None,
+                        'payment_details_type': None
+                    })
+                    
+                    if success:
+                        message = f"""
+✅ **تم تحديث طريقة الدفع بنجاح!**
+━━━━━━━━━━━━━━━━
+
+🏛️ الطريقة: {payment_info['name']}
+✅ تم الحفظ بنجاح
+"""
+                        keyboard = [
+                            [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
+                            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                        ]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        await smart_message_manager.update_current_message(
+                            update, context, message,
+                            reply_markup=reply_markup
+                        )
+                    else:
+                        await query.answer("❌ فشل تحديث طريقة الدفع", show_alert=True)
+            else:
+                await query.answer("❌ طريقة دفع غير صالحة", show_alert=True)
 
     async def admin_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """لوحة تحكم الأدمن"""
@@ -3154,6 +3226,112 @@ class FC26SmartBot:
             "/profile - الملف الشخصي\n"
             "/help - المساعدة",
             reply_markup=ReplyKeyboardRemove()
+        )
+    
+    async def handle_edit_whatsapp_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة إدخال رقم الواتساب عند التعديل"""
+        whatsapp_number = update.message.text.strip()
+        telegram_id = update.effective_user.id
+        
+        # التحقق من رقم الواتساب
+        validation_result = whatsapp_security.validate_whatsapp(whatsapp_number, telegram_id)
+        
+        if validation_result['is_valid']:
+            # تحديث رقم الواتساب في قاعدة البيانات
+            cleaned_number = validation_result['cleaned_number']
+            network_info = validation_result['network']
+            
+            success = self.db.update_user_data(telegram_id, {
+                'whatsapp': cleaned_number,
+                'whatsapp_network': network_info['name']
+            })
+            
+            if success:
+                message = f"""
+✅ **تم تحديث رقم الواتساب بنجاح!**
+━━━━━━━━━━━━━━━━
+
+📱 الرقم الجديد: {cleaned_number}
+{network_info['emoji']} الشبكة: {network_info['name']}
+"""
+                keyboard = [
+                    [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
+                    [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                ]
+            else:
+                message = "❌ حدث خطأ في تحديث الرقم. حاول مرة أخرى."
+                keyboard = [[InlineKeyboardButton("🔄 إعادة المحاولة", callback_data="edit_whatsapp")]]
+        else:
+            # رقم غير صحيح
+            message = f"❌ **{validation_result['error']}**\n\nحاول مرة أخرى أو اضغط إلغاء."
+            keyboard = [[InlineKeyboardButton("❌ إلغاء", callback_data="edit_profile")]]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # مسح وضع التعديل
+        context.user_data.pop('editing_mode', None)
+        context.user_data.pop('edit_registration', None)
+        
+        await smart_message_manager.send_new_active_message(
+            update, context, message,
+            reply_markup=reply_markup
+        )
+    
+    async def handle_edit_payment_details(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة إدخال تفاصيل الدفع عند التعديل"""
+        payment_details = update.message.text.strip()
+        telegram_id = update.effective_user.id
+        payment_method = context.user_data.get('edit_payment_method')
+        
+        if not payment_method:
+            await update.message.reply_text("❌ حدث خطأ. حاول مرة أخرى.")
+            return
+        
+        # التحقق من تفاصيل الدفع
+        validation_result = payment_validator.validate_payment_details(
+            payment_method, payment_details, telegram_id
+        )
+        
+        if validation_result['is_valid']:
+            # تشفير وحفظ البيانات
+            encrypted_data = encryption_system.encrypt(payment_details)
+            
+            success = self.db.update_user_data(telegram_id, {
+                'payment_method': payment_method,
+                'payment_details': encrypted_data,
+                'payment_details_type': validation_result['type']
+            })
+            
+            if success:
+                payment_name = PAYMENT_METHODS[payment_method]['name']
+                message = f"""
+✅ **تم تحديث طريقة الدفع بنجاح!**
+━━━━━━━━━━━━━━━━
+
+💳 الطريقة: {payment_name}
+✅ البيانات محفوظة ومشفرة
+"""
+                keyboard = [
+                    [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
+                    [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                ]
+            else:
+                message = "❌ حدث خطأ في تحديث طريقة الدفع."
+                keyboard = [[InlineKeyboardButton("🔄 إعادة المحاولة", callback_data="edit_payment")]]
+        else:
+            # بيانات غير صحيحة
+            message = f"❌ **{validation_result['error']}**\n\n{validation_result.get('hint', '')}"
+            keyboard = [[InlineKeyboardButton("❌ إلغاء", callback_data="edit_profile")]]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # مسح وضع التعديل
+        context.user_data.pop('editing_mode', None)
+        context.user_data.pop('edit_payment_method', None)
+        
+        await smart_message_manager.send_new_active_message(
+            update, context, message,
+            reply_markup=reply_markup
         )
     
     async def admin_view_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
