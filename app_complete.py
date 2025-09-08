@@ -82,7 +82,7 @@
 • آخر تعديل معتمد: تعديلات أزرار الأدمن + نظام صفحات المستخدمين
 
 ## ⏰ آخر تعديل للمساعد (ينتظر التأكيد):
-- التاريخ والوقت: 2024-12-24 
+- التاريخ والوقت: 2025-01-08 
 - الميزات المضافة:
   • زر تعديل الملف الشخصي مع خيارات (منصة/واتساب/دفع)
   • تغيير رسالة الخطأ لـ "⏳ جاري المعالجة..."
@@ -2436,6 +2436,8 @@ class FC26SmartBot:
             keyboard = [
                 [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
+                [InlineKeyboardButton("📱 واتساب", callback_data="whatsapp_contact")],
+                [InlineKeyboardButton("💳 طرق الدفع", callback_data="payment_methods")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
             
@@ -2729,6 +2731,76 @@ class FC26SmartBot:
                 update, context, "🚧 قريباً... خدمة بيع كوينز",
                 choice_made="بيع كوينز"
             )
+        
+        elif query.data == "whatsapp_contact":
+            # معالج زر واتساب
+            message = """
+📱 **خدمة واتساب FC26**
+━━━━━━━━━━━━━━━━
+
+🌟 تواصل معنا عبر واتساب:
+
+✅ **مميزات التواصل عبر واتساب:**
+• رد فوري خلال دقائق ⚡
+• متابعة طلبك لحظة بلحظة 🔍
+• عروض حصرية للعملاء 🎁
+• دعم فني 24/7 🕰️
+
+📞 **رقم واتساب الدعم:**
+`+20 123 456 7890`
+
+🔗 اضغط الزر بالأسفل للتواصل مباشرة
+"""
+            keyboard = [
+                [InlineKeyboardButton("💬 فتح محادثة واتساب", url="https://wa.me/201234567890?text=مرحبا%20أريد%20شراء%20كوينز%20FC26")],
+                [InlineKeyboardButton("🔙 رجوع للقائمة", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await smart_message_manager.update_current_message(
+                update, context, message,
+                reply_markup=reply_markup
+            )
+        
+        elif query.data == "payment_methods":
+            # معالج زر طرق الدفع
+            message = """
+💳 **طرق الدفع المتاحة**
+━━━━━━━━━━━━━━━━
+
+✨ نقبل جميع طرق الدفع:
+
+📱 **المحافظ الإلكترونية:**
+• فودافون كاش 📢
+• اتصالات كاش 📡
+• أورانج كاش 📠
+
+🏦 **التحويلات البنكية:**
+• InstaPay 💸
+• تحويل بنكي مباشر 🏦
+
+💳 **البطاقات الائتمانية:**
+• Visa/MasterCard 💳
+• PayPal 💰
+
+💸 **طرق أخرى:**
+• بطاقات شحن 🎁
+• عملات رقمية 🪙
+
+━━━━━━━━━━━━━━━━
+🔒 جميع المعاملات آمنة 100%
+✅ نضمن حقوقك بالكامل
+"""
+            keyboard = [
+                [InlineKeyboardButton("✏️ تغيير طريقة الدفع", callback_data="edit_payment")],
+                [InlineKeyboardButton("🔙 رجوع للقائمة", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await smart_message_manager.update_current_message(
+                update, context, message,
+                reply_markup=reply_markup
+            )
 
         elif query.data == "support":
             await smart_message_manager.update_current_message(
@@ -2907,14 +2979,45 @@ class FC26SmartBot:
                 
                 if success:
                     platform_name = GAMING_PLATFORMS[platform_key]['name']
-                    await smart_message_manager.update_current_message(
-                        update, context,
-                        f"✅ تم تحديث المنصة إلى: **{platform_name}**\n\nيتم العودة للملف الشخصي..."
-                    )
                     
-                    # العودة للملف الشخصي بعد ثانيتين
-                    await asyncio.sleep(2)
-                    return await self.profile(update, context)
+                    # جلب البيانات المحدثة
+                    profile = self.db.get_user_profile(telegram_id)
+                    if profile:
+                        # عرض ملخص البيانات المحفوظة
+                        whatsapp_display = profile.get('whatsapp', 'غير محدد')
+                        network_display = ""
+                        
+                        if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
+                            prefix = whatsapp_display[:3]
+                            if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
+                                network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
+                                network_display = f" ({network['emoji']} {network['name']})"
+                        
+                        profile_text = f"""
+✅ **تم تحديث البيانات بنجاح!**
+━━━━━━━━━━━━━━━━
+
+📊 **ملخص بياناتك المحفوظة:**
+
+🎮 المنصة: **{platform_name}** ✅
+📱 واتساب: {whatsapp_display}{network_display}
+💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
+
+━━━━━━━━━━━━━━━━
+🔐 بياناتك محمية ومشفرة
+"""
+                        
+                        # أزرار العودة
+                        keyboard = [
+                            [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
+                            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                        ]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        await smart_message_manager.update_current_message(
+                            update, context, profile_text,
+                            reply_markup=reply_markup
+                        )
                 else:
                     await query.answer("❌ فشل تحديث المنصة", show_alert=True)
             else:
