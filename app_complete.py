@@ -77,26 +77,27 @@
 
 ## 📝 آخر التعديلات:
 • تاريخ: 2025-09-08
-• التحديث الأخير: إصلاح نظام تعديل الملف الشخصي ليعمل بشكل تفاعلي كامل
+• التحديث الأخير: إصلاح خطأ HTTP 400 ونظام تعديل الملف الشخصي
 • المساعد الذكي سيحدث هذا القسم تلقائياً بعد كل تعديل
 • آخر تعديل معتمد: تعديلات أزرار الأدمن + نظام صفحات المستخدمين
 
 ## ⏰ آخر تعديل للمساعد (ينتظر التأكيد):
 - التاريخ والوقت: 2025-09-08 
 - الميزات المضافة:
-  • إصلاح كامل لنظام تعديل الملف الشخصي
-  • تعديل المنصة: يعرض قائمة تفاعلية ويحفظ فوراً
-  • تعديل الواتساب: إدخال مباشر للرقم الجديد
-  • تعديل طريقة الدفع: اختيار من القائمة مع إدخال التفاصيل
-  • إضافة دالة get_user_data لقاعدة البيانات
+  • إصلاح خطأ HTTP 400 Bad Request في عرض الملف الشخصي
+  • إضافة try/catch لتجنب أخطاء تحديث الرسائل
+  • تعديل الواتساب: يحفظ مباشرة بعد الإدخال
+  • تعديل طريقة الدفع: يعمل بشكل تفاعلي مع التفاصيل
+  • تعديل المنصة: يعرض الملف المحدث بالكامل
 - الموقع: 
-  • السطور 2827-2862: تعديل معالج edit_whatsapp
-  • السطور 2899-2945: إصلاح معالج update_platform
-  • السطور 1317-1334: إضافة دالة get_user_data
-- التعديل المضاف: نظام تعديل تفاعلي كامل
+  • السطور 2717-2728: إصلاح خطأ HTTP 400
+  • السطور 1785-1856: تحديث معالج الواتساب للتعديل
+  • السطور 2857-2899: تعديل معالج edit_whatsapp
+  • السطور 2937-2987: إصلاح معالج update_platform
+- التعديل المضاف: نظام تعديل تفاعلي كامل مع إصلاح الأخطاء
 - الملفات المعدلة: app_complete.py
 - حالة الاختبار: منتظر تأكيد المطور
-- ملاحظات: يعمل الآن بنفس سلاسة التسجيل الأول 
+- ملاحظات: تم حل مشكلة HTTP 400 والتعديل أصبح تفاعلي 
 
 ## 🎯 خريطة السطور الحقيقية:
 السطور 1-80: الإعدادات والاستيراد
@@ -1783,7 +1784,7 @@ class SmartRegistrationHandler:
         network_info = validation['network_info']
         
         # التحقق من وضع التعديل
-        is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
+        is_editing = context.user_data.get('editing_mode') in ['whatsapp_only', 'whatsapp_full', 'payment_only']
         
         if is_editing:
             # في وضع التعديل - نحفظ في edit_registration
@@ -1795,6 +1796,57 @@ class SmartRegistrationHandler:
             
             context.user_data['edit_registration']['whatsapp'] = cleaned_number
             context.user_data['edit_registration']['whatsapp_network'] = network_info['name']
+            
+            # في حالة تعديل الواتساب فقط، نحفظ مباشرة
+            if context.user_data.get('editing_mode') == 'whatsapp_only':
+                # تحديث قاعدة البيانات
+                success = self.db.update_user_data(user_id, {
+                    'whatsapp': cleaned_number,
+                    'whatsapp_network': network_info['name']
+                })
+                
+                if success:
+                    # عرض رسالة النجاح والعودة للملف الشخصي
+                    profile = self.db.get_user_profile(user_id)
+                    
+                    profile_text = f"""
+✅ **تم تحديث رقم الواتساب بنجاح!**
+━━━━━━━━━━━━━━━━
+
+👤 **الملف الشخصي المحدث**
+━━━━━━━━━━━━━━━━
+
+🎮 المنصة: {profile.get('platform', 'غير محدد')}
+📱 واتساب: {cleaned_number} ✅
+💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
+
+━━━━━━━━━━━━━━━━
+🔐 بياناتك محمية ومشفرة
+"""
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
+                        [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await smart_message_manager.send_new_active_message(
+                        update, context, profile_text,
+                        reply_markup=reply_markup
+                    )
+                    
+                    # مسح وضع التعديل
+                    context.user_data.pop('editing_mode', None)
+                    context.user_data.pop('edit_registration', None)
+                    
+                    return ConversationHandler.END
+                else:
+                    await smart_message_manager.send_new_active_message(
+                        update, context,
+                        "❌ حدث خطأ في حفظ البيانات. حاول مرة أخرى.",
+                        disable_previous=False
+                    )
+                    return ConversationHandler.END
         else:
             # في وضع التسجيل العادي
             if 'registration' not in context.user_data:
@@ -2714,10 +2766,20 @@ class FC26SmartBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            await smart_message_manager.update_current_message(
-                update, context, profile_text,
-                reply_markup=reply_markup
-            )
+            # تجنب خطأ HTTP 400 - نتأكد إن الرسالة مختلفة
+            try:
+                await smart_message_manager.update_current_message(
+                    update, context, profile_text,
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                # لو حصل خطأ، نرسل رسالة جديدة
+                logger.debug(f"Error updating message: {e}")
+                await smart_message_manager.send_new_active_message(
+                    update, context, profile_text,
+                    reply_markup=reply_markup,
+                    disable_previous=True
+                )
 
         elif query.data == "delete_account":
             # التحقق من أن المستخدم هو الأدمن
