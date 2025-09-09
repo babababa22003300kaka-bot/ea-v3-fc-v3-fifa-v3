@@ -1,0 +1,24 @@
+/home/user/webapp/app_complete.py:3612: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+/home/user/webapp/app_complete.py:3658: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+2025-09-09 02:29:30,729 - __main__ - INFO - 🚀 بدء تشغيل FC 26 Smart Bot...
+2025-09-09 02:29:30,729 - __main__ - INFO - ✨ النظام الذكي للرسائل مفعّل
+2025-09-09 02:29:30,729 - __main__ - INFO - 📱 البوت جاهز: https://t.me/FC26_Trading_Bot
+2025-09-09 02:29:31,190 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getMe "HTTP/1.1 200 OK"
+2025-09-09 02:29:31,333 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/deleteWebhook "HTTP/1.1 200 OK"
+2025-09-09 02:29:31,336 - telegram.ext.Application - INFO - Application started
+2025-09-09 02:29:41,763 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:29:51,906 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:02,048 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:12,197 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:22,340 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:32,484 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:42,629 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:30:52,773 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:02,918 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:13,066 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:23,210 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:33,404 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:43,552 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 02:31:53,700 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
