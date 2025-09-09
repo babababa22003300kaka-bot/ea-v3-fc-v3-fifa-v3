@@ -1,0 +1,103 @@
+/home/user/webapp/app_complete.py:3612: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+/home/user/webapp/app_complete.py:3658: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+2025-09-09 03:43:51,911 - __main__ - INFO - 🚀 بدء تشغيل FC 26 Smart Bot...
+2025-09-09 03:43:51,911 - __main__ - INFO - ✨ النظام الذكي للرسائل مفعّل
+2025-09-09 03:43:51,911 - __main__ - INFO - 📱 البوت جاهز: https://t.me/FC26_Trading_Bot
+2025-09-09 03:43:52,352 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getMe "HTTP/1.1 200 OK"
+2025-09-09 03:43:52,498 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/deleteWebhook "HTTP/1.1 200 OK"
+2025-09-09 03:43:52,499 - telegram.ext.Application - INFO - Application started
+2025-09-09 03:43:52,931 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:43:53,093 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:44:03,077 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:44:13,221 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:44:23,366 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:44:33,512 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:44:43,656 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:44:53,800 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:03,945 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:14,090 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:24,235 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:34,378 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:34,752 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:35,220 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:36,570 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:36,572 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3459
+2025-09-09 03:45:36,733 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:38,485 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:38,488 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3461
+2025-09-09 03:45:38,489 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 2 أجهزة
+2025-09-09 03:45:38,489 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:45:38,653 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:39,781 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:39,936 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:45:39,941 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3462 - New Content Length: 18
+2025-09-09 03:45:40,098 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:45:40,099 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3462
+2025-09-09 03:45:41,089 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:41,239 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:45:41,242 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3462 - New Content Length: 183
+2025-09-09 03:45:41,402 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:45:41,403 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3462
+2025-09-09 03:45:46,332 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:46,336 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3463
+2025-09-09 03:45:46,337 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 3 أجهزة
+2025-09-09 03:45:46,337 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:45:46,513 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:46,514 - __main__ - INFO - تم حفظ رقم واتساب للمستخدم 1124247595: 01094591331 - شبكة: فودافون
+2025-09-09 03:45:48,343 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:48,503 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:45:48,506 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3464 - New Content Length: 174
+2025-09-09 03:45:48,667 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:45:48,668 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3464
+2025-09-09 03:45:49,782 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:49,787 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3465
+2025-09-09 03:45:49,787 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 4 أجهزة
+2025-09-09 03:45:49,787 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:45:49,973 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:49,974 - __main__ - INFO - تم حفظ بيانات دفع للمستخدم 1124247595: نوع we_cash
+2025-09-09 03:45:49,980 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3465
+2025-09-09 03:45:49,980 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 4 أجهزة
+2025-09-09 03:45:49,980 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:45:50,144 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:50,145 - __main__ - INFO - 🧽 تم تنظيف بيانات المستخدم 1124247595
+2025-09-09 03:45:53,312 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:53,506 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:55,182 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:55,184 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3470
+2025-09-09 03:45:55,351 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:45:56,702 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:56,851 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:45:56,852 - __main__ - INFO - 🟡 المستخدم 1124247595 ضغط على زر: edit_profile - Message ID: 3471
+2025-09-09 03:45:56,852 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3471 - New Content Length: 62
+2025-09-09 03:45:57,010 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:45:57,012 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3471
+2025-09-09 03:45:58,023 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:45:58,172 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:45:58,173 - __main__ - INFO - 🟡 المستخدم 1124247595 ضغط على زر: edit_whatsapp - Message ID: 3471
+2025-09-09 03:45:58,173 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3471 - New Content Length: 165
+2025-09-09 03:45:58,331 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:45:58,332 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3471
+2025-09-09 03:46:00,631 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:46:00,633 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3472
+2025-09-09 03:46:00,633 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 2 أجهزة
+2025-09-09 03:46:00,633 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:46:00,903 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:46:08,627 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:46:08,631 - __main__ - INFO - 🔵 المستخدم 1124247595 دخل من جهاز جديد - Device: Message - Device ID: 3474
+2025-09-09 03:46:08,631 - __main__ - WARNING - ⚠️ المستخدم 1124247595 يستخدم أجهزة متعددة: 3 أجهزة
+2025-09-09 03:46:08,631 - __main__ - INFO - 🧽 حذف رسالة قديمة للمستخدم 1124247595 بسبب استخدام جهاز جديد
+2025-09-09 03:46:09,082 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/sendMessage "HTTP/1.1 200 OK"
+2025-09-09 03:46:10,126 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:46:10,279 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:46:10,279 - __main__ - INFO - 🟡 المستخدم 1124247595 ضغط على زر: edit_profile - Message ID: 3475
+2025-09-09 03:46:10,279 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3475 - New Content Length: 62
+2025-09-09 03:46:10,459 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:46:10,460 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3475
+2025-09-09 03:46:12,080 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 03:46:12,229 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-09-09 03:46:12,229 - __main__ - INFO - 🟡 المستخدم 1124247595 ضغط على زر: edit_platform - Message ID: 3475
+2025-09-09 03:46:12,229 - __main__ - INFO - 🟠 محاولة تعديل رسالة للمستخدم 1124247595 - Message ID: 3475 - New Content Length: 22
+2025-09-09 03:46:12,386 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/editMessageText "HTTP/1.1 200 OK"
+2025-09-09 03:46:12,387 - __main__ - INFO - ✅ تم تعديل الرسالة بنجاح للمستخدم 1124247595 - Message ID: 3475
