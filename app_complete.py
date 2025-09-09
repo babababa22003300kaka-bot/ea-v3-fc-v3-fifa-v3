@@ -4,11 +4,9 @@
 🔥 FC 26 Trading Bot - النسخة الكاملة المتكاملة مع نظام الأدمن
 البوت الكامل في ملف واحد مع نظام الرسائل الذكي ولوحة تحكم الأدمن
 مشروع لبيع كوينز FC 26
-
 ================================================================================
 ⚠️⚠️⚠️ تحذير هام جداً للمساعد الذكي - اقرأ هذا أولاً قبل أي تعديل ⚠️⚠️⚠️
 ================================================================================
-
 ## 🛑 خطوات إجبارية للمساعد الذكي:
 1️⃣ اقرأ كامل قسم "المناطق المحظورة المطلقة" أدناه
 2️⃣ اقرأ قسم "المميزات المكتملة 100%" 
@@ -16,45 +14,37 @@
 4️⃣ استخدم فقط "المناطق الآمنة" للإضافات الجديدة
 5️⃣ بعد التعديل، حدث قسم "آخر التعديلات" أدناه
 6️⃣ انتظر تأكيد المطور قبل نقل الميزة لقائمة "المكتملة"
-
 ## ❌ المناطق المحظورة المطلقة (RED ZONES):
-
 ### 🚫 Zone 1: نظام إدارة الرسائل الذكي
 📍 السطور: 151-304 (class SmartMessageManager)
 🎯 الوظيفة: رسالة واحدة نشطة فقط + حماية Race Conditions
 ⛔ الممنوع: إنشاء طرق بديلة لإرسال الرسائل بأزرار
 ✅ الإجباري: استخدم smart_message_manager لكل رسالة تفاعلية
-
 ### 🚫 Zone 2: نظام الحماية المتقدم للواتساب
 📍 السطور: 305-380 (class WhatsAppSecuritySystem)
 🎯 الوظيفة: حماية من محاولات متكررة + تحليل مفصل للمدخلات
 ⛔ الممنوع: تغيير منطق التحقق أو الحماية
 ✅ المسموح: قراءة البيانات فقط
-
 ### 🚫 Zone 3: نظام التشفير المتقدم
 📍 السطور: 381-420 (class EncryptionSystem)
 🎯 الوظيفة: تشفير البيانات الحساسة (أرقام الدفع)
 ⛔ الممنوع: تغيير المفاتيح أو آلية التشفير
 ✅ المسموح: استخدام encrypt/decrypt فقط
-
 ### 🚫 Zone 4: نظام التحقق من طرق الدفع
 📍 السطور: 421-650 (class PaymentValidationSystem)
 🎯 الوظيفة: تحقق متقدم من 7 طرق دفع + حماية من التكرار
 ⛔ الممنوع: تغيير قواعد التحقق أو منطق الحماية
 ✅ المسموح: قراءة النتائج فقط
-
 ### 🚫 Zone 5: آلية استكمال التسجيل "أهلاً بعودتك"
 📍 السطور: 1020-1080 (دالة start في SmartRegistrationHandler)
 🎯 الوظيفة: استكمال التسجيل من نقطة التوقف + حفظ التقدم
 ⛔ الممنوع: تغيير منطق temp_registration أو آلية الاستكمال
 ✅ المسموح: تعديل النصوص والأزرار فقط
-
 ### 🚫 Zone 6: جداول قاعدة البيانات الأساسية
 📍 السطور: 670-750 (init_database في Database class)
 🎯 الوظيفة: 5 جداول أساسية للتسجيل والمحفظة والمعاملات
 ⛔ الممنوع: تعديل/حذف الجداول الموجودة أو علاقاتها
 ✅ المسموح: إضافة جداول جديدة فقط
-
 ## ✅ المميزات المكتملة 100% (تمت واختُبرت بنجاح):
 • ✅ نظام التسجيل 4 مراحل (منصة→واتساب→دفع→تفاصيل دفع)
 • ✅ حماية متقدمة للواتساب (حظر مؤقت + تحليل مفصل)
@@ -75,16 +65,13 @@
   - ✅ حفظ شبكة الواتساب في قاعدة البيانات
   - ✅ إصلاح مشكلة HTTP 400 في عرض الملف الشخصي
 • ✅ رسائل مساعدة للمستخدمين عند محاولة استخدام أوامر الأدمن
-
 ## 🔄 الميزات قيد الاختبار (منتظر تأكيد المطور):
 • ⏳ لوجز مفصلة لتشخيص مشاكل الأجهزة المتعددة
-
 ## 📝 آخر التعديلات:
 • تاريخ: 2025-09-09
 • التحديث الأخير: إصلاح خطأ Markdown parsing (Can't parse entities)
 • المساعد الذكي سيحدث هذا القسم تلقائياً بعد كل تعديل
 • آخر تعديل معتمد: رسائل مساعدة + نظام تعديل الملف
-
 ## ⏰ آخر تعديل للمساعد (ينتظر التأكيد):
 - التاريخ والوقت: 2025-09-09 
 - الميزات المضافة:
@@ -100,7 +87,6 @@
 - الملفات المعدلة: app_complete.py
 - حالة الاختبار: منتظر تأكيد المطور
 - ملاحظات: تم استبدال ** بـ * في الرسائل الرئيسية لتجنب مشاكل parsing 
-
 ## 🎯 خريطة السطور الحقيقية:
 السطور 1-80: الإعدادات والاستيراد
 السطور 81-150: البيانات الثابتة (GAMING_PLATFORMS, PAYMENT_METHODS, MESSAGES)
@@ -113,7 +99,6 @@
 السطور 951-1400: SmartRegistrationHandler ⚠️ (لا تلمس الأساسيات)
 السطور 1401-1800: FC26SmartBot + لوحة الأدمن 🟢 (آمن للإضافة)
 السطور 1801+: التشغيل والإعداد
-
 ## 🟢 المناطق الآمنة للإضافة (GREEN ZONES):
 ✅ إضافة أزرار جديدة في Keyboards class (السطور 851-950)
 ✅ إضافة رسائل جديدة في MESSAGES dictionary (السطور 81-150)
@@ -121,10 +106,8 @@
 ✅ إضافة معالجات أوامر جديدة
 ✅ إضافة callback handlers جديدة
 ✅ إضافة جداول قاعدة بيانات جديدة (بدون مس الموجود)
-
 ## 🤖 تعليمات التحديث الذاتي للمساعد:
 بعد كل تعديل، يجب على المساعد الذكي:
-
 1️⃣ **تحديث قسم "آخر تعديل للمساعد":**
 ```
 - التاريخ والوقت: [YYYY-MM-DD HH:MM]
@@ -133,28 +116,22 @@
 - حالة الاختبار: ⏳ منتظر اختبار المطور
 - ملاحظات: [أي ملاحظات مهمة]
 ```
-
 2️⃣ **إضافة الميزة الجديدة لقسم "قيد الاختبار":**
 - ضع علامة 🔄 بجانب الميزة الجديدة
 - اذكر التفاصيل والموقع في الكود
-
 3️⃣ **إضافة Zone جديد إذا لزم الأمر:**
 - إذا أضفت ميزة معقدة، أضف Zone جديد برقم تسلسلي
 - مثال: ### 🚫 Zone 7: نظام أسعار الكوينز
-
 4️⃣ **كتابة رسالة للمطور:**
 ```
 🎯 تم إضافة ميزة جديدة!
-
 📝 التعديل: [اسم الميزة]
 📍 الموقع: [أرقام السطور]
 🔧 التفاصيل: [شرح مختصر]
-
 ⏰ حالة الاختبار: منتظر تأكيدك
 ✅ إذا اشتغلت بنجاح، قول "تمام" وسأنقلها للمكتملة
 ❌ إذا فيها مشكلة، اشرح المطلوب تعديله
 ```
-
 ## 🔧 قواعد التطوير الآمن:
 1. ✅ استخدم smart_message_manager للرسائل التفاعلية الجديدة
 2. ✅ أضف دوال جديدة في نهاية FC26SmartBot class
@@ -162,27 +139,24 @@
 4. ✅ اتبع نمط التسمية الحالي
 5. ✅ اختبر مع النظام الموجود بدون كسره
 6. ✅ حدث قسم التعليمات تلقائياً بعد كل إضافة
-
 ## ❌ أمثلة طلبات مرفوضة:
 "غير نظام التحقق من الواتساب"
 "عدل طريقة التشفير"  
 "أنشئ طريقة جديدة لإرسال الرسائل بأزرار"
 "غير منطق حفظ التقدم المؤقت"
 "عدل جداول قاعدة البيانات الأساسية"
-
 ## ✅ أمثلة طلبات مقبولة:
 "أضف زر 'أسعار الكوينز' للقائمة الرئيسية"
 "اجعل البوت يستجيب لأمر /prices جديد"
 "أضف جدول جديد لحفظ أسعار الكوينز"
 "أنشئ نظام إشعارات منفصل"
 "أضف ميزة عرض الإحصائيات للأدمن"
-
 ================================================================================
 ⚠️ تنبيه للمساعد الذكي: اقرأ، عدل، حدث التعليمات، ثم انتظر تأكيد المطور ⚠️
 ================================================================================
 """
 
- 
+
 import os
 import logging
 import sqlite3
@@ -248,27 +222,22 @@ PAYMENT_METHODS = {
 
 MESSAGES = {
     'welcome': """🌟 أهلاً وسهلاً في بوت FC 26! 🎮
-
 البوت الأول في مصر لبيع كوينز FC 26 🇪🇬
-
 ✨ مميزاتنا:
 • أسعار منافسة جداً 💰
 • معاملات آمنة 100% 🔒
 • دعم فني 24/7 📞
 • سرعة في التنفيذ ⚡
-
 اضغط على "تسجيل جديد" للبدء! 👇""",
 
     'choose_platform': """🎮 اختر منصة اللعب:""",
 
     'enter_whatsapp': """📱 *أرسل رقم الواتساب:*
-
 📝 *القواعد:*
 • 11 رقم بالضبط
 • يبدأ بـ: 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ *مثال صحيح:* `01094591331`""",
 
     'choose_payment': """💳 اختر طريقة الدفع:""",
@@ -276,20 +245,16 @@ MESSAGES = {
 
 
     'registration_complete': """🎉 مبروك! تم إنشاء حسابك بنجاح! 🎊
-
 ✅ ملخص بياناتك:
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
 📱 واتساب: {whatsapp}
 💳 طريقة الدفع: {payment}
 ━━━━━━━━━━━━━━━━
-
 مرحباً بك في عائلة FC 26! 🚀""",
 
     'welcome_back': """👋 أهلاً بعودتك!
-
 كنا واقفين عند: {last_step}
-
 هل تريد المتابعة من حيث توقفت؟""",
 
 
@@ -297,7 +262,6 @@ MESSAGES = {
 
 
     'data_saved': """💾 تم حفظ البيانات تلقائياً ✅
-
 يمكنك العودة في أي وقت وسنكمل من نفس النقطة!"""
 }
 
@@ -317,28 +281,28 @@ class SmartMessageManager:
         if user_id not in self.user_locks:
             self.user_locks[user_id] = asyncio.Lock()
         return self.user_locks[user_id]
-    
+
     async def cleanup_user_data(self, user_id: int):
         """تنظيف بيانات المستخدم عند انتهاء المحادثة"""
         # حذف القفل إذا كان موجوداً
         if user_id in self.user_locks:
             del self.user_locks[user_id]
-        
+
         # حذف الرسائل النشطة إذا كانت موجودة
         if user_id in self.user_active_messages:
             del self.user_active_messages[user_id]
-        
+
         # حذف بيانات الأجهزة
         if user_id in self.user_devices:
             del self.user_devices[user_id]
-        
+
         logger.info(f"🧽 تم تنظيف بيانات المستخدم {user_id}")
 
     async def disable_old_message(self, user_id: int, context: ContextTypes.DEFAULT_TYPE, choice_made: str = None):
         """إلغاء تفعيل الرسالة القديمة وتحويلها لسجل تاريخي"""
         # الحصول على القفل للمستخدم
         lock = await self.get_or_create_lock(user_id)
-        
+
         async with lock:  # استخدام القفل لحماية العملية
             if user_id not in self.user_active_messages:
                 return
@@ -383,17 +347,17 @@ class SmartMessageManager:
     ):
         """إرسال رسالة جديدة نشطة مع حماية من Race Conditions"""
         user_id = update.effective_user.id
-        
+
         # لوج عند دخول المستخدم
         device_info = "Callback" if update.callback_query else "Message"
         device_id = update.effective_message.message_id if update.effective_message else "Unknown"
         logger.info(f"🔵 المستخدم {user_id} دخل من جهاز جديد - Device: {device_info} - Device ID: {device_id}")
-        
+
         # تتبع الأجهزة المتعددة
         if user_id not in self.user_devices:
             self.user_devices[user_id] = set()
         self.user_devices[user_id].add(device_id)
-        
+
         # إذا كان هناك أكثر من جهاز، نظف الرسائل القديمة
         if len(self.user_devices[user_id]) > 1:
             logger.warning(f"⚠️ المستخدم {user_id} يستخدم أجهزة متعددة: {len(self.user_devices[user_id])} أجهزة")
@@ -403,7 +367,7 @@ class SmartMessageManager:
                 if old_message.get('message_id') != device_id:
                     logger.info(f"🧽 حذف رسالة قديمة للمستخدم {user_id} بسبب استخدام جهاز جديد")
                     del self.user_active_messages[user_id]
-        
+
         # الحصول على القفل للمستخدم
         lock = await self.get_or_create_lock(user_id)
 
@@ -422,7 +386,7 @@ class SmartMessageManager:
                         active_count = len([k for k in self.user_active_messages if k == user_id])
                         logger.warning(f"⚠️ تضارب رسائل للمستخدم {user_id} - Active Messages: {active_count}")
                         return None
-                
+
                 if update.callback_query:
                     sent_message = await update.callback_query.message.reply_text(
                         text=text,
@@ -466,13 +430,13 @@ class SmartMessageManager:
 
         user_id = update.effective_user.id
         message_id = update.callback_query.message.message_id
-        
+
         # لوج قبل editMessageText
         logger.info(f"🟠 محاولة تعديل رسالة للمستخدم {user_id} - Message ID: {message_id} - New Content Length: {len(text)}")
-        
+
         # الحصول على القفل للمستخدم
         lock = await self.get_or_create_lock(user_id)
-        
+
         async with lock:  # استخدام القفل لحماية عملية التحديث
             try:
                 # التحقق من عدم تكرار نفس الرسالة
@@ -482,7 +446,7 @@ class SmartMessageManager:
                         # نفس الرسالة، لا نحدث
                         logger.debug(f"تجاهل تحديث رسالة مطابقة للمستخدم {user_id}")
                         return
-                    
+
                     # التحقق من الـ timestamp لمنع التحديثات السريعة جداً
                     if 'timestamp' in old_msg:
                         time_diff = (datetime.now() - old_msg['timestamp']).total_seconds()
@@ -525,20 +489,20 @@ smart_message_manager = SmartMessageManager()
 # ================================ نظام الحماية المتقدم للواتساب ================================
 class WhatsAppSecuritySystem:
     """نظام حماية متقدم للتحقق من أرقام الواتساب"""
-    
+
     def __init__(self):
         # تتبع المحاولات لكل مستخدم
         self.user_attempts: Dict[int, List[datetime]] = defaultdict(list)
         self.failed_attempts: Dict[int, int] = defaultdict(int)
         self.blocked_users: Dict[int, datetime] = {}
         self.last_numbers: Dict[int, str] = {}
-        
+
         # إعدادات الحماية
         self.MAX_ATTEMPTS_PER_MINUTE = 5
         self.MAX_FAILED_ATTEMPTS = 5
         self.BLOCK_DURATION_MINUTES = 15
         self.RATE_LIMIT_WINDOW = 60  # ثانية
-        
+
         # شبكات الاتصال المصرية
         self.EGYPTIAN_NETWORKS = {
             '010': {'name': 'فودافون', 'emoji': '⭕️'},
@@ -546,13 +510,13 @@ class WhatsAppSecuritySystem:
             '012': {'name': 'أورانج', 'emoji': '🍊'},
             '015': {'name': 'وي', 'emoji': '🟣'}
         }
-    
+
     def is_user_blocked(self, user_id: int) -> Tuple[bool, Optional[int]]:
         """التحقق من حظر المستخدم"""
         if user_id in self.blocked_users:
             block_time = self.blocked_users[user_id]
             elapsed = (datetime.now() - block_time).total_seconds() / 60
-            
+
             if elapsed < self.BLOCK_DURATION_MINUTES:
                 remaining = self.BLOCK_DURATION_MINUTES - int(elapsed)
                 return True, remaining
@@ -560,37 +524,37 @@ class WhatsAppSecuritySystem:
                 # انتهت فترة الحظر
                 del self.blocked_users[user_id]
                 self.failed_attempts[user_id] = 0
-        
+
         return False, None
-    
+
     def check_rate_limit(self, user_id: int) -> Tuple[bool, Optional[str]]:
         """فحص معدل الطلبات"""
         now = datetime.now()
-        
+
         # تنظيف المحاولات القديمة
         if user_id in self.user_attempts:
             self.user_attempts[user_id] = [
                 attempt for attempt in self.user_attempts[user_id]
                 if (now - attempt).total_seconds() < self.RATE_LIMIT_WINDOW
             ]
-        
+
         # فحص عدد المحاولات
         attempts_count = len(self.user_attempts[user_id])
-        
+
         if attempts_count >= self.MAX_ATTEMPTS_PER_MINUTE:
             return False, f"⚠️ لقد تجاوزت الحد المسموح ({self.MAX_ATTEMPTS_PER_MINUTE} محاولات في الدقيقة)\\n\\n⏰ انتظر قليلاً ثم حاول مرة أخرى"
-        
+
         # تسجيل المحاولة الجديدة
         self.user_attempts[user_id].append(now)
         return True, None
-    
+
     def check_duplicate(self, user_id: int, phone: str) -> bool:
         """فحص الأرقام المكررة"""
         if user_id in self.last_numbers:
             if self.last_numbers[user_id] == phone:
                 return True
         return False
-    
+
     def analyze_input(self, text: str) -> Dict[str, Any]:
         """تحليل المدخل بشكل تفصيلي"""
         analysis = {
@@ -603,37 +567,37 @@ class WhatsAppSecuritySystem:
             'all_chars': [],
             'invalid_chars': []
         }
-        
+
         # استخراج الأرقام فقط
         digits_only = re.sub(r'[^\d]', '', text)
         analysis['extracted_digits'] = digits_only
-        
+
         # تحليل كل حرف
         for char in text:
             analysis['all_chars'].append(char)
-            
+
             # فحص الأحرف
             if char.isalpha():
                 analysis['has_letters'] = True
                 analysis['invalid_chars'].append(char)
-            
+
             # فحص الرموز
             elif not char.isdigit() and not char.isspace():
                 analysis['has_symbols'] = True
                 analysis['invalid_chars'].append(char)
-            
+
             # فحص المسافات
             elif char.isspace():
                 analysis['has_spaces'] = True
                 analysis['invalid_chars'].append(char)
-            
+
             # فحص الأرقام العربية
             elif char in '٠١٢٣٤٥٦٧٨٩':
                 analysis['has_arabic_numbers'] = True
                 analysis['invalid_chars'].append(char)
-        
+
         return analysis
-    
+
     def validate_whatsapp(self, text: str, user_id: int) -> Dict[str, Any]:
         """التحقق الشامل من رقم الواتساب"""
         result = {
@@ -644,97 +608,87 @@ class WhatsAppSecuritySystem:
             'network_info': None,
             'analysis': None
         }
-        
+
         # التحليل التفصيلي للمدخل
         analysis = self.analyze_input(text)
         result['analysis'] = analysis
-        
+
         # 1. فحص وجود أحرف أو رموز
         if analysis['has_letters'] or analysis['has_symbols'] or analysis['has_spaces'] or analysis['has_arabic_numbers']:
             invalid_chars_display = ''.join(set(analysis['invalid_chars']))
             result['error_type'] = 'invalid_chars'
             result['error_message'] = f"""❌ **رقم الواتساب يجب أن يكون أرقام فقط**
-
 📍 **المدخل الخاطئ:** `{text}`
 🚫 **الأحرف/الرموز الغير مسموحة:** `{invalid_chars_display}`
 📊 **الأرقام المستخرجة:** `{analysis['extracted_digits'] or 'لا توجد أرقام'}`
-
 ✅ **مثال صحيح:** `01094591331`
-
 💡 **تلميح:** استخدم الأرقام الإنجليزية فقط (0-9) بدون مسافات أو رموز"""
             return result
-        
+
         cleaned = analysis['extracted_digits']
-        
+
         # 2. فحص الطول
         if len(cleaned) < 11:
             result['error_type'] = 'too_short'
             result['error_message'] = f"""❌ **طول الرقم غير صحيح**
-
 📏 **المطلوب:** 11 رقم بالضبط
 📍 **أنت أدخلت:** {len(cleaned)} رقم فقط
 🔢 **الرقم المدخل:** `{cleaned}`
-
 ✅ **مثال صحيح:** `01094591331`"""
             return result
-        
+
         elif len(cleaned) > 11:
             result['error_type'] = 'too_long'
             result['error_message'] = f"""❌ **طول الرقم غير صحيح**
-
 📏 **المطلوب:** 11 رقم بالضبط
 📍 **أنت أدخلت:** {len(cleaned)} رقم (أكثر من المطلوب)
 🔢 **الرقم المدخل:** `{cleaned}`
-
 ✅ **مثال صحيح:** `01094591331`"""
             return result
-        
+
         # 3. فحص البداية
         prefix = cleaned[:3]
         if prefix not in self.EGYPTIAN_NETWORKS:
             result['error_type'] = 'invalid_prefix'
             result['error_message'] = f"""❌ **بداية الرقم غير صحيحة**
-
 📍 **يجب أن يبدأ بـ:** 010 / 011 / 012 / 015
 🚫 **رقمك يبدأ بـ:** `{prefix}`
 🔢 **الرقم المدخل:** `{cleaned}`
-
 📱 **الشبكات المدعومة:**
 ⭕️ **010** - فودافون
 🟢 **011** - اتصالات  
 🍊 **012** - أورانج
 🟣 **015** - وي
-
 ✅ **مثال صحيح:** `01094591331`"""
             return result
-        
+
         # النجاح!
         network = self.EGYPTIAN_NETWORKS[prefix]
         result['is_valid'] = True
         result['cleaned_number'] = cleaned
         result['network_info'] = network
-        
+
         # حفظ الرقم لمنع التكرار
         self.last_numbers[user_id] = cleaned
-        
+
         return result
-    
+
     def record_failure(self, user_id: int):
         """تسجيل محاولة فاشلة"""
         self.failed_attempts[user_id] += 1
-        
+
         if self.failed_attempts[user_id] >= self.MAX_FAILED_ATTEMPTS:
             self.blocked_users[user_id] = datetime.now()
             return True  # تم الحظر
-        
+
         return False
-    
+
     def reset_user_failures(self, user_id: int):
         """إعادة تعيين المحاولات الفاشلة عند النجاح"""
         self.failed_attempts[user_id] = 0
         if user_id in self.blocked_users:
             del self.blocked_users[user_id]
-    
+
     def get_remaining_attempts(self, user_id: int) -> int:
         """الحصول على عدد المحاولات المتبقية"""
         return self.MAX_FAILED_ATTEMPTS - self.failed_attempts.get(user_id, 0)
@@ -745,12 +699,12 @@ whatsapp_security = WhatsAppSecuritySystem()
 # ================================ نظام التشفير المتقدم ================================
 class EncryptionSystem:
     """نظام تشفير متقدم للبيانات الحساسة"""
-    
+
     def __init__(self):
         # استخدام مفتاح ثابت آمن (في الإنتاج يجب استخدام مفتاح من متغيرات البيئة)
         self.master_key = b'FC26_BOT_SECURE_ENCRYPTION_KEY_2025_PRODUCTION'
         self._init_cipher()
-    
+
     def _init_cipher(self):
         """تهيئة نظام التشفير"""
         # إنشاء KDF للحصول على مفتاح قوي
@@ -762,7 +716,7 @@ class EncryptionSystem:
         )
         key = base64.urlsafe_b64encode(kdf.derive(self.master_key))
         self.cipher = Fernet(key)
-    
+
     def encrypt(self, data: str) -> str:
         """تشفير البيانات"""
         if not data:
@@ -773,7 +727,7 @@ class EncryptionSystem:
         except Exception as e:
             logger.error(f"خطأ في التشفير: {e}")
             return data  # إرجاع البيانات بدون تشفير في حالة الخطأ
-    
+
     def decrypt(self, encrypted_data: str) -> str:
         """فك تشفير البيانات"""
         if not encrypted_data:
@@ -792,19 +746,19 @@ encryption_system = EncryptionSystem()
 # ================================ نظام التحقق من طرق الدفع ================================
 class PaymentValidationSystem:
     """نظام التحقق المتقدم من طرق الدفع"""
-    
+
     def __init__(self):
         # تتبع المحاولات لكل مستخدم
         self.user_attempts: Dict[int, List[datetime]] = defaultdict(list)
         self.failed_attempts: Dict[int, int] = defaultdict(int)
         self.blocked_users: Dict[int, datetime] = {}
-        
+
         # إعدادات الحماية
         self.MAX_ATTEMPTS_PER_MINUTE = 8
         self.MAX_FAILED_ATTEMPTS = 4
         self.BLOCK_DURATION_MINUTES = 10
         self.RATE_LIMIT_WINDOW = 60  # ثانية
-        
+
         # قواعد التحقق لكل طريقة دفع
         self.PAYMENT_RULES = {
             'vodafone_cash': {
@@ -860,13 +814,13 @@ class PaymentValidationSystem:
                 'example': 'https://instapay.com/username'
             }
         }
-    
+
     def is_user_blocked(self, user_id: int) -> Tuple[bool, Optional[int]]:
         """التحقق من حظر المستخدم"""
         if user_id in self.blocked_users:
             block_time = self.blocked_users[user_id]
             elapsed = (datetime.now() - block_time).total_seconds() / 60
-            
+
             if elapsed < self.BLOCK_DURATION_MINUTES:
                 remaining = self.BLOCK_DURATION_MINUTES - int(elapsed)
                 return True, remaining
@@ -874,30 +828,30 @@ class PaymentValidationSystem:
                 # انتهت فترة الحظر
                 del self.blocked_users[user_id]
                 self.failed_attempts[user_id] = 0
-        
+
         return False, None
-    
+
     def check_rate_limit(self, user_id: int) -> Tuple[bool, Optional[str]]:
         """فحص معدل الطلبات"""
         now = datetime.now()
-        
+
         # تنظيف المحاولات القديمة
         if user_id in self.user_attempts:
             self.user_attempts[user_id] = [
                 attempt for attempt in self.user_attempts[user_id]
                 if (now - attempt).total_seconds() < self.RATE_LIMIT_WINDOW
             ]
-        
+
         # فحص عدد المحاولات
         attempts_count = len(self.user_attempts[user_id])
-        
+
         if attempts_count >= self.MAX_ATTEMPTS_PER_MINUTE:
             return False, f"⚠️ لقد تجاوزت الحد المسموح ({self.MAX_ATTEMPTS_PER_MINUTE} محاولات في الدقيقة)\\n\\n⏰ انتظر قليلاً ثم حاول مرة أخرى"
-        
+
         # تسجيل المحاولة الجديدة
         self.user_attempts[user_id].append(now)
         return True, None
-    
+
     def validate_wallet(self, text: str, payment_method: str) -> Dict[str, Any]:
         """التحقق من رقم المحفظة الإلكترونية"""
         result = {
@@ -906,60 +860,54 @@ class PaymentValidationSystem:
             'error_message': '',
             'network': ''
         }
-        
+
         # تنظيف الرقم من الرموز
         cleaned = re.sub(r'[^\d]', '', text)
-        
+
         rules = self.PAYMENT_RULES[payment_method]
-        
+
         # فحص وجود أحرف أو رموز
         if re.search(r'[a-zA-Z]', text):
             result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
-
 📍 **يجب أن يكون:**
 • أرقام فقط (بدون حروف أو رموز)
 • 11 رقم بالضبط
 • يبدأ بـ {'/'.join(rules['prefix'])} فقط
-
 ✅ **مثال صحيح:** `{rules['example']}`"""
-            
+
             if payment_method == 'bank_wallet':
                 result['error_message'] += "\n\n📍 **تنبيه:** المحفظة البنكية تقبل جميع الشبكات المصرية (010/011/012/015)"
-            
+
             return result
-        
+
         # فحص الطول
         if len(cleaned) != rules['length']:
             result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
-
 📏 **الطول المطلوب:** {rules['length']} رقم
 📍 **أنت أدخلت:** {len(cleaned)} رقم
-
 ✅ **مثال صحيح:** `{rules['example']}`"""
             return result
-        
+
         # فحص البداية
         prefix = cleaned[:3]
         if prefix not in rules['prefix']:
             result['error_message'] = f"""❌ **رقم {rules['name']} غير صحيح**
-
 📍 **يجب أن يبدأ بـ:** {'/'.join(rules['prefix'])} فقط
 🚫 **رقمك يبدأ بـ:** `{prefix}`
-
 ✅ **مثال صحيح:** `{rules['example']}`"""
-            
+
             if payment_method == 'bank_wallet':
                 result['error_message'] += "\n\n📍 **تنبيه:** المحفظة البنكية تقبل جميع الشبكات المصرية (010/011/012/015)"
-            
+
             return result
-        
+
         # النجاح
         result['is_valid'] = True
         result['cleaned_data'] = cleaned
         result['network'] = rules['network']
-        
+
         return result
-    
+
     def validate_telda(self, text: str) -> Dict[str, Any]:
         """التحقق من رقم كارت تيلدا"""
         result = {
@@ -967,47 +915,43 @@ class PaymentValidationSystem:
             'cleaned_data': '',
             'error_message': ''
         }
-        
+
         # السماح بالمسافات والشرطات ثم إزالتها
         cleaned = re.sub(r'[\s\-]', '', text)
-        
+
         # إزالة أي شيء غير الأرقام
         digits_only = re.sub(r'[^\d]', '', cleaned)
-        
+
         # فحص وجود أحرف
         if re.search(r'[a-zA-Z]', text):
             result['error_message'] = """❌ **رقم كارت تيلدا غير صحيح**
-
 📍 **يجب أن يكون:**
 • 16 رقم بالضبط
 • أرقام فقط (يُسمح بالمسافات والشرطات)
 • بدون حروف أو رموز غريبة
-
 ✅ **أمثلة صحيحة:**
 • `1234567890123456`
 • `1234-5678-9012-3456`
 • `1234 5678 9012 3456`"""
             return result
-        
+
         # فحص الطول
         if len(digits_only) != 16:
             result['error_message'] = f"""❌ **رقم كارت تيلدا غير صحيح**
-
 📏 **المطلوب:** 16 رقم بالضبط
 📍 **أنت أدخلت:** {len(digits_only)} رقم
-
 ✅ **أمثلة صحيحة:**
 • `1234567890123456`
 • `1234-5678-9012-3456`
 • `1234 5678 9012 3456`"""
             return result
-        
+
         # النجاح
         result['is_valid'] = True
         result['cleaned_data'] = digits_only
-        
+
         return result
-    
+
     def validate_instapay(self, text: str) -> Dict[str, Any]:
         """التحقق من رابط إنستاباي واستخراج الرابط الصحيح فقط"""
         result = {
@@ -1015,13 +959,13 @@ class PaymentValidationSystem:
             'cleaned_data': '',
             'error_message': ''
         }
-        
+
         # تنظيف النص
         text = text.strip()
-        
+
         # البحث عن روابط InstaPay أو IPN في النص
         import re
-        
+
         # نمط للبحث عن روابط ipn.eg أو instapay
         # يبحث عن روابط كاملة مثل https://ipn.eg/S/username/instapay/ABC123
         url_patterns = [
@@ -1030,7 +974,7 @@ class PaymentValidationSystem:
             r'ipn\.eg/[^\s]+',  # روابط ipn.eg بدون https
             r'instapay\.com/[^\s]+',  # روابط instapay.com بدون https
         ]
-        
+
         # البحث عن أول رابط مطابق
         for pattern in url_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
@@ -1042,7 +986,7 @@ class PaymentValidationSystem:
                 result['is_valid'] = True
                 result['cleaned_data'] = found_url
                 return result
-        
+
         # إذا لم يتم العثور على رابط، نتحقق من النص بشكل عام
         if any(keyword in text.lower() for keyword in ['instapay', 'ipn.eg', 'ipn']):
             # إذا كان النص يحتوي على كلمات مفتاحية لكن ليس بتنسيق رابط صحيح
@@ -1057,38 +1001,36 @@ class PaymentValidationSystem:
                         result['is_valid'] = True
                         result['cleaned_data'] = url_match.group(0)
                         return result
-        
+
         # فشل التحقق
         result['error_message'] = """❌ **رابط إنستاباي غير صحيح**
-
 📍 **يجب إدخال رابط كامل فقط**
 • لا يُقبل اسم المستخدم بدون رابط
 • يجب أن يحتوي على instapay أو ipn.eg
-
 ✅ **أمثلة صحيحة:**
 • `https://ipn.eg/S/username/instapay/ABC123`
 • `https://instapay.com/username`
 • `ipn.eg/S/ABC123`
 • `instapay.com/username`"""
-        
+
         return result
-    
+
     def record_failure(self, user_id: int):
         """تسجيل محاولة فاشلة"""
         self.failed_attempts[user_id] += 1
-        
+
         if self.failed_attempts[user_id] >= self.MAX_FAILED_ATTEMPTS:
             self.blocked_users[user_id] = datetime.now()
             return True  # تم الحظر
-        
+
         return False
-    
+
     def reset_user_failures(self, user_id: int):
         """إعادة تعيين المحاولات الفاشلة عند النجاح"""
         self.failed_attempts[user_id] = 0
         if user_id in self.blocked_users:
             del self.blocked_users[user_id]
-    
+
     def get_remaining_attempts(self, user_id: int) -> int:
         """الحصول على عدد المحاولات المتبقية"""
         return self.MAX_FAILED_ATTEMPTS - self.failed_attempts.get(user_id, 0)
@@ -1142,7 +1084,7 @@ class Database:
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
         ''')
-        
+
         # إضافة العمود whatsapp_network للجداول الموجودة (للتوافق مع قواعد البيانات القديمة)
         try:
             cursor.execute('ALTER TABLE registration_data ADD COLUMN whatsapp_network TEXT')
@@ -1286,7 +1228,7 @@ class Database:
             except Exception as e:
                 logger.debug(f"Column payment_details may already exist: {e}")
                 pass
-            
+
             try:
                 cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_details_type TEXT")
             except sqlite3.OperationalError:
@@ -1294,7 +1236,7 @@ class Database:
             except Exception as e:
                 logger.debug(f"Column payment_details_type may already exist: {e}")
                 pass
-            
+
             try:
                 cursor.execute("ALTER TABLE registration_data ADD COLUMN payment_network TEXT")
             except sqlite3.OperationalError:
@@ -1302,7 +1244,7 @@ class Database:
             except Exception as e:
                 logger.debug(f"Column payment_network may already exist: {e}")
                 pass
-            
+
             # تحديث بيانات التسجيل
             cursor.execute('''
                 UPDATE registration_data
@@ -1315,7 +1257,7 @@ class Database:
                 data.get('payment_method'),
                 user_id
             ))
-            
+
             # محاولة تحديث الحقول الجديدة إذا كانت موجودة
             if data.get('payment_details'):
                 try:
@@ -1375,21 +1317,21 @@ class Database:
         """الحصول على بيانات المستخدم الكاملة"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             SELECT u.*, r.*
             FROM users u
             LEFT JOIN registration_data r ON u.user_id = r.user_id
             WHERE u.telegram_id = ?
         ''', (telegram_id,))
-        
+
         row = cursor.fetchone()
         conn.close()
-        
+
         if row:
             return dict(row)
         return None
-    
+
     def get_user_profile(self, telegram_id: int) -> Optional[dict]:
         """الحصول على الملف الشخصي"""
         conn = self.get_connection()
@@ -1440,18 +1382,18 @@ class Database:
         """تحديث بيانات المستخدم"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         try:
             # الحصول على user_id
             cursor.execute('SELECT user_id FROM users WHERE telegram_id = ?', (telegram_id,))
             user = cursor.fetchone()
-            
+
             if not user:
                 conn.close()
                 return False
-            
+
             user_id = user['user_id']
-            
+
             # تحديث بيانات التسجيل
             if 'platform' in update_data:
                 cursor.execute('''
@@ -1459,7 +1401,7 @@ class Database:
                     SET platform = ?
                     WHERE user_id = ?
                 ''', (update_data['platform'], user_id))
-            
+
             if 'whatsapp' in update_data:
                 cursor.execute('''
                     UPDATE registration_data
@@ -1470,14 +1412,14 @@ class Database:
                     update_data.get('whatsapp_network', ''),
                     user_id
                 ))
-            
+
             if 'payment_method' in update_data:
                 cursor.execute('''
                     UPDATE registration_data
                     SET payment_method = ?
                     WHERE user_id = ?
                 ''', (update_data['payment_method'], user_id))
-            
+
             if 'payment_details' in update_data:
                 cursor.execute('''
                     UPDATE registration_data
@@ -1489,21 +1431,21 @@ class Database:
                     update_data.get('payment_network', ''),
                     user_id
                 ))
-            
+
             conn.commit()
             conn.close()
             return True
-            
+
         except Exception as e:
             conn.rollback()
             conn.close()
             logger.error(f"خطأ في تحديث بيانات المستخدم: {e}")
             return False
-    
+
     def update_user_platform(self, telegram_id: int, platform: str) -> bool:
         """تحديث منصة المستخدم"""
         return self.update_user_data(telegram_id, {'platform': platform})
-    
+
     def delete_user_account(self, telegram_id: int) -> bool:
         """حذف حساب المستخدم"""
         conn = self.get_connection()
@@ -1651,14 +1593,14 @@ class SmartRegistrationHandler:
     async def handle_registration_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بدء التسجيل الجديد مع حماية من الضغط المتكرر"""
         query = update.callback_query
-        
+
         # الرد على الـ callback query بسرعة
         await query.answer()
-        
+
         telegram_id = query.from_user.id
         username = query.from_user.username
         full_name = query.from_user.full_name
-        
+
         # التحقق من عدم وجود تسجيل قيد المعالجة
         if 'registration' in context.user_data and context.user_data['registration'].get('in_progress'):
             logger.debug(f"تجاهل محاولة بدء تسجيل مكرر للمستخدم {telegram_id}")
@@ -1691,26 +1633,26 @@ class SmartRegistrationHandler:
     async def handle_platform_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار المنصة مع حماية من الضغط المتكرر"""
         query = update.callback_query
-        
+
         # الرد على الـ callback query بسرعة لمنع ظهور رمز التحميل
         await query.answer()
-        
+
         # التحقق من أن البيانات صحيحة
         if not query.data.startswith("platform_"):
             return
-        
+
         platform_key = query.data.replace("platform_", "")
-        
+
         # التحقق من صحة المنصة
         if platform_key not in GAMING_PLATFORMS:
             await query.answer("❌ منصة غير صحيحة", show_alert=True)
             return
-        
+
         platform_name = GAMING_PLATFORMS[platform_key]['name']
-        
+
         # التحقق من وضع التعديل
         is_editing = context.user_data.get('editing_mode') == 'whatsapp_full'
-        
+
         if is_editing:
             # في وضع التعديل - نحفظ في edit_registration
             if 'edit_registration' not in context.user_data:
@@ -1718,9 +1660,9 @@ class SmartRegistrationHandler:
                     'telegram_id': query.from_user.id,
                     'is_editing': True
                 }
-            
+
             context.user_data['edit_registration']['platform'] = platform_key
-            
+
             # عرض رسالة إدخال رقم الواتساب الجديد
             await smart_message_manager.update_current_message(
                 update, context,
@@ -1732,7 +1674,7 @@ class SmartRegistrationHandler:
                 context.user_data['registration'] = {
                     'telegram_id': query.from_user.id
                 }
-            
+
             # التحقق من عدم تكرار نفس الاختيار
             if context.user_data['registration'].get('platform') == platform_key:
                 logger.debug(f"تجاهل اختيار منصة مكرر: {platform_key}")
@@ -1758,23 +1700,20 @@ class SmartRegistrationHandler:
         """إدخال واتساب مع نظام الحماية المتقدم"""
         user_id = update.effective_user.id
         whatsapp_input = update.message.text.strip()
-        
+
         # 1. فحص الحظر
         is_blocked, remaining_minutes = whatsapp_security.is_user_blocked(user_id)
         if is_blocked:
             await smart_message_manager.send_new_active_message(
                 update, context,
                 f"""🚫 **أنت محظور مؤقتاً**
-
 ⏰ **المدة المتبقية:** {remaining_minutes} دقيقة
-
 📝 **السبب:** تجاوز عدد المحاولات الخاطئة المسموح بها
-
 💡 **نصيحة:** تأكد من إدخال رقم واتساب صحيح عند المحاولة مرة أخرى""",
                 disable_previous=False
             )
             return ENTERING_WHATSAPP
-        
+
         # 2. فحص معدل الطلبات
         rate_ok, rate_message = whatsapp_security.check_rate_limit(user_id)
         if not rate_ok:
@@ -1784,63 +1723,59 @@ class SmartRegistrationHandler:
                 disable_previous=False
             )
             return ENTERING_WHATSAPP
-        
+
         # 3. فحص التكرار
         if whatsapp_security.check_duplicate(user_id, whatsapp_input):
             await smart_message_manager.send_new_active_message(
                 update, context,
                 f"""⚠️ **لقد أدخلت هذا الرقم بالفعل**
-
 🔢 **الرقم:** `{whatsapp_input}`
-
 💡 **نصيحة:** إذا كان الرقم صحيحاً، انتظر رسالة التأكيد
 إذا كنت تريد تغييره، أدخل رقماً مختلفاً""",
                 disable_previous=False
             )
             return ENTERING_WHATSAPP
-        
+
         # 4. التحقق الشامل من الرقم
         validation = whatsapp_security.validate_whatsapp(whatsapp_input, user_id)
-        
+
         if not validation['is_valid']:
             # تسجيل المحاولة الفاشلة
             was_blocked = whatsapp_security.record_failure(user_id)
             remaining = whatsapp_security.get_remaining_attempts(user_id)
-            
+
             # إضافة معلومات المحاولات المتبقية للرسالة
             error_msg = validation['error_message']
-            
+
             if was_blocked:
                 error_msg += f"""
-
 🚫 **تم حظرك مؤقتاً لمدة {whatsapp_security.BLOCK_DURATION_MINUTES} دقيقة**
 السبب: تجاوز عدد المحاولات الخاطئة"""
             elif remaining > 0:
                 error_msg += f"""
-
 ⚠️ **تحذير:** لديك {remaining} محاولات متبقية"""
-            
+
             await smart_message_manager.send_new_active_message(
                 update, context,
                 error_msg,
                 disable_previous=False
             )
-            
+
             # تسجيل المحاولة في السجلات
             logger.warning(f"محاولة فاشلة من المستخدم {user_id}: {validation['error_type']} - Input: {whatsapp_input}")
-            
+
             return ENTERING_WHATSAPP
-        
+
         # 5. النجاح! إعادة تعيين المحاولات الفاشلة
         whatsapp_security.reset_user_failures(user_id)
-        
+
         # حفظ الرقم المنظف في السياق
         cleaned_number = validation['cleaned_number']
         network_info = validation['network_info']
-        
+
         # التحقق من وضع التعديل
         is_editing = context.user_data.get('editing_mode') in ['whatsapp_only', 'whatsapp_full', 'payment_only']
-        
+
         if is_editing:
             # في وضع التعديل - نحفظ في edit_registration
             if 'edit_registration' not in context.user_data:
@@ -1848,10 +1783,10 @@ class SmartRegistrationHandler:
                     'telegram_id': user_id,
                     'is_editing': True
                 }
-            
+
             context.user_data['edit_registration']['whatsapp'] = cleaned_number
             context.user_data['edit_registration']['whatsapp_network'] = network_info['name']
-            
+
             # في حالة تعديل الواتساب فقط، نحفظ مباشرة
             if context.user_data.get('editing_mode') == 'whatsapp_only':
                 # تحديث قاعدة البيانات
@@ -1859,41 +1794,38 @@ class SmartRegistrationHandler:
                     'whatsapp': cleaned_number,
                     'whatsapp_network': network_info['name']
                 })
-                
+
                 if success:
                     # عرض رسالة النجاح والعودة للملف الشخصي
                     profile = self.db.get_user_profile(user_id)
-                    
+
                     profile_text = f"""
 ✅ **تم تحديث رقم الواتساب بنجاح!**
 ━━━━━━━━━━━━━━━━
-
 👤 **الملف الشخصي المحدث**
 ━━━━━━━━━━━━━━━━
-
 🎮 المنصة: {profile.get('platform', 'غير محدد')}
 📱 واتساب: {cleaned_number} ✅
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
-
 ━━━━━━━━━━━━━━━━
 🔐 بياناتك محمية ومشفرة
 """
-                    
+
                     keyboard = [
                         [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
                         [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
-                    
+
                     await smart_message_manager.send_new_active_message(
                         update, context, profile_text,
                         reply_markup=reply_markup
                     )
-                    
+
                     # مسح وضع التعديل
                     context.user_data.pop('editing_mode', None)
                     context.user_data.pop('edit_registration', None)
-                    
+
                     return ConversationHandler.END
                 else:
                     await smart_message_manager.send_new_active_message(
@@ -1908,10 +1840,10 @@ class SmartRegistrationHandler:
                 context.user_data['registration'] = {
                     'telegram_id': user_id
                 }
-            
+
             context.user_data['registration']['whatsapp'] = cleaned_number
             context.user_data['registration']['whatsapp_network'] = network_info['name']
-            
+
             # حفظ في قاعدة البيانات المؤقتة
             try:
                 self.db.save_temp_registration(
@@ -1922,17 +1854,15 @@ class SmartRegistrationHandler:
                 )
             except Exception as e:
                 logger.error(f"Error saving temp registration: {e}")
-        
+
         # رسالة النجاح المفصلة
         success_message = f"""✅ **تم حفظ رقم الواتساب بنجاح!**
-
 📱 **الرقم:** `{cleaned_number}`
 🌐 **الشبكة:** {network_info['emoji']} {network_info['name']}
 💾 **تم الحفظ التلقائي** ✅
-
 ━━━━━━━━━━━━━━━━
 ⏭️ **الخطوة التالية:** اختر طريقة الدفع المفضلة"""
-        
+
         # إرسال رسالة النجاح مع خيارات الدفع
         await smart_message_manager.send_new_active_message(
             update, context,
@@ -1940,60 +1870,60 @@ class SmartRegistrationHandler:
             reply_markup=Keyboards.get_payment_keyboard(),
             choice_made=f"واتساب: {cleaned_number}"
         )
-        
+
         # تسجيل النجاح
         logger.info(f"تم حفظ رقم واتساب للمستخدم {user_id}: {cleaned_number} - شبكة: {network_info['name']}")
-        
+
         return CHOOSING_PAYMENT
 
     async def handle_payment_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار طريقة الدفع مع حماية من الضغط المتكرر"""
         query = update.callback_query
-        
+
         # الرد على الـ callback query بسرعة
         await query.answer()
-        
+
         # التحقق من أن البيانات صحيحة
         if not query.data.startswith("payment_"):
             return
-        
+
         payment_key = query.data.replace("payment_", "")
-        
+
         # التحقق من صحة طريقة الدفع
         if payment_key not in PAYMENT_METHODS:
             await query.answer("❌ طريقة دفع غير صحيحة", show_alert=True)
             return
-        
+
         payment_name = PAYMENT_METHODS[payment_key]['name']
-        
+
         # التحقق من وضع التعديل
         is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
-        
+
         if is_editing:
             # في وضع التعديل - نحفظ في edit_registration
             if 'edit_registration' not in context.user_data:
                 await query.answer("❌ يجب البدء من جديد", show_alert=True)
                 return ConversationHandler.END
-            
+
             # التحقق من عدم تكرار نفس الاختيار
             if context.user_data['edit_registration'].get('payment_method') == payment_key:
                 logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
                 return
-            
+
             context.user_data['edit_registration']['payment_method'] = payment_key
         else:
             # في وضع التسجيل العادي
             if 'registration' not in context.user_data:
                 await query.answer("❌ يجب البدء من جديد", show_alert=True)
                 return ConversationHandler.END
-            
+
             # التحقق من عدم تكرار نفس الاختيار
             if context.user_data['registration'].get('payment_method') == payment_key:
                 logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {payment_key}")
                 return
 
             context.user_data['registration']['payment_method'] = payment_key
-            
+
             # حفظ في قاعدة البيانات المؤقتة
             self.db.save_temp_registration(
                 context.user_data['registration']['telegram_id'],
@@ -2001,133 +1931,111 @@ class SmartRegistrationHandler:
                 ENTERING_PAYMENT_DETAILS,
                 context.user_data['registration']
             )
-        
+
         # عرض التعليمات حسب نوع طريقة الدفع
         instructions = self.get_payment_instructions(payment_key)
-        
+
         await smart_message_manager.update_current_message(
             update, context,
             instructions
         )
-        
+
         return ENTERING_PAYMENT_DETAILS
-    
+
     def get_payment_instructions(self, payment_key: str) -> str:
         """الحصول على التعليمات المناسبة لكل طريقة دفع"""
-        
+
         if payment_key == 'vodafone_cash':
             return """⭕️ **فودافون كاش**
-
 📱 **أدخل رقم:**
-
 📝 **القواعد:**
 • 11 رقم بالضبط
 • يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ **مثال صحيح:** `01012345678`"""
-        
+
         elif payment_key == 'etisalat_cash':
             return """🟢 **اتصالات كاش**
-
 📱 **أدخل رقم:**
-
 📝 **القواعد:**
 • 11 رقم بالضبط
 • يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ **مثال صحيح:** `01112345678`"""
-        
+
         elif payment_key == 'orange_cash':
             return """🍊 **أورانج كاش**
-
 📱 **أدخل رقم:**
-
 📝 **القواعد:**
 • 11 رقم بالضبط
 • يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ **مثال صحيح:** `01212345678`"""
-        
+
         elif payment_key == 'we_cash':
             return """🟣 **وي كاش**
-
 📱 **أدخل رقم:**
-
 📝 **القواعد:**
 • 11 رقم بالضبط
 • يبدأ بـ 010 / 011 / 012 / 015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ **مثال صحيح:** `01512345678`"""
-        
+
         elif payment_key == 'bank_wallet':
             return """🏦 **محفظة بنكية**
-
 📱 **أدخل رقم المحفظة البنكية:**
-
 📝 **القواعد:**
 • 11 رقم بالضبط
 • يقبل جميع الشبكات: 010/011/012/015
 • أرقام إنجليزية فقط (0-9)
 • بدون مسافات أو رموز
-
 ✅ **أمثلة صحيحة:**
 • `01012345678` - فودافون ⭕
 • `01112345678` - اتصالات 🟢
 • `01212345678` - أورانج 🍊
 • `01512345678` - وي 🟣
-
 📌 **ملاحظة مهمة:** المحفظة البنكية تقبل جميع الشبكات المصرية
 ✅ **يمكنك استخدام أي رقم من الشبكات الأربعة**"""
-        
+
         elif payment_key == 'telda':
             return """💳 **تيلدا**
-
 💳 **أدخل رقم كارت تيلدا:**
-
 📝 **القواعد:**
 • 16 رقم بالضبط
 • أرقام فقط
 • يُسمح بالمسافات والشرطات (سيتم إزالتها تلقائياً)
-
 ✅ **أمثلة صحيحة:**
 • `1234567890123456`
 • `1234-5678-9012-3456`
 • `1234 5678 9012 3456`"""
-        
+
         elif payment_key == 'instapay':
             return """🔗 **إنستا باي**
-
 🔗 **أدخل رابط إنستاباي كامل:**
-
 📝 **القواعد:**
 • يجب إدخال رابط كامل فقط
 • لا يُقبل اسم المستخدم بدون رابط
 • يجب أن يحتوي على instapay أو ipn.eg
-
 ✅ **أمثلة صحيحة:**
 • `https://ipn.eg/S/username/instapay/ABC123`
 • `https://instapay.com/username`
 • `ipn.eg/S/ABC123`
 • `instapay.com/username`"""
-        
+
         return "طريقة دفع غير معروفة"
-    
+
     async def handle_payment_details_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج إدخال بيانات طريقة الدفع مع التشفير"""
         user_id = update.effective_user.id
         payment_input = update.message.text.strip()
-        
+
         # التحقق من وضع التعديل
         is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
-        
+
         if is_editing:
             # في وضع التعديل
             if 'edit_registration' not in context.user_data or 'payment_method' not in context.user_data['edit_registration']:
@@ -2137,7 +2045,7 @@ class SmartRegistrationHandler:
                     disable_previous=False
                 )
                 return ConversationHandler.END
-            
+
             payment_method = context.user_data['edit_registration']['payment_method']
         else:
             # في وضع التسجيل العادي
@@ -2148,25 +2056,22 @@ class SmartRegistrationHandler:
                     disable_previous=False
                 )
                 return ConversationHandler.END
-            
+
             payment_method = context.user_data['registration']['payment_method']
-        
+
         # 1. فحص الحظر
         is_blocked, remaining_minutes = payment_validation.is_user_blocked(user_id)
         if is_blocked:
             await smart_message_manager.send_new_active_message(
                 update, context,
                 f"""🚫 **أنت محظور مؤقتاً**
-
 ⏰ **المدة المتبقية:** {remaining_minutes} دقيقة
-
 📝 **السبب:** تجاوز عدد المحاولات الخاطئة المسموح بها
-
 💡 **نصيحة:** تأكد من إدخال البيانات الصحيحة عند المحاولة مرة أخرى""",
                 disable_previous=False
             )
             return ENTERING_PAYMENT_DETAILS
-        
+
         # 2. فحص معدل الطلبات
         rate_ok, rate_message = payment_validation.check_rate_limit(user_id)
         if not rate_ok:
@@ -2176,11 +2081,11 @@ class SmartRegistrationHandler:
                 disable_previous=False
             )
             return ENTERING_PAYMENT_DETAILS
-        
+
         # 3. التحقق حسب نوع طريقة الدفع
         validation_result = None
         payment_type = None
-        
+
         if payment_method in ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_cash', 'bank_wallet']:
             validation_result = payment_validation.validate_wallet(payment_input, payment_method)
             payment_type = 'wallet'
@@ -2190,58 +2095,56 @@ class SmartRegistrationHandler:
         elif payment_method == 'instapay':
             validation_result = payment_validation.validate_instapay(payment_input)
             payment_type = 'link'
-        
+
         # 4. معالجة النتيجة
         if not validation_result['is_valid']:
             # تسجيل المحاولة الفاشلة
             was_blocked = payment_validation.record_failure(user_id)
             remaining = payment_validation.get_remaining_attempts(user_id)
-            
+
             # إضافة معلومات المحاولات المتبقية للرسالة
             error_msg = validation_result['error_message']
-            
+
             if was_blocked:
                 error_msg += f"""
-
 🚫 **تم حظرك مؤقتاً لمدة {payment_validation.BLOCK_DURATION_MINUTES} دقيقة**
 السبب: تجاوز عدد المحاولات الخاطئة"""
             elif remaining > 0:
                 error_msg += f"""
-
 ⚠️ **تحذير:** لديك {remaining} محاولات متبقية"""
-            
+
             await smart_message_manager.send_new_active_message(
                 update, context,
                 error_msg,
                 disable_previous=False
             )
-            
+
             # تسجيل المحاولة في السجلات (بدون البيانات الحساسة)
             logger.warning(f"محاولة فاشلة من المستخدم {user_id} لطريقة دفع: {payment_method}")
-            
+
             return ENTERING_PAYMENT_DETAILS
-        
+
         # 5. النجاح! إعادة تعيين المحاولات الفاشلة
         payment_validation.reset_user_failures(user_id)
-        
+
         # 6. تشفير البيانات الحساسة
         encrypted_data = encryption_system.encrypt(validation_result['cleaned_data'])
-        
+
         if is_editing:
             # في وضع التعديل - نحفظ في edit_registration
             context.user_data['edit_registration']['payment_details'] = encrypted_data
             context.user_data['edit_registration']['payment_details_type'] = payment_type
-            
+
             if payment_type == 'wallet':
                 context.user_data['edit_registration']['payment_network'] = validation_result.get('network', '')
         else:
             # في وضع التسجيل العادي
             context.user_data['registration']['payment_details'] = encrypted_data
             context.user_data['registration']['payment_details_type'] = payment_type
-            
+
             if payment_type == 'wallet':
                 context.user_data['registration']['payment_network'] = validation_result.get('network', '')
-            
+
             # حفظ في قاعدة البيانات المؤقتة
             try:
                 self.db.save_temp_registration(
@@ -2252,40 +2155,34 @@ class SmartRegistrationHandler:
                 )
             except Exception as e:
                 logger.error(f"Error saving temp registration: {e}")
-        
+
         # 9. إعداد رسالة النجاح
         payment_name = PAYMENT_METHODS[payment_method]['name']
-        
+
         if payment_type == 'wallet':
             success_message = f"""✅ **تم حفظ {payment_name}!**
-
 📱 **الرقم:** `{validation_result['cleaned_data']}`
-
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'card':
             # عرض رقم الكارت كامل للعميل بدون إخفاء
             success_message = f"""✅ **تم حفظ كارت تيلدا!**
-
 💳 **رقم الكارت:** `{validation_result['cleaned_data']}`
-
 ━━━━━━━━━━━━━━━━"""
         elif payment_type == 'link':
             success_message = f"""✅ **تم حفظ رابط إنستاباي!**
-
 🔗 **الرابط:** `{validation_result['cleaned_data']}`
-
 ━━━━━━━━━━━━━━━━"""
-        
+
         # 10. إرسال رسالة النجاح ثم الانتقال للتأكيد النهائي
         await smart_message_manager.send_new_active_message(
             update, context,
             success_message,
             choice_made=f"{payment_name}: تم الحفظ"
         )
-        
+
         # تسجيل النجاح (بدون البيانات الحساسة)
         logger.info(f"تم حفظ بيانات دفع للمستخدم {user_id}: نوع {payment_method}")
-        
+
         # الانتقال للتأكيد النهائي
         return await self.show_confirmation(update, context)
 
@@ -2295,35 +2192,35 @@ class SmartRegistrationHandler:
         """عرض التأكيد والحفظ التلقائي مع فك تشفير البيانات"""
         # التحقق من وضع التعديل
         is_editing = context.user_data.get('editing_mode') in ['whatsapp_full', 'payment_only']
-        
+
         if is_editing:
             # في وضع التعديل - نحدث البيانات في قاعدة البيانات
             reg_data = context.user_data['edit_registration']
             telegram_id = reg_data['telegram_id']
-            
+
             # تحديث البيانات في قاعدة البيانات
             update_data = {}
-            
+
             if 'platform' in reg_data:
                 update_data['platform'] = reg_data['platform']
-            
+
             if 'whatsapp' in reg_data:
                 update_data['whatsapp'] = reg_data['whatsapp']
                 if 'whatsapp_network' in reg_data:
                     update_data['whatsapp_network'] = reg_data['whatsapp_network']
-            
+
             if 'payment_method' in reg_data:
                 update_data['payment_method'] = reg_data['payment_method']
-            
+
             if 'payment_details' in reg_data:
                 update_data['payment_details'] = reg_data['payment_details']
                 update_data['payment_details_type'] = reg_data.get('payment_details_type', '')
                 if 'payment_network' in reg_data:
                     update_data['payment_network'] = reg_data['payment_network']
-            
+
             # تحديث البيانات في قاعدة البيانات
             success = self.db.update_user_data(telegram_id, update_data)
-            
+
             # مسح وضع التعديل
             context.user_data.pop('editing_mode', None)
             context.user_data.pop('edit_registration', None)
@@ -2332,20 +2229,20 @@ class SmartRegistrationHandler:
             reg_data = context.user_data['registration']
             telegram_id = reg_data['telegram_id']
             success = self.db.complete_registration(telegram_id, reg_data)
-        
+
         # الحصول على اسم المستخدم
         if update.callback_query:
             username = update.callback_query.from_user.username
         else:
             username = update.effective_user.username
-        
+
         # إضافة @ للمستخدم إذا كان موجود
         username_display = f"@{username}" if username else "غير محدد"
 
         if success:
             # الحصول على البيانات المحدثة من قاعدة البيانات
             updated_user_data = self.db.get_user_data(telegram_id)
-            
+
             if updated_user_data:
                 platform = GAMING_PLATFORMS.get(updated_user_data.get('platform'), {}).get('name', 'غير محدد')
                 payment_method = updated_user_data.get('payment_method', '')
@@ -2356,14 +2253,14 @@ class SmartRegistrationHandler:
                 payment_method = reg_data.get('payment_method', '')
                 payment_name = PAYMENT_METHODS.get(payment_method, {}).get('name', 'غير محدد')
                 whatsapp = reg_data.get('whatsapp', 'غير محدد')
-            
+
             # فك تشفير بيانات الدفع إذا كانت موجودة
             payment_details_display = ""
             if 'payment_details' in reg_data:
                 try:
                     decrypted_data = encryption_system.decrypt(reg_data['payment_details'])
                     payment_type = reg_data.get('payment_details_type', '')
-                    
+
                     if payment_type == 'wallet':
                         payment_details_display = f"""
 💰 **بيانات الدفع:**
@@ -2379,38 +2276,32 @@ class SmartRegistrationHandler:
 • الرابط: `{decrypted_data}`"""
                 except:
                     payment_details_display = ""
-            
+
             # رسالة النجاح - مختلفة حسب وضع التعديل
             if is_editing:
                 success_message = f"""
 ✅ **تم تحديث بياناتك بنجاح!**
-
 📊 **ملخص البيانات المحدثة:**
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
 📱 واتساب: {whatsapp}
 💳 طريقة الدفع: {payment_name}{payment_details_display}
 ━━━━━━━━━━━━━━━━
-
 👤 **اسم المستخدم:** {username_display}
 🆔 **معرف التليجرام:** `{telegram_id}`
-
 ✨ تم تحديث ملفك الشخصي بنجاح!
 """
             else:
                 success_message = f"""
 ✅ **تم حفظ بياناتك بنجاح!**
-
 📊 **ملخص البيانات المحفوظة:**
 ━━━━━━━━━━━━━━━━
 🎮 المنصة: {platform}
 📱 واتساب: {whatsapp}
 💳 طريقة الدفع: {payment_name}{payment_details_display}
 ━━━━━━━━━━━━━━━━
-
 👤 **اسم المستخدم:** {username_display}
 🆔 **معرف التليجرام:** `{telegram_id}`
-
 🎉 مرحباً بك في عائلة FC 26! 🚀
 """
 
@@ -2423,18 +2314,18 @@ class SmartRegistrationHandler:
                 await smart_message_manager.send_new_active_message(
                     update, context, success_message
                 )
-            
+
             # مسح البيانات المؤقتة
             context.user_data.clear()
-            
+
             # تنظيف بيانات المستخدم في SmartMessageManager
             await smart_message_manager.cleanup_user_data(telegram_id)
-            
+
             return ConversationHandler.END
         else:
             # في حالة الفشل
             error_message = "❌ حدث خطأ في حفظ البيانات. الرجاء المحاولة مرة أخرى."
-            
+
             if update.callback_query:
                 await smart_message_manager.update_current_message(
                     update, context, error_message
@@ -2443,7 +2334,7 @@ class SmartRegistrationHandler:
                 await smart_message_manager.send_new_active_message(
                     update, context, error_message
                 )
-            
+
             return ConversationHandler.END
 
 
@@ -2529,7 +2420,7 @@ class FC26SmartBot:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية مع النظام الذكي الموحد"""
         telegram_id = update.effective_user.id
-        
+
         # إذا كان هناك callback_query، نتجاهل الطلب (منع التكرار)
         if update.callback_query:
             return
@@ -2538,41 +2429,37 @@ class FC26SmartBot:
 
         if user and user.get('registration_status') == 'complete':
             # مستخدم مسجل - عرض القائمة الرئيسية مع النظام الذكي
-            
+
             # التحقق من صلاحيات الأدمن
             is_admin = telegram_id == ADMIN_ID
-            
+
             if is_admin:
                 welcome_message = f"""
 👋 مرحباً بالأدمن!
-
 🎮 بوت FC 26 - لوحة التحكم
-
 ⚡ لديك صلاحيات كاملة
 """
             else:
                 welcome_message = f"""
 👋 أهلاً بعودتك!
-
 🎮 بوت FC 26 - أفضل مكان لبيع كوينز
-
 كيف يمكنني مساعدتك اليوم؟
 """
-            
+
             # أزرار تفاعلية حسب الصلاحيات
             keyboard = [
                 [InlineKeyboardButton("💸 بيع كوينز", callback_data="sell_coins")],
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
-            
+
             # إضافة أزرار الأدمن فقط للأدمن
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
-            
+
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             # استخدام النظام الذكي دائماً
@@ -2600,21 +2487,19 @@ class FC26SmartBot:
         # الحصول على معلومات الشبكة إذا كان الرقم موجود
         whatsapp_display = profile.get('whatsapp', 'غير محدد')
         network_display = ""
-        
+
         if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
             prefix = whatsapp_display[:3]
             if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
                 network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
                 network_display = f" ({network['emoji']} {network['name']})"
-        
+
         profile_text = f"""
 👤 الملف الشخصي
 ━━━━━━━━━━━━━━━━
-
 🎮 المنصة: {profile.get('platform', 'غير محدد')}
 📱 واتساب: {whatsapp_display}{network_display}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
-
 ━━━━━━━━━━━━━━━━
 🔐 بياناتك محمية
 """
@@ -2635,25 +2520,21 @@ class FC26SmartBot:
         """عرض المساعدة"""
         telegram_id = update.effective_user.id
         is_admin = telegram_id == ADMIN_ID
-        
+
         if is_admin:
             help_text = """
 🆘 المساعدة والأوامر - أدمن
 ━━━━━━━━━━━━━━━━
-
 📢 الأوامر المتاحة:
-
 /start - البداية والقائمة الرئيسية
 /profile - عرض ملفك الشخصي
 /delete - حذف حسابك (أدمن فقط)
 /help - هذه الرسالة
-
 🔐 صلاحيات الأدمن:
 • لوحة تحكم خاصة
 • عرض جميع المستخدمين
 • حذف المستخدمين
 • البث الجماعي
-
 🔗 للدعم والمساعدة:
 @FC26Support
 """
@@ -2661,13 +2542,10 @@ class FC26SmartBot:
             help_text = """
 🆘 المساعدة والأوامر
 ━━━━━━━━━━━━━━━━
-
 📢 الأوامر المتاحة:
-
 /start - البداية والقائمة الرئيسية
 /profile - عرض ملفك الشخصي
 /help - هذه الرسالة
-
 🔗 للدعم والمساعدة:
 @FC26Support
 """
@@ -2687,7 +2565,7 @@ class FC26SmartBot:
     async def delete_account_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف الحساب - للأدمن فقط"""
         telegram_id = update.effective_user.id
-        
+
         # التحقق من أن المستخدم هو الأدمن
         if telegram_id != ADMIN_ID:
             # عرض رسالة مساعدة للمستخدمين العاديين
@@ -2699,17 +2577,14 @@ class FC26SmartBot:
                 reply_markup=ReplyKeyboardRemove()
             )
             return
-        
+
         warning = """
 ⚠️ تحذير مهم!
 ━━━━━━━━━━━━━━━━
-
 هل أنت متأكد من حذف حسابك الشخصي كأدمن؟
-
 سيتم حذف:
 • جميع بياناتك 🗑️
 • صلاحيات الأدمن ستبقى
-
 لا يمكن التراجع! ⛔
 """
         await smart_message_manager.send_new_active_message(
@@ -2741,22 +2616,18 @@ class FC26SmartBot:
         elif query.data == "cancel_delete":
             telegram_id = query.from_user.id
             is_admin = telegram_id == ADMIN_ID
-            
+
             # العودة للقائمة الرئيسية
             if is_admin:
                 welcome_message = f"""
 ✅ تم الإلغاء.
-
 🎮 بوت FC 26 - لوحة التحكم
-
 ⚡ لديك صلاحيات كاملة
 """
             else:
                 welcome_message = f"""
 ✅ تم الإلغاء. سعداء لبقائك معنا! 😊
-
 🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
-
 كيف يمكنني مساعدتك اليوم؟
 """
 
@@ -2765,13 +2636,13 @@ class FC26SmartBot:
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
-            
+
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
-            
+
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smart_message_manager.update_current_message(
@@ -2783,7 +2654,7 @@ class FC26SmartBot:
         """معالجة أزرار القائمة التفاعلية مع النظام الذكي"""
         query = update.callback_query
         await query.answer()
-        
+
         # لوج عند الضغط على الأزرار
         user_id = query.from_user.id
         message_id = query.message.message_id
@@ -2804,21 +2675,19 @@ class FC26SmartBot:
             # الحصول على معلومات الشبكة إذا كان الرقم موجود
             whatsapp_display = profile.get('whatsapp', 'غير محدد')
             network_display = ""
-            
+
             if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
                 prefix = whatsapp_display[:3]
                 if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
                     network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
                     network_display = f" ({network['emoji']} {network['name']})"
-            
+
             profile_text = f"""
 👤 الملف الشخصي
 ━━━━━━━━━━━━━━━━
-
 🎮 المنصة: {profile.get('platform', 'غير محدد')}
 📱 واتساب: {whatsapp_display}{network_display}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
-
 ━━━━━━━━━━━━━━━━
 🔐 بياناتك محمية
 """
@@ -2851,17 +2720,14 @@ class FC26SmartBot:
             if telegram_id != ADMIN_ID:
                 await query.answer("⛔ هذه الميزة للأدمن فقط!", show_alert=True)
                 return
-            
+
             warning = """
 ⚠️ تحذير مهم!
 ━━━━━━━━━━━━━━━━
-
 هل أنت متأكد من حذف حسابك الشخصي كأدمن؟
-
 سيتم حذف:
 • جميع بياناتك 🗑️
 • صلاحيات الأدمن ستبقى
-
 لا يمكن التراجع! ⛔
 """
 
@@ -2885,22 +2751,18 @@ class FC26SmartBot:
         elif query.data == "main_menu":
             telegram_id = query.from_user.id
             is_admin = telegram_id == ADMIN_ID
-            
+
             # العودة للقائمة الرئيسية باستخدام النظام الذكي
             if is_admin:
                 welcome_message = f"""
 👋 مرحباً بالأدمن!
-
 🎮 بوت FC 26 - لوحة التحكم
-
 ⚡ لديك صلاحيات كاملة
 """
             else:
                 welcome_message = f"""
 👋 أهلاً بعودتك!
-
 🎮 بوت FC 26 - أفضل مكان  لبيع كوينز
-
 كيف يمكنني مساعدتك اليوم؟
 """
 
@@ -2909,36 +2771,35 @@ class FC26SmartBot:
                 [InlineKeyboardButton("👤 الملف الشخصي", callback_data="profile")],
                 [InlineKeyboardButton("📞 الدعم", callback_data="support")]
             ]
-            
+
             if is_admin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callback_data="admin_panel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callback_data="delete_account")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callback_data="admin_delete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
-            
+
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smart_message_manager.update_current_message(
                 update, context, welcome_message,
                 reply_markup=reply_markup
             )
-    
+
     async def handle_edit_profile(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج تعديل الملف الشخصي"""
         query = update.callback_query
         await query.answer()
-        
+
         # لوج عند الضغط على أزرار التعديل
         user_id = query.from_user.id
         message_id = query.message.message_id
         logger.info(f"🟡 المستخدم {user_id} ضغط على زر: {query.data} - Message ID: {message_id}")
-        
+
         if query.data == "edit_profile":
             # عرض خيارات التعديل
             message = """
 ✏️ تعديل الملف الشخصي
 ━━━━━━━━━━━━━━━━
-
 اختر ما تريد تعديله:
 """
             keyboard = [
@@ -2948,17 +2809,17 @@ class FC26SmartBot:
                 [InlineKeyboardButton("🔙 رجوع", callback_data="profile")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
+
             await smart_message_manager.update_current_message(
                 update, context, message,
                 reply_markup=reply_markup
             )
-        
+
         elif query.data == "edit_platform":
             # عرض خيارات المنصات للتعديل
             message = "🎮 اختر المنصة الجديدة:"
             keyboard = []
-            
+
             for key, platform in GAMING_PLATFORMS.items():
                 keyboard.append([
                     InlineKeyboardButton(
@@ -2966,25 +2827,25 @@ class FC26SmartBot:
                         callback_data=f"update_platform_{key}"
                     )
                 ])
-            
+
             keyboard.append([InlineKeyboardButton("🔙 رجوع", callback_data="edit_profile")])
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
+
             await smart_message_manager.update_current_message(
                 update, context, message,
                 reply_markup=reply_markup
             )
-        
+
         elif query.data == "edit_whatsapp":
             # بدء عملية تعديل الواتساب بشكل مباشر
             telegram_id = query.from_user.id
-            
+
             # الحصول على بيانات المستخدم الحالية
             user_data = self.db.get_user_data(telegram_id)
             if not user_data:
                 await query.answer("❌ لم يتم العثور على بياناتك", show_alert=True)
                 return
-            
+
             # حفظ البيانات الحالية للاستخدام في التعديل
             context.user_data['editing_mode'] = 'whatsapp_only'
             context.user_data['edit_registration'] = {
@@ -2994,41 +2855,38 @@ class FC26SmartBot:
                 'is_editing': True,
                 'edit_type': 'whatsapp_only'
             }
-            
+
             # طلب رقم الواتساب الجديد مباشرة
             message = """
 📱 تعديل رقم الواتساب
 ━━━━━━━━━━━━━━━━
-
 أرسل رقم الواتساب الجديد:
-
 📌 مثال: 01012345678
-
 ⚠️ يجب أن يبدأ بـ:
 • 010 (فودافون)
 • 011 (اتصالات)
 • 012 (أورانج)
 • 015 (وي)
 """
-            
+
             await smart_message_manager.update_current_message(
                 update, context, message,
                 reply_markup=None  # لا نحتاج أزرار هنا
             )
-            
+
             # ننتظر إدخال الرقم
             return ENTERING_WHATSAPP
-        
+
         elif query.data == "edit_payment":
             # بدء عملية تعديل طريقة الدفع بشكل تفاعلي
             telegram_id = query.from_user.id
-            
+
             # الحصول على بيانات المستخدم الحالية
             user_data = self.db.get_user_data(telegram_id)
             if not user_data:
                 await query.answer("❌ لم يتم العثور على بياناتك", show_alert=True)
                 return
-            
+
             # بدء عملية تعديل طريقة الدفع فقط
             context.user_data['editing_mode'] = 'payment_only'
             context.user_data['edit_registration'] = {
@@ -3038,66 +2896,62 @@ class FC26SmartBot:
                 'is_editing': True,
                 'edit_type': 'payment_only'
             }
-            
+
             # الانتقال مباشرة لاختيار طريقة الدفع
             message = """
 💳 تعديل طريقة الدفع
 ━━━━━━━━━━━━━━━━
-
 اختر طريقة الدفع الجديدة:
 """
             reply_markup = Keyboards.get_payment_keyboard()
-            
+
             await smart_message_manager.update_current_message(
                 update, context, message,
                 reply_markup=reply_markup
             )
-            
+
             return CHOOSING_PAYMENT
-        
+
         elif query.data.startswith("update_platform_"):
             # معالج تحديث المنصة
             platform_key = query.data.replace("update_platform_", "")
             telegram_id = query.from_user.id
-            
+
             if platform_key in GAMING_PLATFORMS:
                 # تحديث المنصة في قاعدة البيانات
                 success = self.db.update_user_platform(telegram_id, platform_key)
-                
+
                 if success:
                     # عرض الملف الشخصي المحدث مباشرة
                     profile = self.db.get_user_profile(telegram_id)
-                    
+
                     whatsapp_display = profile.get('whatsapp', 'غير محدد')
                     network_display = ""
-                    
+
                     if whatsapp_display != 'غير محدد' and len(whatsapp_display) >= 3:
                         prefix = whatsapp_display[:3]
                         if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
                             network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
                             network_display = f" ({network['emoji']} {network['name']})"
-                    
+
                     profile_text = f"""
 ✅ تم التحديث بنجاح!
 ━━━━━━━━━━━━━━━━
-
 👤 الملف الشخصي المحدث
 ━━━━━━━━━━━━━━━━
-
 🎮 المنصة: {GAMING_PLATFORMS[platform_key]['name']} ✅
 📱 واتساب: {whatsapp_display}{network_display}
 💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
-
 ━━━━━━━━━━━━━━━━
 🔐 بياناتك محمية ومشفرة
 """
-                    
+
                     keyboard = [
                         [InlineKeyboardButton("✏️ تعديل آخر", callback_data="edit_profile")],
                         [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
-                    
+
                     await smart_message_manager.update_current_message(
                         update, context, profile_text,
                         reply_markup=reply_markup
@@ -3111,26 +2965,26 @@ class FC26SmartBot:
         """لوحة تحكم الأدمن"""
         query = update.callback_query
         await query.answer()
-        
+
         telegram_id = query.from_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         # جلب إحصائيات البوت
         conn = self.db.get_connection()
         cursor = conn.cursor()
-        
+
         # عدد المستخدمين
         cursor.execute("SELECT COUNT() FROM users")
         total_users = cursor.fetchone()[0]
-        
+
         # عدد المستخدمين المسجلين بالكامل
         cursor.execute("SELECT COUNT() FROM users WHERE registration_status = 'complete'")
         registered_users = cursor.fetchone()[0]
-        
+
         # آخر المستخدمين المسجلين
         cursor.execute("""
             SELECT telegram_id, username, full_name, created_at 
@@ -3140,29 +2994,27 @@ class FC26SmartBot:
             LIMIT 5
         """)
         recent_users = cursor.fetchall()
-        
+
         conn.close()
-        
+
         # بناء رسالة الإحصائيات
         admin_text = f"""
 🔐 لوحة تحكم الأدمن
 ━━━━━━━━━━━━━━━━
-
 📊 إحصائيات البوت:
 • إجمالي المستخدمين: {total_users}
 • مستخدمين مسجلين: {registered_users}
 • غير مكتملين: {total_users - registered_users}
-
 🕔 آخر التسجيلات:
 """
-        
+
         for user in recent_users:
             username = f"@{user['username']}" if user['username'] else "غير محدد"
             admin_text += f"• {username} (ID: {user['telegram_id']})\n"
-        
+
         if not recent_users:
             admin_text += "• لا يوجد تسجيلات جديدة\n"
-        
+
         # أزرار لوحة الأدمن
         keyboard = [
             [InlineKeyboardButton("👥 عرض جميع المستخدمين", callback_data="admin_view_users")],
@@ -3172,12 +3024,12 @@ class FC26SmartBot:
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await smart_message_manager.update_current_message(
             update, context, admin_text,
             reply_markup=reply_markup
         )
-    
+
     async def handle_text_messages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
         # إزالة أي كيبورد موجود
@@ -3188,47 +3040,47 @@ class FC26SmartBot:
             "/help - المساعدة",
             reply_markup=ReplyKeyboardRemove()
         )
-    
+
     async def admin_view_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
         """عرض جميع المستخدمين للأدمن بنظام الصفحات"""
         query = update.callback_query
-        
+
         # استخراج رقم الصفحة من callback_data إن وجد
         if query and query.data.startswith("admin_users_page_"):
             page = int(query.data.replace("admin_users_page_", ""))
-        
+
         if query:
             await query.answer()
             telegram_id = query.from_user.id
         else:
             telegram_id = update.effective_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             if query:
                 await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         conn = self.db.get_connection()
         cursor = conn.cursor()
-        
+
         # الحصول على إجمالي عدد المستخدمين
         cursor.execute("SELECT COUNT() FROM users")
         total_users = cursor.fetchone()[0]
-        
+
         # حساب عدد الصفحات
         users_per_page = 10
         total_pages = (total_users + users_per_page - 1) // users_per_page
-        
+
         # التأكد من أن رقم الصفحة صحيح
         if page < 1:
             page = 1
         elif page > total_pages:
             page = total_pages
-        
+
         # حساب offset للصفحة الحالية
         offset = (page - 1) * users_per_page
-        
+
         # جلب المستخدمين للصفحة الحالية
         cursor.execute("""
             SELECT u.telegram_id, u.username, u.full_name, u.registration_status,
@@ -3239,18 +3091,17 @@ class FC26SmartBot:
             LIMIT ? OFFSET ?
         """, (users_per_page, offset))
         users = cursor.fetchall()
-        
+
         conn.close()
-        
+
         # بناء نص الرسالة
         users_text = f"""
 👥 قائمة المستخدمين
 📄 الصفحة {page} من {total_pages}
 👤 إجمالي المستخدمين: {total_users}
 ━━━━━━━━━━━━━━━━
-
 """
-        
+
         if not users:
             users_text += "لا يوجد مستخدمين في هذه الصفحة."
         else:
@@ -3264,40 +3115,40 @@ class FC26SmartBot:
                 if user['whatsapp']:
                     users_text += f"   📱 {user['whatsapp']}\n"
                 users_text += "\n"
-        
+
         # بناء أزرار التنقل
         keyboard = []
-        
+
         # صف أزرار التنقل بين الصفحات
         navigation_row = []
-        
+
         # زر الصفحة الأولى
         if page > 1:
             navigation_row.append(InlineKeyboardButton("⏪ الأولى", callback_data="admin_users_page_1"))
-        
+
         # زر الصفحة السابقة
         if page > 1:
             navigation_row.append(InlineKeyboardButton("◀️ السابقة", callback_data=f"admin_users_page_{page-1}"))
-        
+
         # زر عرض رقم الصفحة الحالي (غير قابل للضغط)
         navigation_row.append(InlineKeyboardButton(f"📄 {page}/{total_pages}", callback_data="ignore"))
-        
+
         # زر الصفحة التالية
         if page < total_pages:
             navigation_row.append(InlineKeyboardButton("▶️ التالية", callback_data=f"admin_users_page_{page+1}"))
-        
+
         # زر الصفحة الأخيرة
         if page < total_pages:
             navigation_row.append(InlineKeyboardButton("⏩ الأخيرة", callback_data=f"admin_users_page_{total_pages}"))
-        
+
         if navigation_row:
             keyboard.append(navigation_row)
-        
+
         # زر الرجوع للوحة الأدمن
         keyboard.append([InlineKeyboardButton("🔙 رجوع للوحة الأدمن", callback_data="admin_panel")])
-        
+
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         # إرسال أو تحديث الرسالة
         if query:
             await smart_message_manager.update_current_message(
@@ -3309,22 +3160,22 @@ class FC26SmartBot:
                 update, context, users_text,
                 reply_markup=reply_markup
             )
-    
+
     async def admin_delete_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف مستخدم - للأدمن فقط"""
         query = update.callback_query
         await query.answer()
-        
+
         telegram_id = query.from_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         # وضع البوت في وضع انتظار إدخال ID المستخدم
         context.user_data['admin_action'] = 'delete_user'
-        
+
         await smart_message_manager.update_current_message(
             update, context,
             "🗑️ حذف مستخدم\n\n"
@@ -3332,25 +3183,25 @@ class FC26SmartBot:
             "مثال: 123456789\n\n"
             "⚠️ تحذير: سيتم حذف جميع بيانات المستخدم نهائياً!"
         )
-    
+
     async def admin_confirm_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """تأكيد حذف المستخدم"""
         query = update.callback_query
         await query.answer()
-        
+
         telegram_id = query.from_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         # استخراج ID المستخدم من callback_data
         user_to_delete = int(query.data.replace("admin_confirm_delete_", ""))
-        
+
         # حذف المستخدم
         success = self.db.delete_user_account(user_to_delete)
-        
+
         if success:
             await smart_message_manager.update_current_message(
                 update, context,
@@ -3364,25 +3215,25 @@ class FC26SmartBot:
                 "❌ فشل حذف المستخدم\n\n"
                 "قد يكون المستخدم غير موجود أو حدث خطأ."
             )
-        
+
         # مسح حالة الأدمن
         context.user_data.pop('admin_action', None)
-    
+
     async def admin_broadcast(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إرسال رسالة للجميع - للأدمن فقط"""
         query = update.callback_query
         await query.answer()
-        
+
         telegram_id = query.from_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         # وضع البوت في وضع انتظار الرسالة
         context.user_data['admin_action'] = 'broadcast'
-        
+
         await smart_message_manager.update_current_message(
             update, context,
             "📢 إرسال رسالة للجميع\n\n"
@@ -3390,22 +3241,22 @@ class FC26SmartBot:
             "📝 ملاحظة: سيتم إرسال الرسالة لجميع المستخدمين المسجلين.\n"
             "⚠️ استخدم هذه الميزة بحذر!"
         )
-    
+
     async def admin_search_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """البحث عن مستخدم - للأدمن فقط"""
         query = update.callback_query
         await query.answer()
-        
+
         telegram_id = query.from_user.id
-        
+
         # التحقق من صلاحيات الأدمن
         if telegram_id != ADMIN_ID:
             await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
             return
-        
+
         # وضع البوت في وضع انتظار البحث
         context.user_data['admin_action'] = 'search_user'
-        
+
         await smart_message_manager.update_current_message(
             update, context,
             "🔍 البحث عن مستخدم\n\n"
@@ -3414,32 +3265,32 @@ class FC26SmartBot:
             "• اسم المستخدم (@username)\n\n"
             "مثال: 123456789 أو @username"
         )
-    
+
     async def handle_admin_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج إدخال النص من الأدمن"""
         telegram_id = update.effective_user.id
-        
+
         # التحقق من أن المرسل هو الأدمن
         if telegram_id != ADMIN_ID:
             # إذا لم يكن أدمن، نعامله كمستخدم عادي
             await self.handle_text_messages(update, context)
             return
-        
+
         # التحقق من وجود إجراء أدمن نشط
         admin_action = context.user_data.get('admin_action')
-        
+
         if not admin_action:
             # لا يوجد إجراء نشط، نعامله كرسالة عادية
             await self.handle_text_messages(update, context)
             return
-        
+
         text = update.message.text.strip()
-        
+
         if admin_action == 'delete_user':
             # محاولة حذف المستخدم
             try:
                 user_id_to_delete = int(text)
-                
+
                 # التحقق من أن الأدمن لا يحذف نفسه
                 if user_id_to_delete == ADMIN_ID:
                     await smart_message_manager.send_new_active_message(
@@ -3449,20 +3300,20 @@ class FC26SmartBot:
                     )
                     context.user_data.pop('admin_action', None)
                     return
-                
+
                 # التحقق من وجود المستخدم
                 user = self.db.get_user_by_telegram_id(user_id_to_delete)
-                
+
                 if user:
                     # عرض تأكيد الحذف
                     username = f"@{user['username']}" if user['username'] else "غير محدد"
-                    
+
                     keyboard = [
                         [InlineKeyboardButton("✅ تأكيد الحذف", callback_data=f"admin_confirm_delete_{user_id_to_delete}")],
                         [InlineKeyboardButton("❌ إلغاء", callback_data="admin_panel")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
-                    
+
                     await smart_message_manager.send_new_active_message(
                         update, context,
                         f"⚠️ تأكيد حذف المستخدم\n\n"
@@ -3478,31 +3329,31 @@ class FC26SmartBot:
                         f"❌ المستخدم غير موجود\n\n"
                         f"لا يوجد مستخدم بالمعرف: {user_id_to_delete}"
                     )
-                
+
             except ValueError:
                 await smart_message_manager.send_new_active_message(
                     update, context,
                     "❌ معرف غير صحيح\n\n"
                     "يجب إدخال رقم صحيح فقط."
                 )
-            
+
             context.user_data.pop('admin_action', None)
-        
+
         elif admin_action == 'broadcast':
             # إرسال الرسالة لجميع المستخدمين
             conn = self.db.get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("SELECT telegram_id FROM users WHERE registration_status = 'complete'")
             users = cursor.fetchall()
-            
+
             conn.close()
-            
+
             success_count = 0
             fail_count = 0
-            
+
             broadcast_msg = f"📢 رسالة من الإدارة\n\n{text}"
-            
+
             for user in users:
                 try:
                     await context.bot.send_message(
@@ -3515,7 +3366,7 @@ class FC26SmartBot:
                 except Exception as e:
                     fail_count += 1
                     logger.error(f"فشل إرسال رسالة للمستخدم {user['telegram_id']}: {e}")
-            
+
             await smart_message_manager.send_new_active_message(
                 update, context,
                 f"✅ تمت عملية البث\n\n"
@@ -3524,14 +3375,14 @@ class FC26SmartBot:
                 f"• فشل الإرسال: {fail_count}\n"
                 f"• الإجمالي: {len(users)}"
             )
-            
+
             context.user_data.pop('admin_action', None)
-        
+
         elif admin_action == 'search_user':
             # البحث عن مستخدم
             conn = self.db.get_connection()
             cursor = conn.cursor()
-            
+
             # البحث بالمعرف أو اسم المستخدم
             if text.startswith('@'):
                 # البحث باسم المستخدم
@@ -3561,18 +3412,17 @@ class FC26SmartBot:
                     context.user_data.pop('admin_action', None)
                     conn.close()
                     return
-            
+
             user = cursor.fetchone()
             conn.close()
-            
+
             if user:
                 username_display = f"@{user['username']}" if user['username'] else "غير محدد"
                 status = "✅ مكتمل" if user['registration_status'] == 'complete' else "⏳ غير مكتمل"
-                
+
                 user_info = f"""
 🔍 نتيجة البحث
 ━━━━━━━━━━━━━━━━
-
 👤 معلومات المستخدم:
 • الاسم: {user['full_name']}
 • المعرف: {user['telegram_id']}
@@ -3580,20 +3430,20 @@ class FC26SmartBot:
 • الحالة: {status}
 • تاريخ التسجيل: {user['created_at']}
 """
-                
+
                 if user['platform']:
                     user_info += f"\n🎮 المنصة: {user['platform']}"
                 if user['whatsapp']:
                     user_info += f"\n📱 واتساب: {user['whatsapp']}"
                 if user['payment_method']:
                     user_info += f"\n💳 طريقة الدفع: {user['payment_method']}"
-                
+
                 keyboard = [
                     [InlineKeyboardButton("🗑️ حذف هذا المستخدم", callback_data=f"admin_confirm_delete_{user['telegram_id']}")],
                     [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
+
                 await smart_message_manager.send_new_active_message(
                     update, context, user_info,
                     reply_markup=reply_markup
@@ -3604,7 +3454,7 @@ class FC26SmartBot:
                     f"❌ لم يتم العثور على المستخدم\n\n"
                     f"لا يوجد مستخدم بـ: {text}"
                 )
-            
+
             context.user_data.pop('admin_action', None)
 
     def get_registration_conversation(self):
@@ -3652,7 +3502,7 @@ class FC26SmartBot:
             ],
             allow_reentry=True
         )
-    
+
     def get_edit_conversation(self):
         """معالج المحادثة للتعديل"""
         return ConversationHandler(
@@ -3701,7 +3551,7 @@ class FC26SmartBot:
 
         # معالج التسجيل (يجب أن يكون أولاً ليأخذ الأولوية)
         app.add_handler(self.get_registration_conversation())
-        
+
         # معالج التعديل (للتعديل التفاعلي)
         app.add_handler(self.get_edit_conversation())
 
@@ -3723,50 +3573,50 @@ class FC26SmartBot:
             self.handle_menu_buttons,
             pattern="^(profile|delete_account|sell_coins|support|main_menu)$"
         ))
-        
+
         # أزرار تعديل الملف الشخصي
         app.add_handler(CallbackQueryHandler(
             self.handle_edit_profile,
-            pattern="^(edit_profile|edit_platform|edit_whatsapp|edit_payment|update_platform_.|update_payment_.)$"
+            pattern="^(edit_profile|edit_platform|edit_whatsapp|edit_payment|update_platform_.+|update_payment_.+)$"
         ))
-        
+
         # أزرار لوحة الأدمن
         app.add_handler(CallbackQueryHandler(
             self.admin_panel,
             pattern="^admin_panel$"
         ))
-        
+
         app.add_handler(CallbackQueryHandler(
             self.admin_view_users,
             pattern="^admin_view_users$"
         ))
-        
+
         # معالج الصفحات لعرض المستخدمين
         app.add_handler(CallbackQueryHandler(
             self.admin_view_users,
             pattern=r"^admin_users_page_\d+$"
         ))
-        
+
         app.add_handler(CallbackQueryHandler(
             self.admin_delete_user,
             pattern="^admin_delete_user$"
         ))
-        
+
         app.add_handler(CallbackQueryHandler(
             self.admin_confirm_delete,
             pattern=r"^admin_confirm_delete_\d+$"
         ))
-        
+
         app.add_handler(CallbackQueryHandler(
             self.admin_broadcast,
             pattern="^admin_broadcast$"
         ))
-        
+
         app.add_handler(CallbackQueryHandler(
             self.admin_search_user,
             pattern="^admin_search_user$"
         ))
-        
+
         # معالج رسائل البحث والبث للأدمن
         app.add_handler(MessageHandler(
             filters.TEXT & ~filters.COMMAND,
