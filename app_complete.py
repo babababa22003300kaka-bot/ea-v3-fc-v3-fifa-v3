@@ -165,8 +165,10 @@ import logging
 import os
 import re
 import sqlite3
+import threading
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -2714,6 +2716,147 @@ class FC26SmartBot:
         self.db = Database()
         self.registration_handler = SmartRegistrationHandler()
 
+        # إعداد ThreadPoolExecutor لزر الملف الشخصي
+        self.profile_executor = ThreadPoolExecutor(
+            max_workers=2,  # عدد threads محدود لمنع الإرهاق
+            thread_name_prefix="ProfileHandler",
+        )
+
+        # قاموس للأقفال الخاصة بكل مستخدم
+        self.user_locks = {}
+        self.locks_lock = threading.Lock()  # قفل لحماية قاموس الأقفال نفسه
+
+        logger.info("🔧 تم تهيئة ThreadPoolExecutor لزر الملف الشخصي")
+
+    def get_user_lock(self, user_id: int) -> threading.Lock:
+        """الحصول على قفل خاص بالمستخدم"""
+        with self.locks_lock:
+            if user_id not in self.user_locks:
+                self.user_locks[user_id] = threading.Lock()
+                logger.debug(f"🔒 إنشاء قفل جديد للمستخدم {user_id}")
+            return self.user_locks[user_id]
+
+    async def handle_profile_safely(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, telegram_id: int
+    ):
+        """معالج آمن للملف الشخصي في thread منفصل"""
+        try:
+            # الحصول على قفل خاص بهذا المستخدم
+            user_lock = self.get_user_lock(telegram_id)
+
+            # تنفيذ العملية في thread مع القفل
+            loop = asyncio.get_event_loop()
+            future = loop.run_in_executor(
+                self.profile_executor,
+                self._handle_profile_thread,
+                telegram_id,
+                user_lock,
+            )
+
+            # انتظار نتيجة المعالجة
+            profile_data = await future
+
+            if profile_data:
+                # عرض الملف الشخصي
+                await self._display_profile(update, context, profile_data)
+                logger.info(f"✅ تم عرض الملف الشخصي للمستخدم {telegram_id} بنجاح")
+            else:
+                # المستخدم غير مسجل
+                await smart_message_manager.update_current_message(
+                    update, context, "❌ يجب عليك التسجيل أولاً!\n\nاكتب /start للبدء"
+                )
+                logger.warning(f"⚠️ محاولة عرض ملف شخصي لمستخدم غير مسجل: {telegram_id}")
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في معالجة الملف الشخصي للمستخدم {telegram_id}: {e}")
+            await smart_message_manager.update_current_message(
+                update,
+                context,
+                "❌ حدث خطأ في عرض الملف الشخصي. الرجاء المحاولة لاحقاً.",
+            )
+
+    def _handle_profile_thread(
+        self, telegram_id: int, user_lock: threading.Lock
+    ) -> Optional[Dict]:
+        """معالجة الملف الشخصي داخل thread مع قفل"""
+        with user_lock:
+            try:
+                logger.debug(
+                    f"🔍 جلب بيانات الملف الشخصي للمستخدم {telegram_id} من قاعدة البيانات"
+                )
+
+                # جلب بيانات الملف الشخصي من قاعدة البيانات
+                profile = self.db.get_user_profile(telegram_id)
+
+                if profile:
+                    # إضافة تأخير صغير لمحاكاة المعالجة
+                    time.sleep(0.1)
+                    logger.debug(f"✅ تم جلب بيانات الملف الشخصي بنجاح")
+                    return profile
+                else:
+                    logger.debug(f"⚠️ لم يتم العثور على ملف شخصي للمستخدم {telegram_id}")
+                    return None
+
+            except Exception as e:
+                logger.error(f"❌ خطأ في thread معالجة الملف الشخصي: {e}")
+                return None
+
+    async def _display_profile(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, profile: Dict
+    ):
+        """عرض بيانات الملف الشخصي"""
+        # الحصول على معلومات الشبكة إذا كان الرقم موجود
+        whatsapp_display = profile.get("whatsapp", "غير محدد")
+        network_display = ""
+
+        if (
+            whatsapp_display
+            and whatsapp_display != "غير محدد"
+            and len(whatsapp_display) >= 3
+        ):
+            prefix = whatsapp_display[:3]
+            if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
+                network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
+                network_display = f" ({network['emoji']} {network['name']})"
+
+        profile_text = f"""
+👤 الملف الشخصي
+━━━━━━━━━━━━━━━━
+🎮 المنصة: {profile.get('platform', 'غير محدد')}
+📱 واتساب: {whatsapp_display}{network_display}
+💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
+━━━━━━━━━━━━━━━━
+🔐 بياناتك محمية
+🧵 Thread: {threading.current_thread().name}
+"""
+
+        # أزرار العودة
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "✏️ تعديل الملف الشخصي", callback_data="edit_profile"
+                )
+            ],
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        # تجنب خطأ HTTP 400 - نتأكد إن الرسالة مختلفة
+        try:
+            await smart_message_manager.update_current_message(
+                update, context, profile_text, reply_markup=reply_markup
+            )
+        except Exception as e:
+            # لو حصل خطأ، نرسل رسالة جديدة
+            logger.debug(f"Error updating message: {e}")
+            await smart_message_manager.send_new_active_message(
+                update,
+                context,
+                profile_text,
+                reply_markup=reply_markup,
+                disable_previous=True,
+            )
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية مع النظام الذكي الموحد"""
         telegram_id = update.effective_user.id
@@ -3015,70 +3158,16 @@ class FC26SmartBot:
         )
 
         if query.data == "profile":
-            # استخدام النظام الذكي لعرض الملف الشخصي
+            # تنفيذ معالج الملف الشخصي في thread منفصل
             telegram_id = query.from_user.id
-            profile = self.db.get_user_profile(telegram_id)
 
-            if not profile:
-                await smart_message_manager.update_current_message(
-                    update, context, "❌ يجب عليك التسجيل أولاً!\n\nاكتب /start للبدء"
-                )
-                return
+            # تسجيل بداية المعالجة
+            logger.info(
+                f"🔄 بدء معالجة طلب الملف الشخصي للمستخدم {telegram_id} في thread منفصل"
+            )
 
-            # الحصول على معلومات الشبكة إذا كان الرقم موجود
-            whatsapp_display = profile.get("whatsapp", "غير محدد")
-            network_display = ""
-
-            if (
-                whatsapp_display
-                and whatsapp_display != "غير محدد"
-                and len(whatsapp_display) >= 3
-            ):
-                prefix = whatsapp_display[:3]
-                if prefix in whatsapp_security.EGYPTIAN_NETWORKS:
-                    network = whatsapp_security.EGYPTIAN_NETWORKS[prefix]
-                    network_display = f" ({network['emoji']} {network['name']})"
-
-            profile_text = f"""
-👤 الملف الشخصي
-━━━━━━━━━━━━━━━━
-🎮 المنصة: {profile.get('platform', 'غير محدد')}
-📱 واتساب: {whatsapp_display}{network_display}
-💳 طريقة الدفع: {profile.get('payment_method', 'غير محدد')}
-━━━━━━━━━━━━━━━━
-🔐 بياناتك محمية
-"""
-
-            # أزرار العودة
-            keyboard = [
-                [
-                    InlineKeyboardButton(
-                        "✏️ تعديل الملف الشخصي", callback_data="edit_profile"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 القائمة الرئيسية", callback_data="main_menu"
-                    )
-                ],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            # تجنب خطأ HTTP 400 - نتأكد إن الرسالة مختلفة
-            try:
-                await smart_message_manager.update_current_message(
-                    update, context, profile_text, reply_markup=reply_markup
-                )
-            except Exception as e:
-                # لو حصل خطأ، نرسل رسالة جديدة
-                logger.debug(f"Error updating message: {e}")
-                await smart_message_manager.send_new_active_message(
-                    update,
-                    context,
-                    profile_text,
-                    reply_markup=reply_markup,
-                    disable_previous=True,
-                )
+            # استدعاء المعالج الآمن في thread
+            await self.handle_profile_safely(update, context, telegram_id)
 
         elif query.data == "delete_account":
             # التحقق من أن المستخدم هو الأدمن
