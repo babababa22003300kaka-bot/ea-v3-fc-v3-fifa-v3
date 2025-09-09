@@ -1,0 +1,4 @@
+  File "/home/user/webapp/app_complete.py", line 3229
+    offset = (page - 1)  usersperpage
+                         ^^^^^^^^^^^^
+SyntaxError: invalid syntax

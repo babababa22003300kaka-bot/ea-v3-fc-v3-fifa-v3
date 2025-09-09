@@ -355,7 +355,7 @@ class SmartMessageManager:
                                 chat_id=old_message_info['chat_id'],
                                 message_id=old_message_info['message_id'],
                                 text=old_message_info.get('text', '') + "\n\n✅ **تم**",
-                                parse_mode='Markdown'
+                                # parse_mode removed
                             )
                         except Exception as e:
                             # إذا فشل التحديث، نحاول حذف الرسالة
@@ -427,7 +427,7 @@ class SmartMessageManager:
                     sent_message = await update.callback_query.message.reply_text(
                         text=text,
                         reply_markup=reply_markup,
-                        parse_mode='Markdown'
+                        # parse_mode removed
                     )
                 else:
                     # إزالة الكيبورد إذا لم يكن هناك reply_markup
@@ -435,7 +435,7 @@ class SmartMessageManager:
                     sent_message = await update.message.reply_text(
                         text=text,
                         reply_markup=final_markup,
-                        parse_mode='Markdown'
+                        # parse_mode removed
                     )
 
                 # حفظ معلومات الرسالة الجديدة
@@ -493,7 +493,7 @@ class SmartMessageManager:
                 await update.callback_query.edit_message_text(
                     text=text,
                     reply_markup=reply_markup,
-                    parse_mode='Markdown'
+                    # parse_mode removed
                 )
                 logger.info(f"✅ تم تعديل الرسالة بنجاح للمستخدم {user_id} - Message ID: {message_id}")
 
@@ -3508,7 +3508,7 @@ class FC26SmartBot:
                     await context.bot.send_message(
                         chat_id=user['telegram_id'],
                         text=broadcast_msg,
-                        parse_mode='Markdown'
+                        # parse_mode removed
                     )
                     success_count += 1
                     await asyncio.sleep(0.1)  # تأخير بسيط لتجنب حدود التليجرام
