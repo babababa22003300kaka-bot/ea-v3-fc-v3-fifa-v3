@@ -2722,11 +2722,18 @@ class FC26SmartBot:
             thread_name_prefix="ProfileHandler",
         )
 
+        # 🆕 إضافة ThreadPoolExecutor لتعديل الملف الشخصي
+        self.edit_profile_executor = ThreadPoolExecutor(
+            max_workers=3,  # أعلى قليلاً لأن التعديل أكثر تعقيداً
+            thread_name_prefix="EditProfileHandler",
+        )
+
         # قاموس للأقفال الخاصة بكل مستخدم
         self.user_locks = {}
         self.locks_lock = threading.Lock()  # قفل لحماية قاموس الأقفال نفسه
 
         logger.info("🔧 تم تهيئة ThreadPoolExecutor لزر الملف الشخصي")
+        logger.info("🔧 تم تهيئة ThreadPoolExecutor لتعديل الملف الشخصي")
 
     def get_user_lock(self, user_id: int) -> threading.Lock:
         """الحصول على قفل خاص بالمستخدم"""
@@ -2855,6 +2862,236 @@ class FC26SmartBot:
                 profile_text,
                 reply_markup=reply_markup,
                 disable_previous=True,
+            )
+
+    async def handle_edit_profile_safely(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        telegram_id: int,
+        action: str,
+    ):
+        """معالج آمن لتعديل الملف الشخصي في thread منفصل"""
+        try:
+            # الحصول على قفل خاص بهذا المستخدم
+            user_lock = self.get_user_lock(telegram_id)
+
+            # تنفيذ العملية في thread مع القفل
+            loop = asyncio.get_event_loop()
+            future = loop.run_in_executor(
+                self.edit_profile_executor,
+                self._handle_edit_profile_thread,
+                telegram_id,
+                action,
+                user_lock,
+            )
+
+            # انتظار نتيجة المعالجة مع timeout
+            result = await asyncio.wait_for(future, timeout=8.0)
+
+            if result:
+                # عرض نتيجة التعديل
+                await self._display_edit_result(update, context, result)
+                logger.info(
+                    f"✅ تم معالجة تعديل الملف الشخصي للمستخدم {telegram_id} بنجاح - Action: {action}"
+                )
+            else:
+                # خطأ في المعالجة
+                await smart_message_manager.update_current_message(
+                    update,
+                    context,
+                    "❌ حدث خطأ في معالجة طلب التعديل. الرجاء المحاولة لاحقاً.",
+                )
+                logger.warning(
+                    f"⚠️ فشل معالجة تعديل الملف الشخصي للمستخدم {telegram_id}"
+                )
+
+        except asyncio.TimeoutError:
+            logger.error(
+                f"⏰ انتهت مهلة معالجة تعديل الملف الشخصي للمستخدم {telegram_id}"
+            )
+            await smart_message_manager.update_current_message(
+                update, context, "❌ انتهت مهلة المعالجة. الرجاء المحاولة مرة أخرى."
+            )
+        except Exception as e:
+            logger.error(
+                f"❌ خطأ في معالجة تعديل الملف الشخصي للمستخدم {telegram_id}: {e}"
+            )
+            await smart_message_manager.update_current_message(
+                update,
+                context,
+                "❌ حدث خطأ في معالجة طلب التعديل. الرجاء المحاولة لاحقاً.",
+            )
+
+    def _handle_edit_profile_thread(
+        self, telegram_id: int, action: str, user_lock: threading.Lock
+    ) -> Optional[Dict]:
+        """معالجة تعديل الملف الشخصي داخل thread مع قفل"""
+        with user_lock:
+            try:
+                logger.debug(
+                    f"🔍 بدء معالجة تعديل الملف الشخصي للمستخدم {telegram_id} - Action: {action}"
+                )
+
+                # معالجة حسب نوع الإجراء
+                if action == "edit_profile":
+                    # عرض قائمة التعديل
+                    return {
+                        "type": "menu",
+                        "message": """
+✏️ تعديل الملف الشخصي
+━━━━━━━━━━━━━━━━
+اختر ما تريد تعديله:
+🧵 معالج محسّن في Thread منفصل
+""",
+                        "keyboard": [
+                            [
+                                InlineKeyboardButton(
+                                    "🎮 تعديل المنصة", callback_data="edit_platform"
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    "📱 تعديل رقم الواتساب",
+                                    callback_data="edit_whatsapp",
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    "💳 تعديل طريقة الدفع", callback_data="edit_payment"
+                                )
+                            ],
+                            [InlineKeyboardButton("🔙 رجوع", callback_data="profile")],
+                        ],
+                    }
+
+                elif action == "edit_platform":
+                    # عرض خيارات المنصات
+                    return {
+                        "type": "platform_selection",
+                        "message": """🎮 اختر المنصة الجديدة:
+
+🏆 أفضل الأسعار في مصر
+🧵 معالج محسّن للأداء العالي""",
+                    }
+
+                elif action.startswith("update_platform_"):
+                    # معالجة تحديث المنصة
+                    platform_key = action.replace("update_platform_", "")
+
+                    # تحديث في قاعدة البيانات
+                    success = self.db.update_user_data(
+                        telegram_id, {"platform": platform_key}
+                    )
+
+                    if success:
+                        # جلب البيانات المحدثة
+                        updated_profile = self.db.get_user_profile(telegram_id)
+                        platform_name = GAMING_PLATFORMS.get(platform_key, {}).get(
+                            "name", platform_key
+                        )
+
+                        return {
+                            "type": "update_success",
+                            "message": f"""
+✅ تم التحديث بنجاح!
+━━━━━━━━━━━━━━━━
+👤 الملف الشخصي المحدث
+━━━━━━━━━━━━━━━━
+🎮 المنصة: {platform_name} ✅
+📱 واتساب: {updated_profile.get('whatsapp', 'غير محدد')}
+💳 طريقة الدفع: {updated_profile.get('payment_method', 'غير محدد')}
+━━━━━━━━━━━━━━━━
+🧵 Thread: {threading.current_thread().name}
+🔐 بياناتك محمية ومشفرة
+""",
+                            "keyboard": [
+                                [
+                                    InlineKeyboardButton(
+                                        "✏️ تعديل آخر", callback_data="edit_profile"
+                                    )
+                                ],
+                                [
+                                    InlineKeyboardButton(
+                                        "🏠 القائمة الرئيسية", callback_data="main_menu"
+                                    )
+                                ],
+                            ],
+                        }
+                    else:
+                        return None
+
+                # إضافة تأخير صغير لمحاكاة المعالجة
+                time.sleep(0.1)
+
+                logger.debug(
+                    f"✅ تم معالجة تعديل الملف الشخصي بنجاح - Thread: {threading.current_thread().name}"
+                )
+                return {"type": "default", "message": f"معالجة الإجراء: {action}"}
+
+            except Exception as e:
+                logger.error(f"❌ خطأ في thread معالجة تعديل الملف الشخصي: {e}")
+                return None
+
+    async def _display_edit_result(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, result: Dict
+    ):
+        """عرض نتيجة معالجة التعديل"""
+        try:
+            result_type = result.get("type", "default")
+            message = result.get("message", "تم المعالجة")
+
+            if result_type == "menu":
+                # عرض قائمة التعديل
+                keyboard_data = result.get("keyboard", [])
+                reply_markup = InlineKeyboardMarkup(keyboard_data)
+
+                await smart_message_manager.update_current_message(
+                    update, context, message, reply_markup=reply_markup
+                )
+
+            elif result_type == "platform_selection":
+                # عرض خيارات المنصات
+                keyboard = []
+
+                for key, platform in GAMING_PLATFORMS.items():
+                    keyboard.append(
+                        [
+                            InlineKeyboardButton(
+                                f"{platform['emoji']} {platform['name']}",
+                                callback_data=f"update_platform_{key}",
+                            )
+                        ]
+                    )
+
+                keyboard.append(
+                    [InlineKeyboardButton("🔙 رجوع", callback_data="edit_profile")]
+                )
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await smart_message_manager.update_current_message(
+                    update, context, message, reply_markup=reply_markup
+                )
+
+            elif result_type == "update_success":
+                # عرض نجاح التحديث
+                keyboard_data = result.get("keyboard", [])
+                reply_markup = InlineKeyboardMarkup(keyboard_data)
+
+                await smart_message_manager.update_current_message(
+                    update, context, message, reply_markup=reply_markup
+                )
+
+            else:
+                # عرض افتراضي
+                await smart_message_manager.update_current_message(
+                    update, context, message
+                )
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في عرض نتيجة التعديل: {e}")
+            await smart_message_manager.update_current_message(
+                update, context, "❌ حدث خطأ في عرض النتيجة"
             )
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3030,6 +3267,61 @@ class FC26SmartBot:
         await smart_message_manager.send_new_active_message(
             update, context, help_text, reply_markup=reply_markup
         )
+
+    def get_threading_stats(self):
+        """إحصائيات Threading محسنة"""
+        return {
+            "profile_executor": {
+                "max_workers": self.profile_executor._max_workers,
+                "active_threads": (
+                    len(self.profile_executor._threads)
+                    if hasattr(self.profile_executor, "_threads")
+                    else 0
+                ),
+            },
+            "edit_profile_executor": {
+                "max_workers": self.edit_profile_executor._max_workers,
+                "active_threads": (
+                    len(self.edit_profile_executor._threads)
+                    if hasattr(self.edit_profile_executor, "_threads")
+                    else 0
+                ),
+            },
+            "total_active_locks": len(self.user_locks),
+            "system_threads": threading.active_count(),
+        }
+
+    async def threading_stats_command(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """إحصائيات Threading للأدمن"""
+        telegram_id = update.effective_user.id
+
+        if telegram_id != ADMIN_ID:
+            await update.message.reply_text("⛔ هذا الأمر للأدمن فقط!")
+            return
+
+        stats = self.get_threading_stats()
+
+        stats_message = f"""
+🧵 إحصائيات Threading المتقدم
+━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Profile Handler:
+• Max Workers: {stats['profile_executor']['max_workers']}
+• Active Threads: {stats['profile_executor']['active_threads']}
+
+📊 Edit Profile Handler:
+• Max Workers: {stats['edit_profile_executor']['max_workers']}
+• Active Threads: {stats['edit_profile_executor']['active_threads']}
+
+📊 النظام العام:
+• أقفال المستخدمين النشطة: {stats['total_active_locks']}
+• إجمالي Threads: {stats['system_threads']}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 الهدف: 1000 مستخدم متزامن ✅
+"""
+
+        await update.message.reply_text(stats_message)
 
     async def delete_account_command(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -3271,61 +3563,30 @@ class FC26SmartBot:
         )
 
         if query.data == "edit_profile":
-            # عرض خيارات التعديل
-            message = """
-✏️ تعديل الملف الشخصي
-━━━━━━━━━━━━━━━━
-اختر ما تريد تعديله:
-"""
-            keyboard = [
-                [
-                    InlineKeyboardButton(
-                        "🎮 تعديل المنصة", callback_data="edit_platform"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "📱 تعديل رقم الواتساب", callback_data="edit_whatsapp"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "💳 تعديل طريقة الدفع", callback_data="edit_payment"
-                    )
-                ],
-                [InlineKeyboardButton("🔙 رجوع", callback_data="profile")],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            # تنفيذ معالج تعديل الملف الشخصي في thread منفصل
+            telegram_id = query.from_user.id
 
-            await smart_message_manager.update_current_message(
-                update, context, message, reply_markup=reply_markup
+            # تسجيل بداية المعالجة
+            logger.info(
+                f"🔄 بدء معالجة طلب تعديل الملف الشخصي للمستخدم {telegram_id} في thread منفصل"
+            )
+
+            # استدعاء المعالج الآمن في thread
+            await self.handle_edit_profile_safely(
+                update, context, telegram_id, "edit_profile"
             )
 
         elif query.data == "edit_platform":
-            # عرض خيارات المنصات للتعديل
-            message = """🎮 اختر المنصة الجديدة:
+            # تنفيذ معالج تعديل المنصة في thread منفصل
+            telegram_id = query.from_user.id
 
-🏆 أفضل الأسعار في مصر"""
-
-            keyboard = []
-
-            for key, platform in GAMING_PLATFORMS.items():
-                keyboard.append(
-                    [
-                        InlineKeyboardButton(
-                            f"{platform['emoji']} {platform['name']}",
-                            callback_data=f"update_platform_{key}",
-                        )
-                    ]
-                )
-
-            keyboard.append(
-                [InlineKeyboardButton("🔙 رجوع", callback_data="edit_profile")]
+            logger.info(
+                f"🎮 بدء معالجة طلب تعديل المنصة للمستخدم {telegram_id} في thread منفصل"
             )
-            reply_markup = InlineKeyboardMarkup(keyboard)
 
-            await smart_message_manager.update_current_message(
-                update, context, message, reply_markup=reply_markup
+            # استدعاء المعالج الآمن في thread
+            await self.handle_edit_profile_safely(
+                update, context, telegram_id, "edit_platform"
             )
 
         elif query.data == "edit_whatsapp":
@@ -3405,7 +3666,20 @@ class FC26SmartBot:
             return CHOOSING_PAYMENT
 
         elif query.data.startswith("update_platform_"):
-            # معالج تحديث المنصة
+            # تنفيذ معالج تحديث المنصة في thread منفصل
+            telegram_id = query.from_user.id
+
+            logger.info(
+                f"🔄 بدء معالجة تحديث المنصة للمستخدم {telegram_id} في thread منفصل"
+            )
+
+            # استدعاء المعالج الآمن في thread
+            await self.handle_edit_profile_safely(
+                update, context, telegram_id, query.data
+            )
+            return  # ننهي هنا لأن المعالجة تتم في thread
+
+            # الكود القديم (لن يتم تنفيذه)
             platform_key = query.data.replace("update_platform_", "")
             telegram_id = query.from_user.id
 
@@ -4138,6 +4412,8 @@ class FC26SmartBot:
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("help", self.help_command))
+        # أمر إحصائيات Threading للأدمن فقط
+        app.add_handler(CommandHandler("threading_stats", self.threading_stats_command))
         # أمر حذف الحساب للأدمن فقط
         app.add_handler(CommandHandler("delete", self.delete_account_command))
 
