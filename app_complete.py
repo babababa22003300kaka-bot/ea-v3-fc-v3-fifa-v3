@@ -50,7 +50,7 @@
 ✅ المسموح: تعديل النصوص والأزرار فقط
 
 ### 🚫 Zone 6: جداول قاعدة البيانات الأساسية
-📍 السطور: 670-750 (initdatabase في Database class)
+📍 السطور: 670-750 (_init_database في Database class)
 🎯 الوظيفة: 5 جداول أساسية للتسجيل والمحفظة والمعاملات
 ⛔ الممنوع: تعديل/حذف الجداول الموجودة أو علاقاتها
 ✅ المسموح: إضافة جداول جديدة فقط
@@ -89,7 +89,7 @@
 - التاريخ والوقت: 2025-09-09 
 - الميزات المضافة:
   • حل جذري نهائي - إزالة كل الـ Markdown formatting من الكود
-  • إلغاء parse_mode='Markdown' من جميع الرسائل
+  • إلغاء  من جميع الرسائل
   • تنظيف كامل لكل الرسائل من أي formatting
 - الموقع: 
   • السطور 358, 430, 438, 496, 3511: إزالة parse_mode
@@ -317,7 +317,7 @@ class SmartMessageManager:
             self.userlocks[userid] = asyncio.Lock()
         return self.userlocks[userid]
     
-    async def cleanupuserdata(self, userid: int):
+    async def cleanupuser_data(self, userid: int):
         """تنظيف بيانات المستخدم عند انتهاء المحادثة"""
         # حذف القفل إذا كان موجوداً
         if userid in self.userlocks:
@@ -345,23 +345,23 @@ class SmartMessageManager:
             try:
                 oldmessageinfo = self.useractivemessages[userid]
 
-                if oldmessageinfo.get('messageid') and oldmessageinfo.get('chatid'):
+                if oldmessageinfo.get('message_id') and oldmessageinfo.get('chat_id'):
                     # إذا كانت الرسالة القديمة فيها أزرار، نحذفها ونضع "تم"
                     if oldmessageinfo.get('haskeyboard', False):
                         try:
                             # تحديث الرسالة بدون أزرار وإضافة "تم"
-                            await context.bot.editmessagetext(
-                                chatid=oldmessageinfo['chatid'],
-                                messageid=oldmessageinfo['messageid'],
+                            await context.bot.edit_message_text(
+                                chat_id=oldmessageinfo['chat_id'],
+                                message_id=oldmessageinfo['message_id'],
                                 text=oldmessageinfo.get('text', '') + "\n\n✅ تم",
-                                # parsemode removed to avoid parsing errors
+                                # parse_mode removed to avoid parsing errors
                             )
                         except Exception as e:
                             # إذا فشل التحديث، نحاول حذف الرسالة
                             try:
-                                await context.bot.deletemessage(
-                                    chatid=oldmessageinfo['chatid'],
-                                    messageid=oldmessageinfo['messageid']
+                                await context.bot.delete_message(
+                                    chat_id=oldmessageinfo['chat_id'],
+                                    message_id=oldmessageinfo['message_id']
                                 )
                             except:
                                 pass
@@ -373,9 +373,9 @@ class SmartMessageManager:
     async def sendnewactivemessage(
         self,
         update: Update,
-        context: ContextTypes.DEFAULTTYPE,
+        context: ContextTypes.DEFAULT_TYPE,
         text: str,
-        replymarkup: Optional[InlineKeyboardMarkup] = None,
+        reply_markup: Optional[InlineKeyboardMarkup] = None,
         choicemade: str = None,
         disableprevious: bool = True,
         removekeyboard: bool = True
@@ -384,8 +384,8 @@ class SmartMessageManager:
         userid = update.effectiveuser.id
         
         # لوج عند دخول المستخدم
-        deviceinfo = "Callback" if update.callbackquery else "Message"
-        deviceid = update.effectivemessage.messageid if update.effectivemessage else "Unknown"
+        deviceinfo = "Callback" if update.callback_query else "Message"
+        deviceid = update.effectivemessage.message_id if update.effectivemessage else "Unknown"
         logger.info(f"🔵 المستخدم {userid} دخل من جهاز جديد - Device: {deviceinfo} - Device ID: {deviceid}")
         
         # تتبع الأجهزة المتعددة
@@ -399,7 +399,7 @@ class SmartMessageManager:
             # حذف الرسائل القديمة لتجنب التضارب
             if userid in self.useractivemessages:
                 oldmessage = self.useractivemessages[userid]
-                if oldmessage.get('messageid') != deviceid:
+                if oldmessage.get('message_id') != deviceid:
                     logger.info(f"🧽 حذف رسالة قديمة للمستخدم {userid} بسبب استخدام جهاز جديد")
                     del self.useractivemessages[userid]
         
@@ -422,27 +422,27 @@ class SmartMessageManager:
                         logger.warning(f"⚠️ تضارب رسائل للمستخدم {userid} - Active Messages: {activecount}")
                         return None
                 
-                if update.callbackquery:
-                    sentmessage = await update.callbackquery.message.replytext(
+                if update.callback_query:
+                    sentmessage = await update.callback_query.message.reply_text(
                         text=text,
-                        replymarkup=replymarkup,
-                        # parsemode removed to avoid parsing errors
+                        reply_markup=reply_markup,
+                        # parse_mode removed to avoid parsing errors
                     )
                 else:
-                    # إزالة الكيبورد إذا لم يكن هناك replymarkup
-                    finalmarkup = replymarkup if replymarkup else (ReplyKeyboardRemove() if removekeyboard else None)
-                    sentmessage = await update.message.replytext(
+                    # إزالة الكيبورد إذا لم يكن هناك reply_markup
+                    finalmarkup = reply_markup if reply_markup else (ReplyKeyboardRemove() if removekeyboard else None)
+                    sentmessage = await update.message.reply_text(
                         text=text,
-                        replymarkup=finalmarkup,
-                        # parsemode removed to avoid parsing errors
+                        reply_markup=finalmarkup,
+                        # parse_mode removed to avoid parsing errors
                     )
 
                 # حفظ معلومات الرسالة الجديدة
                 self.useractivemessages[userid] = {
-                    'messageid': sentmessage.messageid,
-                    'chatid': sentmessage.chatid,
+                    'message_id': sentmessage.message_id,
+                    'chat_id': sentmessage.chat_id,
                     'text': text,
-                    'haskeyboard': replymarkup is not None,
+                    'haskeyboard': reply_markup is not None,
                     'timestamp': datetime.now()  # إضافة timestamp للتتبع
                 }
 
@@ -455,19 +455,19 @@ class SmartMessageManager:
     async def updatecurrentmessage(
         self,
         update: Update,
-        context: ContextTypes.DEFAULTTYPE,
+        context: ContextTypes.DEFAULT_TYPE,
         text: str,
-        replymarkup: Optional[InlineKeyboardMarkup] = None
+        reply_markup: Optional[InlineKeyboardMarkup] = None
     ):
         """تحديث الرسالة الحالية مع حماية من Race Conditions"""
-        if not update.callbackquery:
-            return await self.sendnewactivemessage(update, context, text, replymarkup)
+        if not update.callback_query:
+            return await self.sendnewactivemessage(update, context, text, reply_markup)
 
         userid = update.effectiveuser.id
-        messageid = update.callbackquery.message.messageid
+        message_id = update.callback_query.message.message_id
         
         # لوج قبل editMessageText
-        logger.info(f"🟠 محاولة تعديل رسالة للمستخدم {userid} - Message ID: {messageid} - New Content Length: {len(text)}")
+        logger.info(f"🟠 محاولة تعديل رسالة للمستخدم {userid} - Message ID: {message_id} - New Content Length: {len(text)}")
         
         # الحصول على القفل للمستخدم
         lock = await self.getorcreatelock(userid)
@@ -477,7 +477,7 @@ class SmartMessageManager:
                 # التحقق من عدم تكرار نفس الرسالة
                 if userid in self.useractivemessages:
                     oldmsg = self.useractivemessages[userid]
-                    if oldmsg.get('text') == text and oldmsg.get('messageid') == update.callbackquery.message.messageid:
+                    if oldmsg.get('text') == text and oldmsg.get('message_id') == update.callback_query.message.message_id:
                         # نفس الرسالة، لا نحدث
                         logger.debug(f"تجاهل تحديث رسالة مطابقة للمستخدم {userid}")
                         return
@@ -489,19 +489,19 @@ class SmartMessageManager:
                             logger.debug(f"تجاهل تحديث سريع جداً للمستخدم {userid}")
                             return
 
-                await update.callbackquery.editmessagetext(
+                await update.callback_query.edit_message_text(
                     text=text,
-                    replymarkup=replymarkup,
-                    # parsemode removed to avoid parsing errors
+                    reply_markup=reply_markup,
+                    # parse_mode removed to avoid parsing errors
                 )
-                logger.info(f"✅ تم تعديل الرسالة بنجاح للمستخدم {userid} - Message ID: {messageid}")
+                logger.info(f"✅ تم تعديل الرسالة بنجاح للمستخدم {userid} - Message ID: {message_id}")
 
                 # حفظ معلومات الرسالة المحدثة
                 self.useractivemessages[userid] = {
-                    'messageid': update.callbackquery.message.messageid,
-                    'chatid': update.callbackquery.message.chatid,
+                    'message_id': update.callback_query.message.message_id,
+                    'chat_id': update.callback_query.message.chat_id,
                     'text': text,
-                    'haskeyboard': replymarkup is not None,
+                    'haskeyboard': reply_markup is not None,
                     'timestamp': datetime.now()  # إضافة timestamp للتتبع
                 }
 
@@ -511,10 +511,10 @@ class SmartMessageManager:
                     logger.debug(f"الرسالة لم تتغير للمستخدم {userid}")
                 elif "400" in str(e) or "Bad Request" in str(e):
                     # لوج عند HTTP 400
-                    logger.error(f"🔴 خطأ HTTP 400 للمستخدم {userid} - Message ID: {messageid} - Error: {str(e)}")
+                    logger.error(f"🔴 خطأ HTTP 400 للمستخدم {userid} - Message ID: {message_id} - Error: {str(e)}")
                     # محاولة إرسال رسالة جديدة بدلاً من التعديل
                     logger.info(f"📨 محاولة إرسال رسالة جديدة بدلاً من التعديل للمستخدم {userid}")
-                    await self.sendnewactivemessage(update, context, text, replymarkup)
+                    await self.sendnewactivemessage(update, context, text, reply_markup)
                 else:
                     logger.debug(f"خطأ في تحديث الرسالة للمستخدم {userid}: {e}")
 
@@ -748,7 +748,7 @@ class EncryptionSystem:
     def __init__(self):
         # استخدام مفتاح ثابت آمن (في الإنتاج يجب استخدام مفتاح من متغيرات البيئة)
         self.masterkey = b'FC26BOTSECUREENCRYPTIONKEY2025PRODUCTION'
-        self.initcipher()
+        self._init_cipher()
     
     def _init_cipher(self):
         """تهيئة نظام التشفير"""
@@ -759,7 +759,7 @@ class EncryptionSystem:
             salt=b'FC26SALT2025',
             iterations=100000,
         )
-        key = base64.urlsafeb64encode(kdf.derive(self.masterkey))
+        key = base64.urlsafe_b64encode(kdf.derive(self.masterkey))
         self.cipher = Fernet(key)
     
     def encrypt(self, data: str) -> str:
@@ -768,7 +768,7 @@ class EncryptionSystem:
             return ""
         try:
             encrypted = self.cipher.encrypt(data.encode())
-            return base64.urlsafeb64encode(encrypted).decode()
+            return base64.urlsafe_b64encode(encrypted).decode()
         except Exception as e:
             logger.error(f"خطأ في التشفير: {e}")
             return data  # إرجاع البيانات بدون تشفير في حالة الخطأ
@@ -778,7 +778,7 @@ class EncryptionSystem:
         if not encrypteddata:
             return ""
         try:
-            decoded = base64.urlsafeb64decode(encrypteddata.encode())
+            decoded = base64.urlsafe_b64decode(encrypteddata.encode())
             decrypted = self.cipher.decrypt(decoded)
             return decrypted.decode()
         except Exception as e:
@@ -1100,17 +1100,17 @@ class Database:
     """مدير قاعدة البيانات"""
 
     def __init__(self):
-        self.initdatabase()
+        self._init_database()
 
-    def getconnection(self):
+    def get_connection(self):
         """إنشاء اتصال جديد"""
         conn = sqlite3.connect(DATABASEPATH)
-        conn.rowfactory = sqlite3.Row
+        conn.row_factory = sqlite3.Row
         return conn
 
-    def initdatabase(self):
+    def _init_database(self):
         """تهيئة قاعدة البيانات"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         # جدول المستخدمين
@@ -1192,7 +1192,7 @@ class Database:
 
     def createuser(self, telegramid: int, username: str, fullname: str) -> int:
         """إنشاء مستخدم جديد"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
@@ -1222,7 +1222,7 @@ class Database:
 
     def savetempregistration(self, telegramid: int, stepname: str, stepnumber: int, data: dict):
         """حفظ التسجيل المؤقت"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -1235,7 +1235,7 @@ class Database:
 
     def gettempregistration(self, telegramid: int) -> Optional[dict]:
         """استرجاع التسجيل المؤقت"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -1255,7 +1255,7 @@ class Database:
 
     def cleartempregistration(self, telegramid: int):
         """حذف التسجيل المؤقت"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('DELETE FROM tempregistration WHERE telegramid = ?', (telegramid,))
         conn.commit()
@@ -1263,7 +1263,7 @@ class Database:
 
     def completeregistration(self, telegramid: int, data: dict) -> bool:
         """إكمال التسجيل"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
@@ -1358,7 +1358,7 @@ class Database:
 
     def getuserbytelegramid(self, telegramid: int) -> Optional[dict]:
         """الحصول على المستخدم"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute('SELECT  FROM users WHERE telegramid = ?', (telegramid,))
@@ -1370,9 +1370,9 @@ class Database:
             return dict(row)
         return None
 
-    def getuserdata(self, telegramid: int) -> Optional[dict]:
+    def getuser_data(self, telegramid: int) -> Optional[dict]:
         """الحصول على بيانات المستخدم الكاملة"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -1389,9 +1389,9 @@ class Database:
             return dict(row)
         return None
     
-    def getuserprofile(self, telegramid: int) -> Optional[dict]:
+    def get_user_profile(self, telegramid: int) -> Optional[dict]:
         """الحصول على الملف الشخصي"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -1414,7 +1414,7 @@ class Database:
             ''', (profile['userid'],))
 
             profile['transactioncount'] = cursor.fetchone()['transactioncount']
-            profile['levelname'] = self.getlevelname(profile.get('loyaltypoints', 0))
+            profile['levelname'] = self.get_level_name(profile.get('loyaltypoints', 0))
 
             conn.close()
             return profile
@@ -1422,7 +1422,7 @@ class Database:
         conn.close()
         return None
 
-    def getlevelname(self, points: int) -> str:
+    def get_level_name(self, points: int) -> str:
         """تحديد اسم المستوى"""
         if points >= 5000:
             return 'أسطورة 👑'
@@ -1435,9 +1435,9 @@ class Database:
         else:
             return 'مبتدئ 🌱'
 
-    def updateuserdata(self, telegramid: int, updatedata: dict) -> bool:
+    def updateuser_data(self, telegramid: int, updatedata: dict) -> bool:
         """تحديث بيانات المستخدم"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
         
         try:
@@ -1501,11 +1501,11 @@ class Database:
     
     def updateuserplatform(self, telegramid: int, platform: str) -> bool:
         """تحديث منصة المستخدم"""
-        return self.updateuserdata(telegramid, {'platform': platform})
+        return self.updateuser_data(telegramid, {'platform': platform})
     
-    def deleteuseraccount(self, telegramid: int) -> bool:
+    def delete_useraccount(self, telegramid: int) -> bool:
         """حذف حساب المستخدم"""
-        conn = self.getconnection()
+        conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
@@ -1600,7 +1600,7 @@ class SmartRegistrationHandler:
     def __init__(self):
         self.db = Database()
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بداية التسجيل"""
         telegramid = update.effectiveuser.id
         username = update.effectiveuser.username
@@ -1610,7 +1610,7 @@ class SmartRegistrationHandler:
 
         if tempdata:
             # استعادة البيانات المحفوظة
-            context.userdata['registration'] = tempdata['data']
+            context.user_data['registration'] = tempdata['data']
             step = tempdata['stepnumber']
 
             stepnames = {
@@ -1626,13 +1626,13 @@ class SmartRegistrationHandler:
                 [InlineKeyboardButton("✅ متابعة من حيث توقفت", callbackdata="continueregistration")],
                 [InlineKeyboardButton("🔄 البدء من جديد", callbackdata="restartregistration")]
             ]
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
             # إرسال رسالة مع الأزرار
             await smartmessagemanager.sendnewactivemessage(
                 update, context,
                 message + "\n\nماذا تريد أن تفعل؟",
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
 
             # لا نرسل رسالة الخطوة مباشرة، بل ننتظر اختيار المستخدم
@@ -1642,14 +1642,14 @@ class SmartRegistrationHandler:
         # مستخدم جديد
         await smartmessagemanager.sendnewactivemessage(
             update, context, MESSAGES['welcome'],
-            replymarkup=Keyboards.getstartkeyboard()
+            reply_markup=Keyboards.getstartkeyboard()
         )
 
         return ConversationHandler.END
 
-    async def handleregistrationstart(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handleregistrationstart(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بدء التسجيل الجديد مع حماية من الضغط المتكرر"""
-        query = update.callbackquery
+        query = update.callback_query
         
         # الرد على الـ callback query بسرعة
         await query.answer()
@@ -1659,12 +1659,12 @@ class SmartRegistrationHandler:
         fullname = query.fromuser.fullname
         
         # التحقق من عدم وجود تسجيل قيد المعالجة
-        if 'registration' in context.userdata and context.userdata['registration'].get('inprogress'):
+        if 'registration' in context.user_data and context.user_data['registration'].get('inprogress'):
             logger.debug(f"تجاهل محاولة بدء تسجيل مكرر للمستخدم {telegramid}")
             return
 
         # وضع علامة أن التسجيل قيد المعالجة
-        context.userdata['registration'] = {
+        context.user_data['registration'] = {
             'inprogress': True,
             'telegramid': telegramid
         }
@@ -1675,21 +1675,21 @@ class SmartRegistrationHandler:
         userid = self.db.createuser(telegramid, username, fullname)
 
         # تحديث بيانات التسجيل
-        context.userdata['registration'].update({
+        context.user_data['registration'].update({
             'userid': userid,
             'inprogress': False  # إلغاء العلامة بعد اكتمال المعالجة
         })
 
         await smartmessagemanager.updatecurrentmessage(
             update, context, MESSAGES['chooseplatform'],
-            replymarkup=Keyboards.getplatformkeyboard()
+            reply_markup=Keyboards.getplatformkeyboard()
         )
 
         return CHOOSINGPLATFORM
 
-    async def handleplatformchoice(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handleplatformchoice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار المنصة مع حماية من الضغط المتكرر"""
-        query = update.callbackquery
+        query = update.callback_query
         
         # الرد على الـ callback query بسرعة لمنع ظهور رمز التحميل
         await query.answer()
@@ -1708,17 +1708,17 @@ class SmartRegistrationHandler:
         platformname = GAMINGPLATFORMS[platformkey]['name']
         
         # التحقق من وضع التعديل
-        isediting = context.userdata.get('editingmode') == 'whatsappfull'
+        isediting = context.user_data.get('editingmode') == 'whatsappfull'
         
         if isediting:
             # في وضع التعديل - نحفظ في editregistration
-            if 'editregistration' not in context.userdata:
-                context.userdata['editregistration'] = {
+            if 'editregistration' not in context.user_data:
+                context.user_data['editregistration'] = {
                     'telegramid': query.fromuser.id,
                     'isediting': True
                 }
             
-            context.userdata['editregistration']['platform'] = platformkey
+            context.user_data['editregistration']['platform'] = platformkey
             
             # عرض رسالة إدخال رقم الواتساب الجديد
             await smartmessagemanager.updatecurrentmessage(
@@ -1727,22 +1727,22 @@ class SmartRegistrationHandler:
             )
         else:
             # في وضع التسجيل العادي
-            if 'registration' not in context.userdata:
-                context.userdata['registration'] = {
+            if 'registration' not in context.user_data:
+                context.user_data['registration'] = {
                     'telegramid': query.fromuser.id
                 }
             
             # التحقق من عدم تكرار نفس الاختيار
-            if context.userdata['registration'].get('platform') == platformkey:
+            if context.user_data['registration'].get('platform') == platformkey:
                 logger.debug(f"تجاهل اختيار منصة مكرر: {platformkey}")
                 return
 
-            context.userdata['registration']['platform'] = platformkey
+            context.user_data['registration']['platform'] = platformkey
 
             self.db.savetempregistration(
-                context.userdata['registration']['telegramid'],
+                context.user_data['registration']['telegramid'],
                 'platformchosen', ENTERINGWHATSAPP,
-                context.userdata['registration']
+                context.user_data['registration']
             )
 
             # استخدام updatecurrentmessage لتحديث الرسالة الحالية بدلاً من إرسال جديدة
@@ -1753,7 +1753,7 @@ class SmartRegistrationHandler:
 
         return ENTERINGWHATSAPP
 
-    async def handlewhatsappinput(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handlewhatsappinput(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إدخال واتساب مع نظام الحماية المتقدم"""
         userid = update.effectiveuser.id
         whatsappinput = update.message.text.strip()
@@ -1838,30 +1838,30 @@ class SmartRegistrationHandler:
         networkinfo = validation['networkinfo']
         
         # التحقق من وضع التعديل
-        isediting = context.userdata.get('editingmode') in ['whatsapponly', 'whatsappfull', 'paymentonly']
+        isediting = context.user_data.get('editingmode') in ['whatsapponly', 'whatsappfull', 'paymentonly']
         
         if isediting:
             # في وضع التعديل - نحفظ في editregistration
-            if 'editregistration' not in context.userdata:
-                context.userdata['editregistration'] = {
+            if 'editregistration' not in context.user_data:
+                context.user_data['editregistration'] = {
                     'telegramid': userid,
                     'isediting': True
                 }
             
-            context.userdata['editregistration']['whatsapp'] = cleanednumber
-            context.userdata['editregistration']['whatsappnetwork'] = networkinfo['name']
+            context.user_data['editregistration']['whatsapp'] = cleanednumber
+            context.user_data['editregistration']['whatsappnetwork'] = networkinfo['name']
             
             # في حالة تعديل الواتساب فقط، نحفظ مباشرة
-            if context.userdata.get('editingmode') == 'whatsapponly':
+            if context.user_data.get('editingmode') == 'whatsapponly':
                 # تحديث قاعدة البيانات
-                success = self.db.updateuserdata(userid, {
+                success = self.db.updateuser_data(userid, {
                     'whatsapp': cleanednumber,
                     'whatsappnetwork': networkinfo['name']
                 })
                 
                 if success:
                     # عرض رسالة النجاح والعودة للملف الشخصي
-                    profile = self.db.getuserprofile(userid)
+                    profile = self.db.get_user_profile(userid)
                     
                     profiletext = f"""
 ✅ تم تحديث رقم الواتساب بنجاح!
@@ -1882,16 +1882,16 @@ class SmartRegistrationHandler:
                         [InlineKeyboardButton("✏️ تعديل آخر", callbackdata="editprofile")],
                         [InlineKeyboardButton("🏠 القائمة الرئيسية", callbackdata="mainmenu")]
                     ]
-                    replymarkup = InlineKeyboardMarkup(keyboard)
+                    reply_markup = InlineKeyboardMarkup(keyboard)
                     
                     await smartmessagemanager.sendnewactivemessage(
                         update, context, profiletext,
-                        replymarkup=replymarkup
+                        reply_markup=reply_markup
                     )
                     
                     # مسح وضع التعديل
-                    context.userdata.pop('editingmode', None)
-                    context.userdata.pop('editregistration', None)
+                    context.user_data.pop('editingmode', None)
+                    context.user_data.pop('editregistration', None)
                     
                     return ConversationHandler.END
                 else:
@@ -1903,21 +1903,21 @@ class SmartRegistrationHandler:
                     return ConversationHandler.END
         else:
             # في وضع التسجيل العادي
-            if 'registration' not in context.userdata:
-                context.userdata['registration'] = {
+            if 'registration' not in context.user_data:
+                context.user_data['registration'] = {
                     'telegramid': userid
                 }
             
-            context.userdata['registration']['whatsapp'] = cleanednumber
-            context.userdata['registration']['whatsappnetwork'] = networkinfo['name']
+            context.user_data['registration']['whatsapp'] = cleanednumber
+            context.user_data['registration']['whatsappnetwork'] = networkinfo['name']
             
             # حفظ في قاعدة البيانات المؤقتة
             try:
                 self.db.savetempregistration(
-                    context.userdata['registration']['telegramid'],
+                    context.user_data['registration']['telegramid'],
                     'whatsappentered',
                     CHOOSINGPAYMENT,
-                    context.userdata['registration']
+                    context.user_data['registration']
                 )
             except Exception as e:
                 logger.error(f"Error saving temp registration: {e}")
@@ -1936,7 +1936,7 @@ class SmartRegistrationHandler:
         await smartmessagemanager.sendnewactivemessage(
             update, context,
             successmessage + "\n\n" + MESSAGES['choosepayment'],
-            replymarkup=Keyboards.getpaymentkeyboard(),
+            reply_markup=Keyboards.getpaymentkeyboard(),
             choicemade=f"واتساب: {cleanednumber}"
         )
         
@@ -1945,9 +1945,9 @@ class SmartRegistrationHandler:
         
         return CHOOSINGPAYMENT
 
-    async def handlepaymentchoice(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handlepaymentchoice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار طريقة الدفع مع حماية من الضغط المتكرر"""
-        query = update.callbackquery
+        query = update.callback_query
         
         # الرد على الـ callback query بسرعة
         await query.answer()
@@ -1966,39 +1966,39 @@ class SmartRegistrationHandler:
         paymentname = PAYMENTMETHODS[paymentkey]['name']
         
         # التحقق من وضع التعديل
-        isediting = context.userdata.get('editingmode') in ['whatsappfull', 'paymentonly']
+        isediting = context.user_data.get('editingmode') in ['whatsappfull', 'paymentonly']
         
         if isediting:
             # في وضع التعديل - نحفظ في editregistration
-            if 'editregistration' not in context.userdata:
+            if 'editregistration' not in context.user_data:
                 await query.answer("❌ يجب البدء من جديد", showalert=True)
                 return ConversationHandler.END
             
             # التحقق من عدم تكرار نفس الاختيار
-            if context.userdata['editregistration'].get('paymentmethod') == paymentkey:
+            if context.user_data['editregistration'].get('paymentmethod') == paymentkey:
                 logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {paymentkey}")
                 return
             
-            context.userdata['editregistration']['paymentmethod'] = paymentkey
+            context.user_data['editregistration']['paymentmethod'] = paymentkey
         else:
             # في وضع التسجيل العادي
-            if 'registration' not in context.userdata:
+            if 'registration' not in context.user_data:
                 await query.answer("❌ يجب البدء من جديد", showalert=True)
                 return ConversationHandler.END
             
             # التحقق من عدم تكرار نفس الاختيار
-            if context.userdata['registration'].get('paymentmethod') == paymentkey:
+            if context.user_data['registration'].get('paymentmethod') == paymentkey:
                 logger.debug(f"تجاهل اختيار طريقة دفع مكررة: {paymentkey}")
                 return
 
-            context.userdata['registration']['paymentmethod'] = paymentkey
+            context.user_data['registration']['paymentmethod'] = paymentkey
             
             # حفظ في قاعدة البيانات المؤقتة
             self.db.savetempregistration(
-                context.userdata['registration']['telegramid'],
+                context.user_data['registration']['telegramid'],
                 'paymentmethodchosen',
                 ENTERINGPAYMENTDETAILS,
-                context.userdata['registration']
+                context.user_data['registration']
             )
         
         # عرض التعليمات حسب نوع طريقة الدفع
@@ -2119,17 +2119,17 @@ class SmartRegistrationHandler:
         
         return "طريقة دفع غير معروفة"
     
-    async def handlepaymentdetailsinput(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handlepaymentdetailsinput(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج إدخال بيانات طريقة الدفع مع التشفير"""
         userid = update.effectiveuser.id
         paymentinput = update.message.text.strip()
         
         # التحقق من وضع التعديل
-        isediting = context.userdata.get('editingmode') in ['whatsappfull', 'paymentonly']
+        isediting = context.user_data.get('editingmode') in ['whatsappfull', 'paymentonly']
         
         if isediting:
             # في وضع التعديل
-            if 'editregistration' not in context.userdata or 'paymentmethod' not in context.userdata['editregistration']:
+            if 'editregistration' not in context.user_data or 'paymentmethod' not in context.user_data['editregistration']:
                 await smartmessagemanager.sendnewactivemessage(
                     update, context,
                     "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
@@ -2137,10 +2137,10 @@ class SmartRegistrationHandler:
                 )
                 return ConversationHandler.END
             
-            paymentmethod = context.userdata['editregistration']['paymentmethod']
+            paymentmethod = context.user_data['editregistration']['paymentmethod']
         else:
             # في وضع التسجيل العادي
-            if 'registration' not in context.userdata or 'paymentmethod' not in context.userdata['registration']:
+            if 'registration' not in context.user_data or 'paymentmethod' not in context.user_data['registration']:
                 await smartmessagemanager.sendnewactivemessage(
                     update, context,
                     "❌ حدث خطأ. يرجى البدء من جديد بكتابة /start",
@@ -2148,7 +2148,7 @@ class SmartRegistrationHandler:
                 )
                 return ConversationHandler.END
             
-            paymentmethod = context.userdata['registration']['paymentmethod']
+            paymentmethod = context.user_data['registration']['paymentmethod']
         
         # 1. فحص الحظر
         isblocked, remainingminutes = paymentvalidation.isuserblocked(userid)
@@ -2228,26 +2228,26 @@ class SmartRegistrationHandler:
         
         if isediting:
             # في وضع التعديل - نحفظ في editregistration
-            context.userdata['editregistration']['paymentdetails'] = encrypteddata
-            context.userdata['editregistration']['paymentdetailstype'] = paymenttype
+            context.user_data['editregistration']['paymentdetails'] = encrypteddata
+            context.user_data['editregistration']['paymentdetailstype'] = paymenttype
             
             if paymenttype == 'wallet':
-                context.userdata['editregistration']['paymentnetwork'] = validationresult.get('network', '')
+                context.user_data['editregistration']['paymentnetwork'] = validationresult.get('network', '')
         else:
             # في وضع التسجيل العادي
-            context.userdata['registration']['paymentdetails'] = encrypteddata
-            context.userdata['registration']['paymentdetailstype'] = paymenttype
+            context.user_data['registration']['paymentdetails'] = encrypteddata
+            context.user_data['registration']['paymentdetailstype'] = paymenttype
             
             if paymenttype == 'wallet':
-                context.userdata['registration']['paymentnetwork'] = validationresult.get('network', '')
+                context.user_data['registration']['paymentnetwork'] = validationresult.get('network', '')
             
             # حفظ في قاعدة البيانات المؤقتة
             try:
                 self.db.savetempregistration(
-                    context.userdata['registration']['telegramid'],
+                    context.user_data['registration']['telegramid'],
                     'paymentdetailsentered',
                     ConversationHandler.END,
-                    context.userdata['registration']
+                    context.user_data['registration']
                 )
             except Exception as e:
                 logger.error(f"Error saving temp registration: {e}")
@@ -2290,14 +2290,14 @@ class SmartRegistrationHandler:
 
 
 
-    async def showconfirmation(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def showconfirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض التأكيد والحفظ التلقائي مع فك تشفير البيانات"""
         # التحقق من وضع التعديل
-        isediting = context.userdata.get('editingmode') in ['whatsappfull', 'paymentonly']
+        isediting = context.user_data.get('editingmode') in ['whatsappfull', 'paymentonly']
         
         if isediting:
             # في وضع التعديل - نحدث البيانات في قاعدة البيانات
-            regdata = context.userdata['editregistration']
+            regdata = context.user_data['editregistration']
             telegramid = regdata['telegramid']
             
             # تحديث البيانات في قاعدة البيانات
@@ -2321,20 +2321,20 @@ class SmartRegistrationHandler:
                     updatedata['paymentnetwork'] = regdata['paymentnetwork']
             
             # تحديث البيانات في قاعدة البيانات
-            success = self.db.updateuserdata(telegramid, updatedata)
+            success = self.db.updateuser_data(telegramid, updatedata)
             
             # مسح وضع التعديل
-            context.userdata.pop('editingmode', None)
-            context.userdata.pop('editregistration', None)
+            context.user_data.pop('editingmode', None)
+            context.user_data.pop('editregistration', None)
         else:
             # في وضع التسجيل العادي
-            regdata = context.userdata['registration']
+            regdata = context.user_data['registration']
             telegramid = regdata['telegramid']
             success = self.db.completeregistration(telegramid, regdata)
         
         # الحصول على اسم المستخدم
-        if update.callbackquery:
-            username = update.callbackquery.fromuser.username
+        if update.callback_query:
+            username = update.callback_query.fromuser.username
         else:
             username = update.effectiveuser.username
         
@@ -2343,13 +2343,13 @@ class SmartRegistrationHandler:
 
         if success:
             # الحصول على البيانات المحدثة من قاعدة البيانات
-            updateduserdata = self.db.getuserdata(telegramid)
+            updateduser_data = self.db.getuser_data(telegramid)
             
-            if updateduserdata:
-                platform = GAMINGPLATFORMS.get(updateduserdata.get('platform'), {}).get('name', 'غير محدد')
-                paymentmethod = updateduserdata.get('paymentmethod', '')
+            if updateduser_data:
+                platform = GAMINGPLATFORMS.get(updateduser_data.get('platform'), {}).get('name', 'غير محدد')
+                paymentmethod = updateduser_data.get('paymentmethod', '')
                 paymentname = PAYMENTMETHODS.get(paymentmethod, {}).get('name', 'غير محدد')
-                whatsapp = updateduserdata.get('whatsapp', 'غير محدد')
+                whatsapp = updateduser_data.get('whatsapp', 'غير محدد')
             else:
                 platform = GAMINGPLATFORMS.get(regdata.get('platform'), {}).get('name', 'غير محدد')
                 paymentmethod = regdata.get('paymentmethod', '')
@@ -2414,7 +2414,7 @@ class SmartRegistrationHandler:
 """
 
             # استخدام updatecurrentmessage إذا كان من callback
-            if update.callbackquery:
+            if update.callback_query:
                 await smartmessagemanager.updatecurrentmessage(
                     update, context, successmessage
                 )
@@ -2424,17 +2424,17 @@ class SmartRegistrationHandler:
                 )
             
             # مسح البيانات المؤقتة
-            context.userdata.clear()
+            context.user_data.clear()
             
             # تنظيف بيانات المستخدم في SmartMessageManager
-            await smartmessagemanager.cleanupuserdata(telegramid)
+            await smartmessagemanager.cleanupuser_data(telegramid)
             
             return ConversationHandler.END
         else:
             # في حالة الفشل
             errormessage = "❌ حدث خطأ في حفظ البيانات. الرجاء المحاولة مرة أخرى."
             
-            if update.callbackquery:
+            if update.callback_query:
                 await smartmessagemanager.updatecurrentmessage(
                     update, context, errormessage
                 )
@@ -2447,9 +2447,9 @@ class SmartRegistrationHandler:
 
 
 
-    async def handlecontinueregistration(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handlecontinueregistration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """استكمال التسجيل"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
 
         telegramid = query.fromuser.id
@@ -2458,7 +2458,7 @@ class SmartRegistrationHandler:
             tempdata = self.db.gettempregistration(telegramid)
 
             if tempdata:
-                context.userdata['registration'] = tempdata['data']
+                context.user_data['registration'] = tempdata['data']
                 step = tempdata['stepnumber']
 
                 stepmessages = {
@@ -2472,12 +2472,12 @@ class SmartRegistrationHandler:
                 if step == CHOOSINGPAYMENT:
                     await smartmessagemanager.updatecurrentmessage(
                         update, context, message,
-                        replymarkup=Keyboards.getpaymentkeyboard()
+                        reply_markup=Keyboards.getpaymentkeyboard()
                     )
                 elif step == CHOOSINGPLATFORM:
                     await smartmessagemanager.updatecurrentmessage(
                         update, context, message,
-                        replymarkup=Keyboards.getplatformkeyboard()
+                        reply_markup=Keyboards.getplatformkeyboard()
                     )
                 elif step == ENTERINGWHATSAPP:
                     # للواتساب نرسل الرسالة بدون لوحة مفاتيح
@@ -2497,18 +2497,18 @@ class SmartRegistrationHandler:
 
             await smartmessagemanager.updatecurrentmessage(
                 update, context, MESSAGES['chooseplatform'],
-                replymarkup=Keyboards.getplatformkeyboard()
+                reply_markup=Keyboards.getplatformkeyboard()
             )
 
-            context.userdata['registration'] = {'telegramid': telegramid}
+            context.user_data['registration'] = {'telegramid': telegramid}
 
             return CHOOSINGPLATFORM
 
 
 
-    async def cancel(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء التسجيل"""
-        context.userdata.clear()
+        context.user_data.clear()
 
         await smartmessagemanager.sendnewactivemessage(
             update, context,
@@ -2525,12 +2525,12 @@ class FC26SmartBot:
         self.db = Database()
         self.registrationhandler = SmartRegistrationHandler()
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البداية مع النظام الذكي الموحد"""
         telegramid = update.effectiveuser.id
         
-        # إذا كان هناك callbackquery، نتجاهل الطلب (منع التكرار)
-        if update.callbackquery:
+        # إذا كان هناك callback_query، نتجاهل الطلب (منع التكرار)
+        if update.callback_query:
             return
 
         user = self.db.getuserbytelegramid(telegramid)
@@ -2569,25 +2569,25 @@ class FC26SmartBot:
             if isadmin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callbackdata="adminpanel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callbackdata="deleteaccount")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindeleteuser")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindelete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
             
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
             # استخدام النظام الذكي دائماً
             await smartmessagemanager.sendnewactivemessage(
                 update, context, welcomemessage,
-                replymarkup=replymarkup,
+                reply_markup=reply_markup,
                 disableprevious=True  # تعطيل الرسالة السابقة
             )
         else:
             # مستخدم جديد - استخدام النظام الذكي للتسجيل
             await self.registrationhandler.start(update, context)
 
-    async def profilecommand(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def profilecommand(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض الملف الشخصي مع النظام الذكي"""
         telegramid = update.effectiveuser.id
-        profile = self.db.getuserprofile(telegramid)
+        profile = self.db.get_user_profile(telegramid)
 
         if not profile:
             await smartmessagemanager.sendnewactivemessage(
@@ -2623,14 +2623,14 @@ class FC26SmartBot:
             [InlineKeyboardButton("✏️ تعديل الملف الشخصي", callbackdata="editprofile")],
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callbackdata="mainmenu")]
         ]
-        replymarkup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
         await smartmessagemanager.sendnewactivemessage(
             update, context, profiletext,
-            replymarkup=replymarkup
+            reply_markup=reply_markup
         )
 
-    async def helpcommand(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def helpcommand(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """عرض المساعدة"""
         telegramid = update.effectiveuser.id
         isadmin = telegramid == ADMINID
@@ -2676,26 +2676,26 @@ class FC26SmartBot:
             [InlineKeyboardButton("👤 ملفي الشخصي", callbackdata="profile")],
             [InlineKeyboardButton("📞 الدعم الفني", callbackdata="support")]
         ]
-        replymarkup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
         await smartmessagemanager.sendnewactivemessage(
             update, context, helptext,
-            replymarkup=replymarkup
+            reply_markup=reply_markup
         )
 
-    async def deleteaccountcommand(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def deleteaccountcommand(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف الحساب - للأدمن فقط"""
         telegramid = update.effectiveuser.id
         
         # التحقق من أن المستخدم هو الأدمن
         if telegramid != ADMINID:
             # عرض رسالة مساعدة للمستخدمين العاديين
-            await update.message.replytext(
+            await update.message.reply_text(
                 "👋 استخدم الأوامر التالية:\n\n"
                 "/start - البداية\n"
                 "/profile - الملف الشخصي\n"
                 "/help - المساعدة",
-                replymarkup=ReplyKeyboardRemove()
+                reply_markup=ReplyKeyboardRemove()
             )
             return
         
@@ -2713,18 +2713,18 @@ class FC26SmartBot:
 """
         await smartmessagemanager.sendnewactivemessage(
             update, context, warning,
-            replymarkup=Keyboards.getdeletekeyboard()
+            reply_markup=Keyboards.getdeletekeyboard()
         )
 
-    async def handledeleteconfirmation(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handledeleteconfirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """تأكيد حذف الحساب مع النظام الذكي"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
 
         if query.data == "confirmdelete":
             telegramid = query.fromuser.id
 
-            success = self.db.deleteuseraccount(telegramid)
+            success = self.db.delete_useraccount(telegramid)
 
             if success:
                 await smartmessagemanager.updatecurrentmessage(
@@ -2768,30 +2768,30 @@ class FC26SmartBot:
             if isadmin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callbackdata="adminpanel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callbackdata="deleteaccount")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindeleteuser")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindelete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
             
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smartmessagemanager.updatecurrentmessage(
                 update, context, welcomemessage,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
 
-    async def handlemenubuttons(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handlemenubuttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة أزرار القائمة التفاعلية مع النظام الذكي"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         # لوج عند الضغط على الأزرار
         userid = query.fromuser.id
-        messageid = query.message.messageid
-        logger.info(f"🟡 المستخدم {userid} ضغط على زر: {query.data} - Message ID: {messageid}")
+        message_id = query.message.message_id
+        logger.info(f"🟡 المستخدم {userid} ضغط على زر: {query.data} - Message ID: {message_id}")
 
         if query.data == "profile":
             # استخدام النظام الذكي لعرض الملف الشخصي
             telegramid = query.fromuser.id
-            profile = self.db.getuserprofile(telegramid)
+            profile = self.db.get_user_profile(telegramid)
 
             if not profile:
                 await smartmessagemanager.updatecurrentmessage(
@@ -2827,20 +2827,20 @@ class FC26SmartBot:
                 [InlineKeyboardButton("✏️ تعديل الملف الشخصي", callbackdata="editprofile")],
                 [InlineKeyboardButton("🏠 القائمة الرئيسية", callbackdata="mainmenu")]
             ]
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
             # تجنب خطأ HTTP 400 - نتأكد إن الرسالة مختلفة
             try:
                 await smartmessagemanager.updatecurrentmessage(
                     update, context, profiletext,
-                    replymarkup=replymarkup
+                    reply_markup=reply_markup
                 )
             except Exception as e:
                 # لو حصل خطأ، نرسل رسالة جديدة
                 logger.debug(f"Error updating message: {e}")
                 await smartmessagemanager.sendnewactivemessage(
                     update, context, profiletext,
-                    replymarkup=replymarkup,
+                    reply_markup=reply_markup,
                     disableprevious=True
                 )
 
@@ -2866,7 +2866,7 @@ class FC26SmartBot:
 
             await smartmessagemanager.updatecurrentmessage(
                 update, context, warning,
-                replymarkup=Keyboards.getdeletekeyboard()
+                reply_markup=Keyboards.getdeletekeyboard()
             )
 
         elif query.data == "sellcoins":
@@ -2912,25 +2912,25 @@ class FC26SmartBot:
             if isadmin:
                 keyboard.append([InlineKeyboardButton("🔐 لوحة الأدمن", callbackdata="adminpanel")])
                 keyboard.append([InlineKeyboardButton("🗑️ حذف حسابي", callbackdata="deleteaccount")])
-                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindeleteuser")])
+                keyboard.append([InlineKeyboardButton("🗑️ حذف حساب مستخدم", callbackdata="admindelete_user")])
             # المستخدمين العاديين لا يرون زر حذف الحساب
             
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
             await smartmessagemanager.updatecurrentmessage(
                 update, context, welcomemessage,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
     
-    async def handleeditprofile(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handleeditprofile(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج تعديل الملف الشخصي"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         # لوج عند الضغط على أزرار التعديل
         userid = query.fromuser.id
-        messageid = query.message.messageid
-        logger.info(f"🟡 المستخدم {userid} ضغط على زر: {query.data} - Message ID: {messageid}")
+        message_id = query.message.message_id
+        logger.info(f"🟡 المستخدم {userid} ضغط على زر: {query.data} - Message ID: {message_id}")
         
         if query.data == "editprofile":
             # عرض خيارات التعديل
@@ -2946,11 +2946,11 @@ class FC26SmartBot:
                 [InlineKeyboardButton("💳 تعديل طريقة الدفع", callbackdata="editpayment")],
                 [InlineKeyboardButton("🔙 رجوع", callbackdata="profile")]
             ]
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
             
             await smartmessagemanager.updatecurrentmessage(
                 update, context, message,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
         
         elif query.data == "editplatform":
@@ -2967,11 +2967,11 @@ class FC26SmartBot:
                 ])
             
             keyboard.append([InlineKeyboardButton("🔙 رجوع", callbackdata="editprofile")])
-            replymarkup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
             
             await smartmessagemanager.updatecurrentmessage(
                 update, context, message,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
         
         elif query.data == "editwhatsapp":
@@ -2979,17 +2979,17 @@ class FC26SmartBot:
             telegramid = query.fromuser.id
             
             # الحصول على بيانات المستخدم الحالية
-            userdata = self.db.getuserdata(telegramid)
-            if not userdata:
+            user_data = self.db.getuser_data(telegramid)
+            if not user_data:
                 await query.answer("❌ لم يتم العثور على بياناتك", showalert=True)
                 return
             
             # حفظ البيانات الحالية للاستخدام في التعديل
-            context.userdata['editingmode'] = 'whatsapponly'
-            context.userdata['editregistration'] = {
+            context.user_data['editingmode'] = 'whatsapponly'
+            context.user_data['editregistration'] = {
                 'telegramid': telegramid,
-                'platform': userdata.get('platform'),  # نحتفظ بالمنصة الحالية
-                'paymentmethod': userdata.get('paymentmethod'),  # نحتفظ بطريقة الدفع الحالية
+                'platform': user_data.get('platform'),  # نحتفظ بالمنصة الحالية
+                'paymentmethod': user_data.get('paymentmethod'),  # نحتفظ بطريقة الدفع الحالية
                 'isediting': True,
                 'edittype': 'whatsapponly'
             }
@@ -3012,7 +3012,7 @@ class FC26SmartBot:
             
             await smartmessagemanager.updatecurrentmessage(
                 update, context, message,
-                replymarkup=None  # لا نحتاج أزرار هنا
+                reply_markup=None  # لا نحتاج أزرار هنا
             )
             
             # ننتظر إدخال الرقم
@@ -3023,17 +3023,17 @@ class FC26SmartBot:
             telegramid = query.fromuser.id
             
             # الحصول على بيانات المستخدم الحالية
-            userdata = self.db.getuserdata(telegramid)
-            if not userdata:
+            user_data = self.db.getuser_data(telegramid)
+            if not user_data:
                 await query.answer("❌ لم يتم العثور على بياناتك", showalert=True)
                 return
             
             # بدء عملية تعديل طريقة الدفع فقط
-            context.userdata['editingmode'] = 'paymentonly'
-            context.userdata['editregistration'] = {
+            context.user_data['editingmode'] = 'paymentonly'
+            context.user_data['editregistration'] = {
                 'telegramid': telegramid,
-                'platform': userdata.get('platform'),
-                'whatsapp': userdata.get('whatsapp'),  # نحتفظ بالواتساب الحالي
+                'platform': user_data.get('platform'),
+                'whatsapp': user_data.get('whatsapp'),  # نحتفظ بالواتساب الحالي
                 'isediting': True,
                 'edittype': 'paymentonly'
             }
@@ -3045,11 +3045,11 @@ class FC26SmartBot:
 
 اختر طريقة الدفع الجديدة:
 """
-            replymarkup = Keyboards.getpaymentkeyboard()
+            reply_markup = Keyboards.getpaymentkeyboard()
             
             await smartmessagemanager.updatecurrentmessage(
                 update, context, message,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
             
             return CHOOSINGPAYMENT
@@ -3065,7 +3065,7 @@ class FC26SmartBot:
                 
                 if success:
                     # عرض الملف الشخصي المحدث مباشرة
-                    profile = self.db.getuserprofile(telegramid)
+                    profile = self.db.get_user_profile(telegramid)
                     
                     whatsappdisplay = profile.get('whatsapp', 'غير محدد')
                     networkdisplay = ""
@@ -3095,20 +3095,20 @@ class FC26SmartBot:
                         [InlineKeyboardButton("✏️ تعديل آخر", callbackdata="editprofile")],
                         [InlineKeyboardButton("🏠 القائمة الرئيسية", callbackdata="mainmenu")]
                     ]
-                    replymarkup = InlineKeyboardMarkup(keyboard)
+                    reply_markup = InlineKeyboardMarkup(keyboard)
                     
                     await smartmessagemanager.updatecurrentmessage(
                         update, context, profiletext,
-                        replymarkup=replymarkup
+                        reply_markup=reply_markup
                     )
                 else:
                     await query.answer("❌ فشل تحديث المنصة", showalert=True)
             else:
                 await query.answer("❌ منصة غير صالحة", showalert=True)
 
-    async def adminpanel(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def adminpanel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """لوحة تحكم الأدمن"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         telegramid = query.fromuser.id
@@ -3119,7 +3119,7 @@ class FC26SmartBot:
             return
         
         # جلب إحصائيات البوت
-        conn = self.db.getconnection()
+        conn = self.db.get_connection()
         cursor = conn.cursor()
         
         # عدد المستخدمين
@@ -3167,30 +3167,30 @@ class FC26SmartBot:
             [InlineKeyboardButton("👥 عرض جميع المستخدمين", callbackdata="adminviewusers")],
             [InlineKeyboardButton("🔍 بحث عن مستخدم", callbackdata="adminsearchuser")],
             [InlineKeyboardButton("📢 إرسال رسالة للجميع", callbackdata="adminbroadcast")],
-            [InlineKeyboardButton("🗑️ حذف مستخدم", callbackdata="admindeleteuser")],
+            [InlineKeyboardButton("🗑️ حذف مستخدم", callbackdata="admindelete_user")],
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callbackdata="mainmenu")]
         ]
-        replymarkup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
         
         await smartmessagemanager.updatecurrentmessage(
             update, context, admintext,
-            replymarkup=replymarkup
+            reply_markup=reply_markup
         )
     
-    async def handletextmessages(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handletextmessages(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الرسائل النصية - نعيد توجيههم للأوامر"""
         # إزالة أي كيبورد موجود
-        await update.message.replytext(
+        await update.message.reply_text(
             "👋 استخدم الأوامر التالية:\n\n"
             "/start - البداية\n"
             "/profile - الملف الشخصي\n"
             "/help - المساعدة",
-            replymarkup=ReplyKeyboardRemove()
+            reply_markup=ReplyKeyboardRemove()
         )
     
-    async def adminviewusers(self, update: Update, context: ContextTypes.DEFAULTTYPE, page: int = 1):
+    async def adminviewusers(self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
         """عرض جميع المستخدمين للأدمن بنظام الصفحات"""
-        query = update.callbackquery
+        query = update.callback_query
         
         # استخراج رقم الصفحة من callbackdata إن وجد
         if query and query.data.startswith("adminuserspage"):
@@ -3208,7 +3208,7 @@ class FC26SmartBot:
                 await query.answer("⛔ ليس لديك صلاحية!", showalert=True)
             return
         
-        conn = self.db.getconnection()
+        conn = self.db.get_connection()
         cursor = conn.cursor()
         
         # الحصول على إجمالي عدد المستخدمين
@@ -3295,23 +3295,23 @@ class FC26SmartBot:
         # زر الرجوع للوحة الأدمن
         keyboard.append([InlineKeyboardButton("🔙 رجوع للوحة الأدمن", callbackdata="adminpanel")])
         
-        replymarkup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
         
         # إرسال أو تحديث الرسالة
         if query:
             await smartmessagemanager.updatecurrentmessage(
                 update, context, userstext,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
         else:
             await smartmessagemanager.sendnewactivemessage(
                 update, context, userstext,
-                replymarkup=replymarkup
+                reply_markup=reply_markup
             )
     
-    async def admindeleteuser(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def admindelete_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """حذف مستخدم - للأدمن فقط"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         telegramid = query.fromuser.id
@@ -3322,7 +3322,7 @@ class FC26SmartBot:
             return
         
         # وضع البوت في وضع انتظار إدخال ID المستخدم
-        context.userdata['adminaction'] = 'deleteuser'
+        context.user_data['adminaction'] = 'delete_user'
         
         await smartmessagemanager.updatecurrentmessage(
             update, context,
@@ -3332,9 +3332,9 @@ class FC26SmartBot:
             "⚠️ تحذير: سيتم حذف جميع بيانات المستخدم نهائياً!"
         )
     
-    async def adminconfirmdelete(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def adminconfirmdelete(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """تأكيد حذف المستخدم"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         telegramid = query.fromuser.id
@@ -3348,7 +3348,7 @@ class FC26SmartBot:
         usertodelete = int(query.data.replace("adminconfirmdelete", ""))
         
         # حذف المستخدم
-        success = self.db.deleteuseraccount(usertodelete)
+        success = self.db.delete_useraccount(usertodelete)
         
         if success:
             await smartmessagemanager.updatecurrentmessage(
@@ -3365,11 +3365,11 @@ class FC26SmartBot:
             )
         
         # مسح حالة الأدمن
-        context.userdata.pop('adminaction', None)
+        context.user_data.pop('adminaction', None)
     
-    async def adminbroadcast(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def adminbroadcast(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إرسال رسالة للجميع - للأدمن فقط"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         telegramid = query.fromuser.id
@@ -3380,7 +3380,7 @@ class FC26SmartBot:
             return
         
         # وضع البوت في وضع انتظار الرسالة
-        context.userdata['adminaction'] = 'broadcast'
+        context.user_data['adminaction'] = 'broadcast'
         
         await smartmessagemanager.updatecurrentmessage(
             update, context,
@@ -3390,9 +3390,9 @@ class FC26SmartBot:
             "⚠️ استخدم هذه الميزة بحذر!"
         )
     
-    async def adminsearchuser(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def adminsearchuser(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """البحث عن مستخدم - للأدمن فقط"""
-        query = update.callbackquery
+        query = update.callback_query
         await query.answer()
         
         telegramid = query.fromuser.id
@@ -3403,7 +3403,7 @@ class FC26SmartBot:
             return
         
         # وضع البوت في وضع انتظار البحث
-        context.userdata['adminaction'] = 'searchuser'
+        context.user_data['adminaction'] = 'searchuser'
         
         await smartmessagemanager.updatecurrentmessage(
             update, context,
@@ -3414,7 +3414,7 @@ class FC26SmartBot:
             "مثال: 123456789 أو @username"
         )
     
-    async def handleadmintextinput(self, update: Update, context: ContextTypes.DEFAULTTYPE):
+    async def handleadmintextinput(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج إدخال النص من الأدمن"""
         telegramid = update.effectiveuser.id
         
@@ -3425,7 +3425,7 @@ class FC26SmartBot:
             return
         
         # التحقق من وجود إجراء أدمن نشط
-        adminaction = context.userdata.get('adminaction')
+        adminaction = context.user_data.get('adminaction')
         
         if not adminaction:
             # لا يوجد إجراء نشط، نعامله كرسالة عادية
@@ -3434,7 +3434,7 @@ class FC26SmartBot:
         
         text = update.message.text.strip()
         
-        if adminaction == 'deleteuser':
+        if adminaction == 'delete_user':
             # محاولة حذف المستخدم
             try:
                 useridtodelete = int(text)
@@ -3446,7 +3446,7 @@ class FC26SmartBot:
                         "❌ لا يمكنك حذف حسابك الخاص!\n\n"
                         "أنت الأدمن الرئيسي للبوت."
                     )
-                    context.userdata.pop('adminaction', None)
+                    context.user_data.pop('adminaction', None)
                     return
                 
                 # التحقق من وجود المستخدم
@@ -3460,7 +3460,7 @@ class FC26SmartBot:
                         [InlineKeyboardButton("✅ تأكيد الحذف", callbackdata=f"adminconfirmdelete{useridtodelete}")],
                         [InlineKeyboardButton("❌ إلغاء", callbackdata="adminpanel")]
                     ]
-                    replymarkup = InlineKeyboardMarkup(keyboard)
+                    reply_markup = InlineKeyboardMarkup(keyboard)
                     
                     await smartmessagemanager.sendnewactivemessage(
                         update, context,
@@ -3469,7 +3469,7 @@ class FC26SmartBot:
                         f"🆔 المعرف: {useridtodelete}\n"
                         f"📝 اسم المستخدم: {username}\n\n"
                         f"هل أنت متأكد من حذف هذا المستخدم؟",
-                        replymarkup=replymarkup
+                        reply_markup=reply_markup
                     )
                 else:
                     await smartmessagemanager.sendnewactivemessage(
@@ -3485,11 +3485,11 @@ class FC26SmartBot:
                     "يجب إدخال رقم صحيح فقط."
                 )
             
-            context.userdata.pop('adminaction', None)
+            context.user_data.pop('adminaction', None)
         
         elif adminaction == 'broadcast':
             # إرسال الرسالة لجميع المستخدمين
-            conn = self.db.getconnection()
+            conn = self.db.get_connection()
             cursor = conn.cursor()
             
             cursor.execute("SELECT telegramid FROM users WHERE registrationstatus = 'complete'")
@@ -3504,10 +3504,10 @@ class FC26SmartBot:
             
             for user in users:
                 try:
-                    await context.bot.sendmessage(
-                        chatid=user['telegramid'],
+                    await context.bot.send_message(
+                        chat_id=user['telegramid'],
                         text=broadcastmsg,
-                        # parsemode removed to avoid parsing errors
+                        # parse_mode removed to avoid parsing errors
                     )
                     successcount += 1
                     await asyncio.sleep(0.1)  # تأخير بسيط لتجنب حدود التليجرام
@@ -3524,11 +3524,11 @@ class FC26SmartBot:
                 f"• الإجمالي: {len(users)}"
             )
             
-            context.userdata.pop('adminaction', None)
+            context.user_data.pop('adminaction', None)
         
         elif adminaction == 'searchuser':
             # البحث عن مستخدم
-            conn = self.db.getconnection()
+            conn = self.db.get_connection()
             cursor = conn.cursor()
             
             # البحث بالمعرف أو اسم المستخدم
@@ -3557,7 +3557,7 @@ class FC26SmartBot:
                         "❌ بحث غير صحيح\n\n"
                         "يجب إدخال معرف رقمي أو اسم مستخدم يبدأ بـ @"
                     )
-                    context.userdata.pop('adminaction', None)
+                    context.user_data.pop('adminaction', None)
                     conn.close()
                     return
             
@@ -3591,11 +3591,11 @@ class FC26SmartBot:
                     [InlineKeyboardButton("🗑️ حذف هذا المستخدم", callbackdata=f"adminconfirmdelete{user['telegramid']}")],
                     [InlineKeyboardButton("🔙 رجوع", callbackdata="adminpanel")]
                 ]
-                replymarkup = InlineKeyboardMarkup(keyboard)
+                reply_markup = InlineKeyboardMarkup(keyboard)
                 
                 await smartmessagemanager.sendnewactivemessage(
                     update, context, userinfo,
-                    replymarkup=replymarkup
+                    reply_markup=reply_markup
                 )
             else:
                 await smartmessagemanager.sendnewactivemessage(
@@ -3604,12 +3604,12 @@ class FC26SmartBot:
                     f"لا يوجد مستخدم بـ: {text}"
                 )
             
-            context.userdata.pop('adminaction', None)
+            context.user_data.pop('adminaction', None)
 
-    def getregistrationconversation(self):
+    def get_registration_conversation(self):
         """معالج المحادثة للتسجيل"""
         return ConversationHandler(
-            entrypoints=[
+            entry_points=[
                 CallbackQueryHandler(
                     self.registrationhandler.handleregistrationstart,
                     pattern="^registernew$"
@@ -3649,13 +3649,13 @@ class FC26SmartBot:
                 CommandHandler('cancel', self.registrationhandler.cancel),
                 CommandHandler('start', self.registrationhandler.start)
             ],
-            allowreentry=True
+            allow_reentry=True
         )
     
     def geteditconversation(self):
         """معالج المحادثة للتعديل"""
         return ConversationHandler(
-            entrypoints=[
+            entry_points=[
                 CallbackQueryHandler(
                     self.handleeditprofile,
                     pattern="^(editwhatsapp|editpayment)$"
@@ -3691,7 +3691,7 @@ class FC26SmartBot:
                 CommandHandler('cancel', self.registrationhandler.cancel),
                 CommandHandler('profile', self.profilecommand)
             ],
-            allowreentry=True
+            allow_reentry=True
         )
 
     def run(self):
@@ -3699,75 +3699,75 @@ class FC26SmartBot:
         app = Application.builder().token(BOTTOKEN).build()
 
         # معالج التسجيل (يجب أن يكون أولاً ليأخذ الأولوية)
-        app.addhandler(self.getregistrationconversation())
+        app.add_handler(self.get_registration_conversation())
         
         # معالج التعديل (للتعديل التفاعلي)
-        app.addhandler(self.geteditconversation())
+        app.add_handler(self.geteditconversation())
 
         # الأوامر
-        app.addhandler(CommandHandler("start", self.start))
-        app.addhandler(CommandHandler("profile", self.profilecommand))
-        app.addhandler(CommandHandler("help", self.helpcommand))
+        app.add_handler(CommandHandler("start", self.start))
+        app.add_handler(CommandHandler("profile", self.profilecommand))
+        app.add_handler(CommandHandler("help", self.helpcommand))
         # أمر حذف الحساب للأدمن فقط
-        app.addhandler(CommandHandler("delete", self.deleteaccountcommand))
+        app.add_handler(CommandHandler("delete", self.deleteaccountcommand))
 
         # الأزرار
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.handledeleteconfirmation,
             pattern="^(confirmdelete|canceldelete)$"
         ))
 
         # أزرار القائمة الرئيسية (محدثة بدون الأزرار المحذوفة)
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.handlemenubuttons,
             pattern="^(profile|deleteaccount|sellcoins|support|mainmenu)$"
         ))
         
         # أزرار تعديل الملف الشخصي
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.handleeditprofile,
             pattern="^(editprofile|editplatform|editwhatsapp|editpayment|updateplatform.|updatepayment.)$"
         ))
         
         # أزرار لوحة الأدمن
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminpanel,
             pattern="^adminpanel$"
         ))
         
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminviewusers,
             pattern="^adminviewusers$"
         ))
         
         # معالج الصفحات لعرض المستخدمين
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminviewusers,
             pattern=r"^adminuserspage\d+$"
         ))
         
-        app.addhandler(CallbackQueryHandler(
-            self.admindeleteuser,
-            pattern="^admindeleteuser$"
+        app.add_handler(CallbackQueryHandler(
+            self.admindelete_user,
+            pattern="^admindelete_user$"
         ))
         
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminconfirmdelete,
             pattern=r"^adminconfirmdelete\d+$"
         ))
         
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminbroadcast,
             pattern="^adminbroadcast$"
         ))
         
-        app.addhandler(CallbackQueryHandler(
+        app.add_handler(CallbackQueryHandler(
             self.adminsearchuser,
             pattern="^adminsearchuser$"
         ))
         
         # معالج رسائل البحث والبث للأدمن
-        app.addhandler(MessageHandler(
+        app.add_handler(MessageHandler(
             filters.TEXT & ~filters.COMMAND,
             self.handleadmintextinput
         ))
@@ -3779,7 +3779,7 @@ class FC26SmartBot:
         logger.info("✨ النظام الذكي للرسائل مفعّل")
         logger.info("📱 البوت جاهز: https://t.me/FC26TradingBot")
 
-        app.runpolling(allowedupdates=Update.ALLTYPES)
+        app.run_polling(allowedupdates=Update.ALLTYPES)
 
 # ================================ نقطة البداية ================================
 if __name__ == "__main__":

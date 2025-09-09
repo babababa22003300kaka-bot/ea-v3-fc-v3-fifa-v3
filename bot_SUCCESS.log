@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/user/webapp/app_complete.py", line 3786, in <module>
+    bot = FC26SmartBot()
+          ^^^^^^^^^^^^^^
+  File "/home/user/webapp/app_complete.py", line 2525, in __init__
+    self.db = Database()
+              ^^^^^^^^^^
+  File "/home/user/webapp/app_complete.py", line 1103, in __init__
+    self.initdatabase()
+  File "/home/user/webapp/app_complete.py", line 1113, in initdatabase
+    conn = self.getconnection()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/webapp/app_complete.py", line 1108, in getconnection
+    conn.rowfactory = sqlite3.Row
+    ^^^^^^^^^^^^^^^
+AttributeError: 'sqlite3.Connection' object has no attribute 'rowfactory'

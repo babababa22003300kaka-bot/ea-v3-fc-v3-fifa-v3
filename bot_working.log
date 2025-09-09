@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/user/webapp/app_complete.py", line 789, in <module>
+    encryptionsystem = EncryptionSystem()
+                       ^^^^^^^^^^^^^^^^^^
+  File "/home/user/webapp/app_complete.py", line 751, in __init__
+    self.initcipher()
+    ^^^^^^^^^^^^^^^
+AttributeError: 'EncryptionSystem' object has no attribute 'initcipher'. Did you mean: '_init_cipher'?
