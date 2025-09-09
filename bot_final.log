@@ -1,0 +1,27 @@
+/home/user/webapp/app_complete.py:3612: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+/home/user/webapp/app_complete.py:3658: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  return ConversationHandler(
+2025-09-09 04:06:46,310 - __main__ - INFO - 🚀 بدء تشغيل FC 26 Smart Bot...
+2025-09-09 04:06:46,310 - __main__ - INFO - ✨ النظام الذكي للرسائل مفعّل
+2025-09-09 04:06:46,310 - __main__ - INFO - 📱 البوت جاهز: https://t.me/FC26_Trading_Bot
+2025-09-09 04:06:46,748 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getMe "HTTP/1.1 200 OK"
+2025-09-09 04:06:46,892 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/deleteWebhook "HTTP/1.1 200 OK"
+2025-09-09 04:06:46,893 - telegram.ext.Application - INFO - Application started
+2025-09-09 04:06:57,316 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:07,458 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:17,601 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:27,760 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:37,902 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:48,045 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:07:58,189 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:08,331 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:18,473 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:28,616 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:38,758 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:48,901 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:08:59,043 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:09:09,189 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:09:14,331 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7607085569:AAEDNKwt8j8B_CjG5gjKLJ8MLjrTRCCrx6k/getUpdates "HTTP/1.1 200 OK"
+2025-09-09 04:09:14,332 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-09-09 04:09:14,332 - telegram.ext.Application - INFO - Application.stop() complete
