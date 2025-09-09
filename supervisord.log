@@ -1,0 +1,16 @@
+2025-09-09 01:59:29,167 INFO RPC interface 'supervisor' initialized
+2025-09-09 01:59:29,167 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2025-09-09 01:59:29,169 INFO daemonizing the supervisord process
+2025-09-09 01:59:29,170 INFO supervisord started with pid 2970
+2025-09-09 01:59:30,174 INFO spawned: 'fc26bot' with pid 2997
+2025-09-09 01:59:31,368 INFO success: fc26bot entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-09 01:59:31,369 WARN exited: fc26bot (exit status 1; not expected)
+2025-09-09 01:59:32,372 INFO spawned: 'fc26bot' with pid 3011
+2025-09-09 01:59:32,541 WARN exited: fc26bot (exit status 1; not expected)
+2025-09-09 01:59:33,545 INFO spawned: 'fc26bot' with pid 3014
+2025-09-09 01:59:33,688 WARN exited: fc26bot (exit status 1; not expected)
+2025-09-09 01:59:36,263 INFO spawned: 'fc26bot' with pid 3023
+2025-09-09 01:59:36,406 WARN exited: fc26bot (exit status 1; not expected)
+2025-09-09 01:59:39,412 INFO spawned: 'fc26bot' with pid 3030
+2025-09-09 01:59:39,571 WARN exited: fc26bot (exit status 1; not expected)
+2025-09-09 01:59:40,573 INFO gave up: fc26bot entered FATAL state, too many start retries too quickly
