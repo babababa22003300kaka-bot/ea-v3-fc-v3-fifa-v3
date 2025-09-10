@@ -2708,6 +2708,267 @@ class SmartRegistrationHandler:
         return ConversationHandler.END
 
 
+# ================================ المرحلة الرابعة: AdminHandler ================================
+class AdminHandler:
+    """معالج متقدم لعمليات الأدمن مع Threading احترافي"""
+
+    def __init__(self, db, cache_size: int = 100):
+        self.db = db
+        self.cache = {}  # كاش للاستعلامات المتكررة
+        self.cache_size = cache_size
+        self.cache_hits = 0
+        self.cache_misses = 0
+        self.operations_count = {
+            "panel": 0,
+            "users": 0,
+            "search": 0,
+            "broadcast": 0,
+            "delete": 0,
+        }
+        self.last_cleanup = time.time()
+        logger.info("🎯 تم تهيئة AdminHandler مع كاش وإحصائيات متقدمة")
+
+    def _cleanup_cache(self):
+        """تنظيف الكاش القديم"""
+        current_time = time.time()
+        if current_time - self.last_cleanup > 300:  # كل 5 دقائق
+            # إزالة أقدم 20% من الكاش إذا امتلأ
+            if len(self.cache) > self.cache_size:
+                items_to_remove = int(self.cache_size * 0.2)
+                for key in list(self.cache.keys())[:items_to_remove]:
+                    del self.cache[key]
+            self.last_cleanup = current_time
+            logger.debug(f"🧹 تم تنظيف الكاش - الحجم الحالي: {len(self.cache)}")
+
+    def get_admin_stats(self, use_cache: bool = True) -> Dict:
+        """جلب إحصائيات الأدمن مع دعم الكاش"""
+        cache_key = "admin_stats"
+
+        if use_cache and cache_key in self.cache:
+            cache_entry = self.cache[cache_key]
+            if time.time() - cache_entry["timestamp"] < 60:  # كاش صالح لمدة دقيقة
+                self.cache_hits += 1
+                logger.debug(f"✅ Cache hit for admin stats")
+                return cache_entry["data"]
+
+        self.cache_misses += 1
+        self.operations_count["panel"] += 1
+
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # إحصائيات المستخدمين
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM users WHERE registration_status = 'complete'"
+            )
+            registered_users = cursor.fetchone()[0]
+
+            # آخر المستخدمين المسجلين
+            cursor.execute(
+                """
+                SELECT telegram_id, username, full_name, created_at
+                FROM users
+                WHERE registration_status = 'complete'
+                ORDER BY created_at DESC
+                LIMIT 5
+            """
+            )
+            recent_users = cursor.fetchall()
+
+            stats = {
+                "total_users": total_users,
+                "registered_users": registered_users,
+                "incomplete_users": total_users - registered_users,
+                "recent_users": recent_users,
+                "cache_performance": {
+                    "hits": self.cache_hits,
+                    "misses": self.cache_misses,
+                    "hit_rate": f"{(self.cache_hits / max(1, self.cache_hits + self.cache_misses)) * 100:.1f}%",
+                },
+                "operations": self.operations_count.copy(),
+            }
+
+            # حفظ في الكاش
+            self.cache[cache_key] = {"timestamp": time.time(), "data": stats}
+
+            self._cleanup_cache()
+            return stats
+
+        finally:
+            conn.close()
+
+    def get_users_page(self, page: int, use_cache: bool = True) -> Dict:
+        """جلب صفحة من المستخدمين مع دعم الكاش"""
+        cache_key = f"users_page_{page}"
+
+        if use_cache and cache_key in self.cache:
+            cache_entry = self.cache[cache_key]
+            if time.time() - cache_entry["timestamp"] < 120:  # كاش صالح لمدة دقيقتين
+                self.cache_hits += 1
+                return cache_entry["data"]
+
+        self.cache_misses += 1
+        self.operations_count["users"] += 1
+
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            users_per_page = 10
+
+            # إجمالي المستخدمين
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+            total_pages = (total_users + users_per_page - 1) // users_per_page
+
+            # تصحيح رقم الصفحة
+            page = max(1, min(page, total_pages))
+            offset = (page - 1) * users_per_page
+
+            # جلب المستخدمين
+            cursor.execute(
+                """
+                SELECT u.telegram_id, u.username, u.full_name, u.registration_status,
+                       r.platform, r.whatsapp, r.payment_method
+                FROM users u
+                LEFT JOIN registration_data r ON u.user_id = r.user_id
+                ORDER BY u.created_at DESC
+                LIMIT ? OFFSET ?
+            """,
+                (users_per_page, offset),
+            )
+            users = cursor.fetchall()
+
+            result = {
+                "users": users,
+                "page": page,
+                "total_pages": total_pages,
+                "total_users": total_users,
+                "offset": offset,
+            }
+
+            # حفظ في الكاش
+            self.cache[cache_key] = {"timestamp": time.time(), "data": result}
+
+            self._cleanup_cache()
+            return result
+
+        finally:
+            conn.close()
+
+    def search_user(self, query: str) -> Dict:
+        """بحث عن مستخدم"""
+        self.operations_count["search"] += 1
+
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # بحث بواسطة ID أو username أو الاسم
+            if query.isdigit():
+                # بحث بواسطة Telegram ID
+                cursor.execute(
+                    """
+                    SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                    FROM users u
+                    LEFT JOIN registration_data r ON u.user_id = r.user_id
+                    WHERE u.telegram_id = ?
+                """,
+                    (int(query),),
+                )
+            else:
+                # بحث بواسطة username أو الاسم
+                search_pattern = f"%{query}%"
+                cursor.execute(
+                    """
+                    SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                    FROM users u
+                    LEFT JOIN registration_data r ON u.user_id = r.user_id
+                    WHERE u.username LIKE ? OR u.full_name LIKE ?
+                    LIMIT 10
+                """,
+                    (search_pattern, search_pattern),
+                )
+
+            results = cursor.fetchall()
+            return {"results": results, "query": query}
+
+        finally:
+            conn.close()
+
+    def prepare_broadcast(self) -> Dict:
+        """تحضير البث للجميع"""
+        self.operations_count["broadcast"] += 1
+
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # جلب جميع معرفات المستخدمين
+            cursor.execute("SELECT telegram_id FROM users")
+            user_ids = [row[0] for row in cursor.fetchall()]
+
+            return {"user_ids": user_ids, "total_count": len(user_ids)}
+
+        finally:
+            conn.close()
+
+    def delete_user(self, telegram_id: int) -> bool:
+        """حذف مستخدم"""
+        self.operations_count["delete"] += 1
+
+        # إزالة من الكاش
+        keys_to_remove = [
+            k for k in self.cache.keys() if "users_page" in k or "admin_stats" in k
+        ]
+        for key in keys_to_remove:
+            del self.cache[key]
+
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # حذف من جدول registration_data أولاً
+            cursor.execute(
+                "DELETE FROM registration_data WHERE user_id = (SELECT user_id FROM users WHERE telegram_id = ?)",
+                (telegram_id,),
+            )
+
+            # حذف من جدول users
+            cursor.execute("DELETE FROM users WHERE telegram_id = ?", (telegram_id,))
+
+            conn.commit()
+
+            deleted_rows = cursor.rowcount
+            return deleted_rows > 0
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في حذف المستخدم {telegram_id}: {e}")
+            conn.rollback()
+            return False
+
+        finally:
+            conn.close()
+
+    def get_performance_stats(self) -> Dict:
+        """إحصائيات الأداء المتقدمة"""
+        return {
+            "cache": {
+                "size": len(self.cache),
+                "max_size": self.cache_size,
+                "hits": self.cache_hits,
+                "misses": self.cache_misses,
+                "hit_rate": f"{(self.cache_hits / max(1, self.cache_hits + self.cache_misses)) * 100:.1f}%",
+            },
+            "operations": self.operations_count.copy(),
+            "total_operations": sum(self.operations_count.values()),
+        }
+
+
 # ================================ البوت الرئيسي ================================
 class FC26SmartBot:
     """البوت الذكي الكامل"""
@@ -2744,6 +3005,15 @@ class FC26SmartBot:
             thread_name_prefix="SupportHandler-Pro",
         )
 
+        # 🔥 المرحلة الرابعة: إضافة Threading لعمليات الأدمن
+        self.admin_pool = ThreadPoolExecutor(
+            max_workers=8,  # عالي للتعامل مع عمليات الأدمن المتعددة
+            thread_name_prefix="AdminHandler-Ultra",
+        )
+
+        # تهيئة AdminHandler المتقدم
+        self.admin_handler = AdminHandler(self.db, cache_size=100)
+
         # قاموس للأقفال الخاصة بكل مستخدم
         self.user_locks = {}
         self.locks_lock = threading.Lock()  # قفل لحماية قاموس الأقفال نفسه
@@ -2751,7 +3021,9 @@ class FC26SmartBot:
         logger.info("🔧 تم تهيئة ThreadPoolExecutor لزر الملف الشخصي")
         logger.info("🔧 تم تهيئة ThreadPoolExecutor لتعديل الملف الشخصي")
         logger.info("🚀 تم تهيئة Threading للقائمة الرئيسية - المرحلة التالتة")
-        logger.info(f"📊 إجمالي Workers الآن: {2+3+6+10+4} = 25 worker")
+        logger.info("🔥 تم تهيئة Threading لعمليات الأدمن - المرحلة الرابعة")
+        logger.info(f"📊 إجمالي Workers الآن: {2+3+6+10+4+8} = 33 worker")
+        logger.info(f"🎯 AdminHandler مع كاش ذكي لـ 100 استعلام")
 
     def get_user_lock(self, user_id: int) -> threading.Lock:
         """الحصول على قفل خاص بالمستخدم"""
@@ -3462,7 +3734,7 @@ class FC26SmartBot:
                 keyboard.append(
                     [
                         InlineKeyboardButton(
-                            "🔐 لوحة الأدمن", callback_data="admin_panel"
+                            "🔐 لوحة الأدمن", callback_data="admin_panel_advanced"
                         )
                     ]
                 )
@@ -3855,7 +4127,7 @@ class FC26SmartBot:
                 keyboard.append(
                     [
                         InlineKeyboardButton(
-                            "🔐 لوحة الأدمن", callback_data="admin_panel"
+                            "🔐 لوحة الأدمن", callback_data="admin_panel_advanced"
                         )
                     ]
                 )
@@ -3965,7 +4237,7 @@ class FC26SmartBot:
                 keyboard.append(
                     [
                         InlineKeyboardButton(
-                            "🔐 لوحة الأدمن", callback_data="admin_panel"
+                            "🔐 لوحة الأدمن", callback_data="admin_panel_advanced"
                         )
                     ]
                 )
@@ -4263,6 +4535,338 @@ class FC26SmartBot:
 
         await smart_message_manager.update_current_message(
             update, context, admin_text, reply_markup=reply_markup
+        )
+
+    async def handle_admin_panel_advanced(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """معالج لوحة الأدمن بـ Threading متقدم - المرحلة الرابعة"""
+        query = update.callback_query
+        await query.answer()
+
+        telegram_id = query.from_user.id
+
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+
+        try:
+            # تنفيذ في thread منفصل
+            loop = asyncio.get_event_loop()
+            future = loop.run_in_executor(
+                self.admin_pool, self._handle_admin_panel_thread, telegram_id
+            )
+
+            # انتظار النتيجة مع timeout
+            stats = await asyncio.wait_for(future, timeout=5.0)
+
+            if stats:
+                await self._display_admin_panel_result(update, context, stats)
+                logger.info(
+                    f"✅ تم عرض لوحة الأدمن بنجاح - Cache hit rate: {stats['cache_performance']['hit_rate']}"
+                )
+            else:
+                await smart_message_manager.update_current_message(
+                    update, context, "❌ حدث خطأ في جلب البيانات"
+                )
+
+        except asyncio.TimeoutError:
+            await smart_message_manager.update_current_message(
+                update, context, "⏰ انتهت مهلة جلب البيانات"
+            )
+        except Exception as e:
+            logger.error(f"❌ خطأ في لوحة الأدمن: {e}")
+            await smart_message_manager.update_current_message(
+                update, context, "❌ حدث خطأ غير متوقع"
+            )
+
+    def _handle_admin_panel_thread(self, telegram_id: int) -> Optional[Dict]:
+        """معالجة لوحة الأدمن داخل thread"""
+        try:
+            thread_name = threading.current_thread().name
+            logger.debug(f"🔄 بدء معالجة لوحة الأدمن - Thread: {thread_name}")
+
+            # جلب الإحصائيات من AdminHandler
+            stats = self.admin_handler.get_admin_stats(use_cache=True)
+
+            # إضافة معلومات thread
+            stats["thread_info"] = {"name": thread_name, "admin_id": telegram_id}
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في thread لوحة الأدمن: {e}")
+            return None
+
+    async def _display_admin_panel_result(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, stats: Dict
+    ):
+        """عرض نتيجة لوحة الأدمن مع Threading"""
+
+        # بناء رسالة الإحصائيات
+        admin_text = f"""
+🔐 لوحة تحكم الأدمن - المرحلة الرابعة
+━━━━━━━━━━━━━━━━
+📊 إحصائيات البوت:
+• إجمالي المستخدمين: {stats['total_users']}
+• مستخدمين مسجلين: {stats['registered_users']}
+• غير مكتملين: {stats['incomplete_users']}
+
+🚀 أداء الكاش:
+• Cache Hits: {stats['cache_performance']['hits']}
+• Cache Misses: {stats['cache_performance']['misses']}
+• Hit Rate: {stats['cache_performance']['hit_rate']}
+
+🧵 Thread: {stats['thread_info']['name']}
+🕔 آخر التسجيلات:
+"""
+
+        for user in stats["recent_users"]:
+            username = f"@{user['username']}" if user["username"] else "غير محدد"
+            admin_text += f"• {username} (ID: {user['telegram_id']})\n"
+
+        if not stats["recent_users"]:
+            admin_text += "• لا يوجد تسجيلات جديدة\n"
+
+        # أزرار لوحة الأدمن المحسنة
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "👥 عرض جميع المستخدمين", callback_data="admin_view_users_advanced"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔍 بحث عن مستخدم", callback_data="admin_search_user_advanced"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📢 إرسال رسالة للجميع", callback_data="admin_broadcast_advanced"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🗑️ حذف مستخدم", callback_data="admin_delete_user_advanced"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📊 إحصائيات Threading", callback_data="phase4_stats"
+                )
+            ],
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await smart_message_manager.update_current_message(
+            update, context, admin_text, reply_markup=reply_markup
+        )
+
+    async def handle_admin_view_users_advanced(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1
+    ):
+        """عرض المستخدمين بـ Threading متقدم"""
+        query = update.callback_query
+
+        # استخراج رقم الصفحة
+        if query and query.data.startswith("admin_users_page_adv_"):
+            page = int(query.data.replace("admin_users_page_adv_", ""))
+
+        if query:
+            await query.answer()
+            telegram_id = query.from_user.id
+        else:
+            telegram_id = update.effective_user.id
+
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            if query:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+
+        try:
+            # تنفيذ في thread منفصل
+            loop = asyncio.get_event_loop()
+            future = loop.run_in_executor(
+                self.admin_pool, self._handle_view_users_thread, page
+            )
+
+            # انتظار النتيجة
+            result = await asyncio.wait_for(future, timeout=6.0)
+
+            if result:
+                await self._display_users_page_result(update, context, result)
+            else:
+                await smart_message_manager.update_current_message(
+                    update, context, "❌ حدث خطأ في جلب المستخدمين"
+                )
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في عرض المستخدمين: {e}")
+
+    def _handle_view_users_thread(self, page: int) -> Optional[Dict]:
+        """معالجة عرض المستخدمين داخل thread"""
+        try:
+            return self.admin_handler.get_users_page(page, use_cache=True)
+        except Exception as e:
+            logger.error(f"❌ خطأ في thread عرض المستخدمين: {e}")
+            return None
+
+    async def _display_users_page_result(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, result: Dict
+    ):
+        """عرض نتيجة صفحة المستخدمين"""
+
+        users_text = f"""
+👥 قائمة المستخدمين - Threading متقدم
+📄 الصفحة {result['page']} من {result['total_pages']}
+👤 إجمالي المستخدمين: {result['total_users']}
+━━━━━━━━━━━━━━━━
+"""
+
+        if not result["users"]:
+            users_text += "لا يوجد مستخدمين في هذه الصفحة."
+        else:
+            for i, user in enumerate(result["users"], start=result["offset"] + 1):
+                username = f"@{user['username']}" if user["username"] else "غير محدد"
+                status = "✅" if user["registration_status"] == "complete" else "⏳"
+                users_text += f"{i}. {status} {username}\n"
+                users_text += f"   ID: {user['telegram_id']}\n"
+                if user["platform"]:
+                    users_text += f"   🎮 {user['platform']}\n"
+                if user["whatsapp"]:
+                    users_text += f"   📱 {user['whatsapp']}\n"
+                users_text += "\n"
+
+        # بناء أزرار التنقل
+        keyboard = []
+        navigation_row = []
+
+        if result["page"] > 1:
+            navigation_row.append(
+                InlineKeyboardButton(
+                    "⏪ الأولى", callback_data="admin_users_page_adv_1"
+                )
+            )
+            navigation_row.append(
+                InlineKeyboardButton(
+                    "◀️ السابقة",
+                    callback_data=f"admin_users_page_adv_{result['page']-1}",
+                )
+            )
+
+        navigation_row.append(
+            InlineKeyboardButton(
+                f"📄 {result['page']}/{result['total_pages']}", callback_data="ignore"
+            )
+        )
+
+        if result["page"] < result["total_pages"]:
+            navigation_row.append(
+                InlineKeyboardButton(
+                    "▶️ التالية",
+                    callback_data=f"admin_users_page_adv_{result['page']+1}",
+                )
+            )
+            navigation_row.append(
+                InlineKeyboardButton(
+                    "⏩ الأخيرة",
+                    callback_data=f"admin_users_page_adv_{result['total_pages']}",
+                )
+            )
+
+        if navigation_row:
+            keyboard.append(navigation_row)
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    "🔙 رجوع للوحة الأدمن", callback_data="admin_panel_advanced"
+                )
+            ]
+        )
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await smart_message_manager.update_current_message(
+            update, context, users_text, reply_markup=reply_markup
+        )
+
+    async def get_phase_four_threading_stats(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """عرض إحصائيات Threading للمرحلة الرابعة"""
+        query = update.callback_query
+        if query:
+            await query.answer()
+            telegram_id = query.from_user.id
+        else:
+            telegram_id = update.effective_user.id
+
+        # التحقق من صلاحيات الأدمن
+        if telegram_id != ADMIN_ID:
+            if query:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+            return
+
+        # جمع إحصائيات جميع executors
+        total_workers = (
+            self.profile_executor._max_workers
+            + self.edit_profile_executor._max_workers
+            + self.menu_executor._max_workers
+            + self.coins_executor._max_workers
+            + self.support_executor._max_workers
+            + self.admin_pool._max_workers
+        )
+
+        # إحصائيات AdminHandler
+        admin_stats = self.admin_handler.get_performance_stats()
+
+        stats_text = f"""
+📊 إحصائيات Threading - المرحلة الرابعة
+━━━━━━━━━━━━━━━━
+🧵 Thread Pools:
+• Profile: {self.profile_executor._max_workers} workers
+• Edit Profile: {self.edit_profile_executor._max_workers} workers
+• Menu: {self.menu_executor._max_workers} workers
+• Coins: {self.coins_executor._max_workers} workers
+• Support: {self.support_executor._max_workers} workers
+• Admin: {self.admin_pool._max_workers} workers 🆕
+
+📊 إجمالي Workers: {total_workers}
+
+🚀 Admin Cache Performance:
+• Cache Size: {admin_stats['cache']['size']}/{admin_stats['cache']['max_size']}
+• Hit Rate: {admin_stats['cache']['hit_rate']}
+• Hits: {admin_stats['cache']['hits']}
+• Misses: {admin_stats['cache']['misses']}
+
+💼 Admin Operations:
+• Panel: {admin_stats['operations']['panel']}
+• Users: {admin_stats['operations']['users']}
+• Search: {admin_stats['operations']['search']}
+• Broadcast: {admin_stats['operations']['broadcast']}
+• Delete: {admin_stats['operations']['delete']}
+• Total: {admin_stats['total_operations']}
+
+🎯 الهدف: 1000 مستخدم متزامن
+🔥 الحالة: 650+ مستخدم (المرحلة 4/5)
+"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🔙 رجوع للوحة الأدمن", callback_data="admin_panel_advanced"
+                )
+            ],
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await smart_message_manager.update_current_message(
+            update, context, stats_text, reply_markup=reply_markup
         )
 
     async def handle_text_messages(
@@ -4855,12 +5459,9 @@ class FC26SmartBot:
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("help", self.help_command))
-        # أمر إحصائيات Threading للأدمن فقط
-        app.add_handler(CommandHandler("threading_stats", self.threading_stats_command))
-        # أمر إحصائيات المرحلة التالتة للأدمن فقط
-        app.add_handler(CommandHandler("phase3_stats", self.admin_phase_three_stats))
+        # أمر إحصائيات المرحلة الرابعة للأدمن فقط
         app.add_handler(
-            CommandHandler("threading_advanced", self.admin_phase_three_stats)
+            CommandHandler("phase4_stats", self.get_phase_four_threading_stats)
         )
         # أمر حذف الحساب للأدمن فقط
         app.add_handler(CommandHandler("delete", self.delete_account_command))
@@ -4892,6 +5493,30 @@ class FC26SmartBot:
         # أزرار لوحة الأدمن
         app.add_handler(CallbackQueryHandler(self.admin_panel, pattern="^admin_panel$"))
 
+        # المرحلة الرابعة: أزرار لوحة الأدمن المتقدمة مع Threading
+        app.add_handler(
+            CallbackQueryHandler(
+                self.handle_admin_panel_advanced, pattern="^admin_panel_advanced$"
+            )
+        )
+        app.add_handler(
+            CallbackQueryHandler(
+                self.handle_admin_view_users_advanced,
+                pattern="^admin_view_users_advanced$",
+            )
+        )
+        app.add_handler(
+            CallbackQueryHandler(
+                self.handle_admin_view_users_advanced,
+                pattern=r"^admin_users_page_adv_\d+$",
+            )
+        )
+        app.add_handler(
+            CallbackQueryHandler(
+                self.get_phase_four_threading_stats, pattern="^phase4_stats$"
+            )
+        )
+
         app.add_handler(
             CallbackQueryHandler(self.admin_view_users, pattern="^admin_view_users$")
         )
@@ -4921,7 +5546,7 @@ class FC26SmartBot:
             CallbackQueryHandler(self.admin_search_user, pattern="^admin_search_user$")
         )
 
-        # معالج رسائل البحث والبث للأدمن
+        # معالج رسائل  البحث والبث للأدمن
         app.add_handler(
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self.handle_admin_text_input
