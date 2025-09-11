@@ -678,8 +678,11 @@ class WhatsAppSecuritySystem:
             ] = f"""❌ رقم الواتساب يجب أن يكون أرقام فقط
 
 📍 المدخل الخاطئ: {text}
+
 🚫 الأحرف/الرموز الغير مسموحة: {invalid_chars_display}
+
 📊 الأرقام المستخرجة: {analysis['extracted_digits'] or 'لا توجد أرقام'}
+
 
 ✅ مثال صحيح: 01094591331
 
@@ -696,7 +699,9 @@ class WhatsAppSecuritySystem:
             ] = f"""❌ طول الرقم غير صحيح
 
 📏 المطلوب: 11 رقم بالضبط
+
 📍 أنت أدخلت: {len(cleaned)} رقم فقط
+
 🔢 الرقم المدخل: {cleaned}
 
 ✅ مثال صحيح: 01094591331"""
@@ -709,7 +714,9 @@ class WhatsAppSecuritySystem:
             ] = f"""❌ طول الرقم غير صحيح
 
 📏 المطلوب: 11 رقم بالضبط
+
 📍 أنت أدخلت: {len(cleaned)} رقم (أكثر من المطلوب)
+
 🔢 الرقم المدخل: {cleaned}
 
 ✅ مثال صحيح: 01094591331"""
@@ -724,8 +731,11 @@ class WhatsAppSecuritySystem:
             ] = f"""❌ بداية الرقم غير صحيحة
 
 📍 يجب أن يبدأ بـ: 010 / 011 / 012 / 015
+
 🚫 رقمك يبدأ بـ: {prefix}
+
 🔢 الرقم المدخل: {cleaned}
+
 
 📱 الشبكات المدعومة:
 ⭕️ 010 - فودافون
@@ -954,9 +964,13 @@ class PaymentValidationSystem:
                 "error_message"
             ] = f"""❌ رقم {rules['name']} غير صحيح
 📍 يجب أن يكون:
+
 • أرقام فقط (بدون حروف أو رموز)
+
 • 11 رقم بالضبط
+
 • يبدأ بـ {'/'.join(rules['prefix'])} فقط
+
 ✅ مثال صحيح: {rules['example']}"""
 
             if payment_method == "bank_wallet":
@@ -972,7 +986,9 @@ class PaymentValidationSystem:
                 "error_message"
             ] = f"""❌ رقم {rules['name']} غير صحيح
 📏 الطول المطلوب: {rules['length']} رقم
+
 📍 أنت أدخلت: {len(cleaned)} رقم
+
 ✅ مثال صحيح: {rules['example']}"""
             return result
 
@@ -982,8 +998,11 @@ class PaymentValidationSystem:
             result[
                 "error_message"
             ] = f"""❌ رقم {rules['name']} غير صحيح
+
 📍 يجب أن يبدأ بـ: {'/'.join(rules['prefix'])} فقط
+
 🚫 رقمك يبدأ بـ: {prefix}
+
 ✅ مثال صحيح: {rules['example']}"""
 
             if payment_method == "bank_wallet":
@@ -5138,469 +5157,329 @@ class FC26SmartBot:
             "مثال: 123456789 أو @username",
         )
 
+    async def handle_admin_text_input(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """معالج إدخال النص من الأدمن"""
+        telegram_id = update.effective_user.id
 
-async def handle_admin_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    معالج متقدم لمدخلات النص في لوحة الأدمن مع دعم Threading ومعالجة أخطاء شاملة
-    يدعم: البحث عن المستخدمين، البث الجماعي، حذف المستخدمين
-    """
-    user_id = update.effective_user.id
-    text = update.message.text.strip()
-
-    # تسجيل بداية المعالجة
-    logger.info(
-        f"🔍 Admin input received from {user_id}: '{text[:50]}{'...' if len(text) > 50 else ''}'"
-    )
-
-    try:
-        # التحقق من صلاحيات الأدمن
-        if user_id not in ADMIN_IDS:
-            logger.warning(f"⚠️ Unauthorized admin access attempt from {user_id}")
-            await update.message.reply_text("❌ غير مصرح لك بالوصول لهذه الميزة.")
+        # التحقق من أن المرسل هو الأدمن
+        if telegram_id != ADMIN_ID:
+            # إذا لم يكن أدمن، نعامله كمستخدم عادي
+            await self.handle_text_messages(update, context)
             return
 
-        # الحصول على حالة الأدمن الحالية
-        admin_state = context.user_data.get("admin_action", None)
-        logger.info(f"📊 Current admin state for {user_id}: {admin_state}")
+        # التحقق من وجود إجراء أدمن نشط
+        admin_action = context.user_data.get("admin_action")
 
-        if not admin_state:
-            logger.warning(f"⚠️ No admin action state found for {user_id}")
-            await update.message.reply_text(
-                "❌ لم يتم العثور على عملية إدارية نشطة.\n"
-                "الرجاء العودة للوحة الأدمن واختيار العملية المطلوبة.",
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "🔙 العودة للوحة الأدمن", callback_data="admin_panel"
-                            )
-                        ]
-                    ]
-                ),
-            )
+        if not admin_action:
+            # لا يوجد إجراء نشط، نعامله كرسالة عادية
+            await self.handle_text_messages(update, context)
             return
 
-        # معالجة البحث عن المستخدم
-        if admin_state == "search_user":
-            logger.info(f"🔍 Processing user search: '{text}'")
-            await handle_user_search(update, context, text)
+        text = update.message.text.strip()
 
-        # معالجة البث الجماعي
-        elif admin_state == "broadcast":
-            logger.info(
-                f"📢 Processing broadcast message: '{text[:100]}{'...' if len(text) > 100 else ''}'"
-            )
-            await handle_broadcast_message(update, context, text)
+        if admin_action == "delete_user":
+            # محاولة حذف المستخدم
+            try:
+                user_id_to_delete = int(text)
 
-        # معالجة حذف المستخدم
-        elif admin_state == "delete_user":
-            logger.info(f"🗑️ Processing user deletion: '{text}'")
-            await handle_user_deletion(update, context, text)
+                # التحقق من أن الأدمن لا يحذف نفسه
+                if user_id_to_delete == ADMIN_ID:
+                    await smart_message_manager.send_new_active_message(
+                        update,
+                        context,
+                        "❌ لا يمكنك حذف حسابك الخاص!\n\n" "أنت الأدمن الرئيسي للبوت.",
+                    )
+                    context.user_data.pop("admin_action", None)
+                    return
 
-        # حالة غير معروفة
-        else:
-            logger.error(f"❌ Unknown admin action state: {admin_state}")
-            await update.message.reply_text(
-                f"❌ حالة إدارية غير معروفة: {admin_state}\n"
-                "الرجاء العودة للوحة الأدمن.",
-                reply_markup=InlineKeyboardMarkup(
-                    [
+                # التحقق من وجود المستخدم
+                user = self.db.get_user_by_telegram_id(user_id_to_delete)
+
+                if user:
+                    # عرض تأكيد الحذف
+                    username = (
+                        f"@{user['username']}" if user["username"] else "غير محدد"
+                    )
+
+                    keyboard = [
                         [
                             InlineKeyboardButton(
-                                "🔙 العودة للوحة الأدمن", callback_data="admin_panel"
+                                "✅ تأكيد الحذف",
+                                callback_data=f"admin_confirm_delete_{user_id_to_delete}",
                             )
-                        ]
+                        ],
+                        [InlineKeyboardButton("❌ إلغاء", callback_data="admin_panel")],
                     ]
-                ),
-            )
-            # إعادة تعيين الحالة
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+
+                    await smart_message_manager.send_new_active_message(
+                        update,
+                        context,
+                        f"⚠️ تأكيد حذف المستخدم\n\n"
+                        f"👤 الاسم: {user['full_name']}\n"
+                        f"🆔 المعرف: {user_id_to_delete}\n"
+                        f"📝 اسم المستخدم: {username}\n\n"
+                        f"هل أنت متأكد من حذف هذا المستخدم؟",
+                        reply_markup=reply_markup,
+                    )
+                else:
+                    await smart_message_manager.send_new_active_message(
+                        update,
+                        context,
+                        f"❌ المستخدم غير موجود\n\n"
+                        f"لا يوجد مستخدم بالمعرف: {user_id_to_delete}",
+                    )
+
+            except ValueError:
+                await smart_message_manager.send_new_active_message(
+                    update, context, "❌ معرف غير صحيح\n\n" "يجب إدخال رقم صحيح فقط."
+                )
+
             context.user_data.pop("admin_action", None)
 
-    except Exception as e:
-        logger.error(
-            f"💥 Critical error in handle_admin_text_input for {user_id}: {str(e)}",
-            exc_info=True,
-        )
-        await update.message.reply_text(
-            "❌ حدث خطأ في معالجة طلبك.\n" "تم تسجيل الخطأ وسيتم إصلاحه قريباً.",
-            reply_markup=InlineKeyboardMarkup(
-                [
+        elif admin_action == "broadcast":
+            # إرسال الرسالة لجميع المستخدمين
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT telegram_id FROM users WHERE registration_status = 'complete'"
+            )
+            users = cursor.fetchall()
+
+            conn.close()
+
+            success_count = 0
+            fail_count = 0
+
+            broadcast_msg = f"📢 رسالة من الإدارة\n\n{text}"
+
+            for user in users:
+                try:
+                    await context.bot.send_message(
+                        chat_id=user["telegram_id"],
+                        text=broadcast_msg,
+                        # parse_mode removed
+                    )
+                    success_count += 1
+                    await asyncio.sleep(0.1)  # تأخير بسيط لتجنب حدود التليجرام
+                except Exception as e:
+                    fail_count += 1
+                    logger.error(f"فشل إرسال رسالة للمستخدم {user['telegram_id']}: {e}")
+
+            await smart_message_manager.send_new_active_message(
+                update,
+                context,
+                f"✅ تمت عملية البث\n\n"
+                f"📊 الإحصائيات:\n"
+                f"• نجح الإرسال: {success_count}\n"
+                f"• فشل الإرسال: {fail_count}\n"
+                f"• الإجمالي: {len(users)}",
+            )
+
+            context.user_data.pop("admin_action", None)
+
+        elif admin_action == "search_user":
+            # البحث عن مستخدم
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+
+            # البحث بالمعرف أو اسم المستخدم
+            if text.startswith("@"):
+                # البحث باسم المستخدم
+                username = text[1:]  # إزالة @
+                cursor.execute(
+                    """
+                    SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                    FROM users u
+                    LEFT JOIN registration_data r ON u.user_id = r.user_id
+                    WHERE u.username = ?
+                """,
+                    (username,),
+                )
+            else:
+                # البحث بالمعرف
+                try:
+                    search_id = int(text)
+                    cursor.execute(
+                        """
+                        SELECT u.*, r.platform, r.whatsapp, r.payment_method
+                        FROM users u
+                        LEFT JOIN registration_data r ON u.user_id = r.user_id
+                        WHERE u.telegram_id = ?
+                    """,
+                        (search_id,),
+                    )
+                except ValueError:
+                    await smart_message_manager.send_new_active_message(
+                        update,
+                        context,
+                        "❌ بحث غير صحيح\n\n"
+                        "يجب إدخال معرف رقمي أو اسم مستخدم يبدأ بـ @",
+                    )
+                    context.user_data.pop("admin_action", None)
+                    conn.close()
+                    return
+
+            user = cursor.fetchone()
+            conn.close()
+
+            if user:
+                username_display = (
+                    f"@{user['username']}" if user["username"] else "غير محدد"
+                )
+                status = (
+                    "✅ مكتمل"
+                    if user["registration_status"] == "complete"
+                    else "⏳ غير مكتمل"
+                )
+
+                user_info = f"""
+🔍 نتيجة البحث
+━━━━━━━━━━━━━━━━
+👤 معلومات المستخدم:
+• الاسم: {user['full_name']}
+• المعرف: {user['telegram_id']}
+• اسم المستخدم: {username_display}
+• الحالة: {status}
+• تاريخ التسجيل: {user['created_at']}
+"""
+
+                if user["platform"]:
+                    user_info += f"\n🎮 المنصة: {user['platform']}"
+                if user["whatsapp"]:
+                    user_info += f"\n📱 واتساب: {user['whatsapp']}"
+                if user["payment_method"]:
+                    user_info += f"\n💳 طريقة الدفع: {user['payment_method']}"
+
+                keyboard = [
                     [
                         InlineKeyboardButton(
-                            "🔙 العودة للوحة الأدمن", callback_data="admin_panel"
+                            "🗑️ حذف هذا المستخدم",
+                            callback_data=f"admin_confirm_delete_{user['telegram_id']}",
                         )
-                    ]
+                    ],
+                    [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
                 ]
-            ),
-        )
-        # إعادة تعيين الحالة في حالة الخطأ
-        context.user_data.pop("admin_action", None)
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-
-async def handle_user_search(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, search_term: str
-):
-    """
-    معالج البحث عن المستخدمين - محسن مع SQL صحيح ومعالجة أخطاء
-    """
-    user_id = update.effective_user.id
-
-    try:
-        # تنظيف مصطلح البحث
-        search_term = search_term.strip()
-
-        if not search_term:
-            await update.message.reply_text(
-                "❌ الرجاء إدخال معرف المستخدم أو اسم المستخدم للبحث."
-            )
-            return
-
-        logger.info(f"🔍 Starting user search for term: '{search_term}'")
-
-        # إظهار رسالة البحث
-        search_msg = await update.message.reply_text("🔍 جاري البحث...")
-
-        conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
-        cursor = conn.cursor()
-
-        # استعلام البحث المُحسن (إصلاح مشكلة SELECT u.)
-        if search_term.isdigit():
-            # البحث بمعرف المستخدم
-            query = """
-            SELECT u.user_id, u.username, u.first_name, u.last_name, u.phone_number,
-                   u.registration_date, u.coins, u.is_vip, u.total_purchases, u.last_activity
-            FROM users u
-            WHERE u.user_id = ?
-            """
-            cursor.execute(query, (int(search_term),))
-        else:
-            # البحث بالاسم أو اسم المستخدم
-            query = """
-            SELECT u.user_id, u.username, u.first_name, u.last_name, u.phone_number,
-                   u.registration_date, u.coins, u.is_vip, u.total_purchases, u.last_activity
-            FROM users u
-            WHERE u.username LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?
-            """
-            search_pattern = f"%{search_term}%"
-            cursor.execute(query, (search_pattern, search_pattern, search_pattern))
-
-        results = cursor.fetchall()
-        conn.close()
-
-        # معالجة النتائج
-        if not results:
-            logger.info(f"🔍 No users found for search term: '{search_term}'")
-            await search_msg.edit_text(
-                f"❌ لم يتم العثور على أي مستخدم يطابق: `{search_term}`\n\n"
-                "💡 تأكد من:\n"
-                "• صحة معرف المستخدم (رقم)\n"
-                "• صحة اسم المستخدم\n"
-                "• أن المستخدم مسجل في البوت",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "🔍 بحث آخر", callback_data="search_user"
-                            ),
-                            InlineKeyboardButton(
-                                "🔙 العودة", callback_data="admin_panel"
-                            ),
-                        ]
-                    ]
-                ),
-            )
-        else:
-            # عرض النتائج
-            results_text = f"🔍 **نتائج البحث عن:** `{search_term}`\n"
-            results_text += f"📊 **عدد النتائج:** {len(results)}\n\n"
-
-            for i, user in enumerate(results, 1):
-                (
-                    user_id_result,
-                    username,
-                    first_name,
-                    last_name,
-                    phone,
-                    reg_date,
-                    coins,
-                    is_vip,
-                    purchases,
-                    last_activity,
-                ) = user
-
-                # تنسيق اسم المستخدم
-                full_name = (
-                    f"{first_name or ''} {last_name or ''}".strip() or "غير محدد"
+                await smart_message_manager.send_new_active_message(
+                    update, context, user_info, reply_markup=reply_markup
                 )
-                username_display = f"@{username}" if username else "غير محدد"
-
-                # تنسيق تاريخ التسجيل
-                try:
-                    reg_date_formatted = (
-                        datetime.fromisoformat(reg_date).strftime("%Y/%m/%d")
-                        if reg_date
-                        else "غير محدد"
-                    )
-                except:
-                    reg_date_formatted = "غير صالح"
-
-                # تنسيق آخر نشاط
-                try:
-                    if last_activity:
-                        last_activity_dt = datetime.fromisoformat(last_activity)
-                        time_diff = datetime.now() - last_activity_dt
-                        if time_diff.days > 0:
-                            last_activity_display = f"منذ {time_diff.days} يوم"
-                        elif time_diff.seconds > 3600:
-                            last_activity_display = (
-                                f"منذ {time_diff.seconds // 3600} ساعة"
-                            )
-                        else:
-                            last_activity_display = "نشط مؤخراً"
-                    else:
-                        last_activity_display = "غير محدد"
-                except:
-                    last_activity_display = "غير صالح"
-
-                results_text += f"👤 **المستخدم {i}:**\n"
-                results_text += f"🆔 المعرف: `{user_id_result}`\n"
-                results_text += f"📝 الاسم: {full_name}\n"
-                results_text += f"👤 اسم المستخدم: {username_display}\n"
-                results_text += f"📱 الهاتف: {phone or 'غير محدد'}\n"
-                results_text += f"📅 التسجيل: {reg_date_formatted}\n"
-                results_text += f"🪙 الكوينز: {coins or 0}\n"
-                results_text += f"⭐ VIP: {'نعم' if is_vip else 'لا'}\n"
-                results_text += f"🛒 المشتريات: {purchases or 0}\n"
-                results_text += f"🕒 آخر نشاط: {last_activity_display}\n"
-                results_text += "─────────────────\n"
-
-            # تحديد أزرار الإجراءات
-            buttons = []
-            if len(results) == 1:
-                target_user_id = results[0][0]
-                buttons.append(
-                    [
-                        InlineKeyboardButton(
-                            "💌 إرسال رسالة",
-                            callback_data=f"send_message_{target_user_id}",
-                        ),
-                        InlineKeyboardButton(
-                            "🗑️ حذف المستخدم",
-                            callback_data=f"delete_user_{target_user_id}",
-                        ),
-                    ]
-                )
-                buttons.append(
-                    [
-                        InlineKeyboardButton(
-                            "💰 تعديل الكوينز",
-                            callback_data=f"edit_coins_{target_user_id}",
-                        ),
-                        InlineKeyboardButton(
-                            "⭐ تغيير VIP", callback_data=f"toggle_vip_{target_user_id}"
-                        ),
-                    ]
+            else:
+                await smart_message_manager.send_new_active_message(
+                    update,
+                    context,
+                    f"❌ لم يتم العثور على المستخدم\n\n" f"لا يوجد مستخدم بـ: {text}",
                 )
 
-            buttons.append(
-                [
-                    InlineKeyboardButton("🔍 بحث آخر", callback_data="search_user"),
-                    InlineKeyboardButton("🔙 العودة", callback_data="admin_panel"),
-                ]
-            )
+            context.user_data.pop("admin_action", None)
 
-            logger.info(
-                f"✅ User search completed. Found {len(results)} users for '{search_term}'"
-            )
-
-            await search_msg.edit_text(
-                results_text,
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(buttons),
-            )
-
-        # إعادة تعيين حالة الأدمن
-        context.user_data.pop("admin_action", None)
-
-    except sqlite3.Error as e:
-        logger.error(f"💥 Database error in user search: {str(e)}")
-        await update.message.reply_text(
-            "❌ خطأ في قاعدة البيانات.\n" "الرجاء المحاولة مرة أخرى."
-        )
-    except Exception as e:
-        logger.error(f"💥 Unexpected error in user search: {str(e)}", exc_info=True)
-        await update.message.reply_text(
-            "❌ حدث خطأ غير متوقع.\n" "تم تسجيل الخطأ للمراجعة."
-        )
-
-
-async def handle_broadcast_message(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, message: str
-):
-    """
-    معالج البث الجماعي - محسن مع Threading ومعالجة أخطاء
-    """
-    user_id = update.effective_user.id
-
-    try:
-        if not message.strip():
-            await update.message.reply_text("❌ الرجاء إدخال نص الرسالة للبث.")
-            return
-
-        logger.info(f"📢 Starting broadcast from admin {user_id}")
-
-        # رسالة التأكيد
-        confirmation_text = f"📢 **معاينة رسالة البث:**\n\n{message}\n\n"
-        confirmation_text += "هل تريد إرسال هذه الرسالة لجميع المستخدمين؟"
-
-        keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "✅ تأكيد الإرسال", callback_data=f"confirm_broadcast"
-                    ),
-                    InlineKeyboardButton("❌ إلغاء", callback_data="admin_panel"),
-                ]
-            ]
-        )
-
-        # حفظ الرسالة للاستخدام لاحقاً
-        context.user_data["broadcast_message"] = message
-
-        await update.message.reply_text(
-            confirmation_text, parse_mode="Markdown", reply_markup=keyboard
-        )
-
-        # إعادة تعيين حالة الأدمن
-        context.user_data.pop("admin_action", None)
-
-    except Exception as e:
-        logger.error(f"💥 Error in broadcast preparation: {str(e)}", exc_info=True)
-        await update.message.reply_text(
-            "❌ حدث خطأ في إعداد البث.\n" "الرجاء المحاولة مرة أخرى."
-        )
-
-
-async def handle_user_deletion(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, user_input: str
-):
-    """
-    معالج حذف المستخدم - محسن مع تأكيدات أمان
-    """
-    admin_id = update.effective_user.id
-
-    try:
-        user_input = user_input.strip()
-
-        if not user_input:
-            await update.message.reply_text(
-                "❌ الرجاء إدخال معرف المستخدم المراد حذفه."
-            )
-            return
-
-        if not user_input.isdigit():
-            await update.message.reply_text(
-                "❌ معرف المستخدم يجب أن يكون رقماً.\n" "مثال: 123456789"
-            )
-            return
-
-        target_user_id = int(user_input)
-
-        # التحقق من أن المستخدم المراد حذفه ليس أدمن
-        if target_user_id in ADMIN_IDS:
-            logger.warning(
-                f"⚠️ Admin {admin_id} attempted to delete another admin {target_user_id}"
-            )
-            await update.message.reply_text(
-                "❌ لا يمكن حذف حساب أدمن آخر!\n" "هذه العملية غير مسموحة لأسباب أمنية."
-            )
-            return
-
-        logger.info(f"🗑️ Admin {admin_id} initiating deletion of user {target_user_id}")
-
-        # البحث عن المستخدم للتأكيد
-        conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT user_id, username, first_name, last_name, registration_date, coins, total_purchases
-            FROM users WHERE user_id = ?
-        """,
-            (target_user_id,),
-        )
-
-        user_data = cursor.fetchone()
-        conn.close()
-
-        if not user_data:
-            await update.message.reply_text(
-                f"❌ لم يتم العثور على مستخدم بالمعرف: `{target_user_id}`\n"
-                "تأكد من صحة المعرف.",
-                parse_mode="Markdown",
-            )
-            return
-
-        # عرض معلومات المستخدم وطلب التأكيد
-        user_id_db, username, first_name, last_name, reg_date, coins, purchases = (
-            user_data
-        )
-        full_name = f"{first_name or ''} {last_name or ''}".strip() or "غير محدد"
-        username_display = f"@{username}" if username else "غير محدد"
-
+    async def admin_search_user_advanced(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """البحث عن مستخدم - النسخة المتقدمة"""
+        logger.info("🔥 [ADMIN_DEBUG] admin_search_user_advanced() تم استدعاؤها")
+        # إعادة توجيه للمعالج العادي
         try:
-            reg_date_formatted = (
-                datetime.fromisoformat(reg_date).strftime("%Y/%m/%d")
-                if reg_date
-                else "غير محدد"
+            query = update.callback_query
+            await query.answer()
+
+            if query.from_user.id != ADMIN_ID:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+                return
+
+            context.user_data["admin_action"] = "search_user"
+
+            await smart_message_manager.update_current_message(
+                update,
+                context,
+                "🔍 البحث عن مستخدم\n\n"
+                "أدخل واحد من التالي للبحث:\n\n"
+                "• معرف التليجرام (ID)\n"
+                "• اسم المستخدم (@username)\n\n"
+                "مثال: 123456789 أو @username",
             )
-        except:
-            reg_date_formatted = "غير صالح"
+            logger.info("✅ [ADMIN_DEBUG] معالج متقدم تم بنجاح")
+        except Exception as e:
+            logger.error(f"❌ [ADMIN_DEBUG] خطأ في المعالج المتقدم: {e}")
+            if update.callback_query:
+                try:
+                    await update.callback_query.answer("❌ حدث خطأ!", show_alert=True)
+                except:
+                    pass
 
-        confirmation_text = f"🗑️ **تأكيد حذف المستخدم**\n\n"
-        confirmation_text += f"🆔 **المعرف:** `{user_id_db}`\n"
-        confirmation_text += f"📝 **الاسم:** {full_name}\n"
-        confirmation_text += f"👤 **اسم المستخدم:** {username_display}\n"
-        confirmation_text += f"📅 **تاريخ التسجيل:** {reg_date_formatted}\n"
-        confirmation_text += f"🪙 **الكوينز:** {coins or 0}\n"
-        confirmation_text += f"🛒 **إجمالي المشتريات:** {purchases or 0}\n\n"
-        confirmation_text += "⚠️ **تحذير:** هذا الإجراء لا يمكن التراجع عنه!\n"
-        confirmation_text += "سيتم حذف جميع بيانات المستخدم نهائياً."
+    async def admin_broadcast_advanced(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """إرسال رسالة للجميع - النسخة المتقدمة"""
+        logger.info("🔥 [ADMIN_DEBUG] admin_broadcast_advanced() تم استدعاؤها")
+        # إعادة توجيه للمعالج العادي
+        try:
+            query = update.callback_query
+            await query.answer()
 
-        keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "🗑️ تأكيد الحذف",
-                        callback_data=f"confirm_delete_{target_user_id}",
+            if query.from_user.id != ADMIN_ID:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+                return
+
+            context.user_data["admin_action"] = "broadcast"
+
+            await smart_message_manager.update_current_message(
+                update,
+                context,
+                "📢 إرسال رسالة للجميع\n\n"
+                "اكتب الرسالة التي تريد إرسالها لجميع المستخدمين:\n\n"
+                "📝 ملاحظة: سيتم إرسال الرسالة لجميع المستخدمين المسجلين.\n"
+                "⚠️ استخدم هذه الميزة بحذر!",
+            )
+            logger.info("✅ [ADMIN_DEBUG] معالج البث المتقدم تم بنجاح")
+        except Exception as e:
+            logger.error(f"❌ [ADMIN_DEBUG] خطأ في معالج البث: {e}")
+            if update.callback_query:
+                try:
+                    await update.callback_query.answer(
+                        "❌ حدث خطأ في البث!", show_alert=True
                     )
-                ],
-                [InlineKeyboardButton("❌ إلغاء", callback_data="admin_panel")],
-            ]
-        )
+                except:
+                    pass
 
-        await update.message.reply_text(
-            confirmation_text, parse_mode="Markdown", reply_markup=keyboard
-        )
+    async def admin_delete_user_advanced(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """حذف مستخدم - النسخة المتقدمة"""
+        logger.info("🔥 [ADMIN_DEBUG] admin_delete_user_advanced() تم استدعاؤها")
+        # إعادة توجيه للمعالج العادي
+        try:
+            query = update.callback_query
+            await query.answer()
 
-        # إعادة تعيين حالة الأدمن
-        context.user_data.pop("admin_action", None)
+            if query.from_user.id != ADMIN_ID:
+                await query.answer("⛔ ليس لديك صلاحية!", show_alert=True)
+                return
 
-    except sqlite3.Error as e:
-        logger.error(f"💥 Database error in user deletion: {str(e)}")
-        await update.message.reply_text(
-            "❌ خطأ في قاعدة البيانات.\n" "الرجاء المحاولة مرة أخرى."
-        )
-    except ValueError:
-        await update.message.reply_text(
-            "❌ معرف المستخدم غير صالح.\n" "يجب أن يكون رقماً صحيحاً."
-        )
-    except Exception as e:
-        logger.error(f"💥 Unexpected error in user deletion: {str(e)}", exc_info=True)
-        await update.message.reply_text(
-            "❌ حدث خطأ غير متوقع.\n" "تم تسجيل الخطأ للمراجعة."
-        )
+            context.user_data["admin_action"] = "delete_user"
+
+            await smart_message_manager.update_current_message(
+                update,
+                context,
+                "🗑️ حذف مستخدم\n\n"
+                "أدخل معرف التليجرام (ID) للمستخدم المراد حذفه:\n\n"
+                "مثال: 123456789\n\n"
+                "⚠️ تحذير: سيتم حذف جميع بيانات المستخدم نهائياً!",
+            )
+            logger.info("✅ [ADMIN_DEBUG] معالج الحذف المتقدم تم بنجاح")
+        except Exception as e:
+            logger.error(f"❌ [ADMIN_DEBUG] خطأ في معالج الحذف: {e}")
+            if update.callback_query:
+                try:
+                    await update.callback_query.answer(
+                        "❌ حدث خطأ في الحذف!", show_alert=True
+                    )
+                except:
+                    pass
 
     def get_registration_conversation(self):
         """معالج المحادثة للتسجيل"""
@@ -5690,10 +5569,7 @@ async def handle_user_deletion(
         )
 
     def run(self):
-        """تشغيل البوت مع Threading متقدم"""
-
-        logger.info("🔧 بناء تطبيق التليجرام...")
-
+        """تشغيل البوت"""
         app = Application.builder().token(BOT_TOKEN).build()
 
         # معالج التسجيل (يجب أن يكون أولاً ليأخذ الأولوية)
@@ -5702,20 +5578,18 @@ async def handle_user_deletion(
         # معالج التعديل (للتعديل التفاعلي)
         app.add_handler(self.get_edit_conversation())
 
-        # الأوامر الأساسية
+        # الأوامر
         app.add_handler(CommandHandler("start", self.start))
-
         app.add_handler(CommandHandler("profile", self.profile_command))
         app.add_handler(CommandHandler("help", self.help_command))
-        app.add_handler(CommandHandler("admin", self.admin_command))
-
-        # أوامر الأدمن المتقدمة
+        # أمر إحصائيات المرحلة الرابعة للأدمن فقط
         app.add_handler(
             CommandHandler("phase4_stats", self.get_phase_four_threading_stats)
         )
+        # أمر حذف الحساب للأدمن فقط
         app.add_handler(CommandHandler("delete", self.delete_account_command))
 
-        # معالجات الأزرار الأساسية
+        # الأزرار
         app.add_handler(
             CallbackQueryHandler(
                 self.handle_delete_confirmation,
@@ -5723,7 +5597,7 @@ async def handle_user_deletion(
             )
         )
 
-        # أزرار القائمة الرئيسية
+        # أزرار القائمة الرئيسية (محدثة بدون الأزرار المحذوفة)
         app.add_handler(
             CallbackQueryHandler(
                 self.handle_menu_buttons,
@@ -5735,23 +5609,12 @@ async def handle_user_deletion(
         app.add_handler(
             CallbackQueryHandler(
                 self.handle_edit_profile,
-                pattern="^(edit_profile|edit_platform|edit_whatsapp|edit_payment|update_platform_.+|        update_payment_.+)$",
+                pattern="^(edit_profile|edit_platform|edit_whatsapp|edit_payment|update_platform_.+|update_payment_.+)$",
             )
         )
 
-        # === أزرار لوحة الأدمن ===
+        # أزرار لوحة الأدمن
         app.add_handler(CallbackQueryHandler(self.admin_panel, pattern="^admin_panel$"))
-
-        # أزرار الأدمن الثلاثة المطلوبة
-        app.add_handler(
-            CallbackQueryHandler(self.admin_search_user, pattern="^admin_search_user$")
-        )
-        app.add_handler(
-            CallbackQueryHandler(self.admin_broadcast, pattern="^admin_broadcast$")
-        )
-        app.add_handler(
-            CallbackQueryHandler(self.admin_delete_user, pattern="^admin_delete_user$")
-        )
 
         # المرحلة الرابعة: أزرار لوحة الأدمن المتقدمة مع Threading
         app.add_handler(
@@ -5777,75 +5640,85 @@ async def handle_user_deletion(
             )
         )
 
-        # معالجات عرض وإدارة المستخدمين
         app.add_handler(
             CallbackQueryHandler(self.admin_view_users, pattern="^admin_view_users$")
         )
+
+        # معالج الصفحات لعرض المستخدمين
         app.add_handler(
             CallbackQueryHandler(
                 self.admin_view_users, pattern=r"^admin_users_page_\d+$"
             )
         )
+
+        app.add_handler(
+            CallbackQueryHandler(self.admin_delete_user, pattern="^admin_delete_user$")
+        )
+
         app.add_handler(
             CallbackQueryHandler(
                 self.admin_confirm_delete, pattern=r"^admin_confirm_delete_\d+$"
             )
         )
 
-        # === معالج النصوص للأدمن - المُحدث ===
-        # استخدام الدالة المُحسنة خارج الكلاس
         app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_text_input)
+            CallbackQueryHandler(self.admin_broadcast, pattern="^admin_broadcast$")
         )
 
-        # معالج الأخطاء
-        app.add_error_handler(self.error_handler)
+        # 🔥 معالج تشخيصي لأزرار الأدمن
+        async def debug_admin_callback(update, context):
+            try:
+                user_id = update.effective_user.id
+                callback_data = (
+                    update.callback_query.data if update.callback_query else "None"
+                )
+                logger.info(
+                    f"🔥 [ADMIN_DEBUG] Callback: {callback_data} من User: {user_id} (Admin: {ADMIN_ID})"
+                )
+            except Exception as e:
+                logger.error(f"❌ [ADMIN_DEBUG] خطأ في التشخيص: {e}")
 
-        # رسائل التشغيل
+        app.add_handler(
+            CallbackQueryHandler(debug_admin_callback, pattern=r"^admin_"), group=-1
+        )
+
+        app.add_handler(
+            CallbackQueryHandler(self.admin_search_user, pattern="^admin_search_user$")
+        )
+
+        # معالج رسائل  البحث والبث للأدمن
+        app.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, self.handle_admin_text_input
+            )
+        )
+
+        # 🔥 تسجيل معالجات الأدمن المتقدمة المفقودة
+        app.add_handler(
+            CallbackQueryHandler(
+                self.admin_search_user_advanced, pattern="^admin_search_user_advanced$"
+            )
+        )
+        app.add_handler(
+            CallbackQueryHandler(
+                self.admin_broadcast_advanced, pattern="^admin_broadcast_advanced$"
+            )
+        )
+        app.add_handler(
+            CallbackQueryHandler(
+                self.admin_delete_user_advanced, pattern="^admin_delete_user_advanced$"
+            )
+        )
+
+        # التشغيل
         logger.info("🚀 بدء تشغيل FC 26 Smart Bot...")
         logger.info("✨ النظام الذكي للرسائل مفعّل")
         logger.info("📱 البوت جاهز: https://t.me/FC26_Trading_Bot")
-        logger.info("🔧 معالج النصوص المُحسن للأدمن مُفعّل")
 
-        # تشغيل البوت - هنا النقطة المهمة!
-        logger.info("▶️ تشغيل البوت الآن...")
-        app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
-        logger.info("✅ تم تشغيل البوت بنجاح!")
-
-    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالج الأخطاء العام للبوت"""
-        try:
-            user_id = update.effective_user.id if update.effective_user else "Unknown"
-            error_msg = str(context.error)
-
-            logger.error(
-                f"💥 خطأ للمستخدم {user_id}: {error_msg}", exc_info=context.error
-            )
-
-            if update.effective_message:
-                try:
-                    await update.effective_message.reply_text(
-                        "❌ حدث خطأ مؤقت. الرجاء المحاولة مرة أخرى.\n"
-                        "إذا استمرت المشكلة، تواصل مع الدعم الفني."
-                    )
-                except Exception:
-                    pass  # تجاهل أخطاء الإرسال
-
-        except Exception as e:
-            logger.error(f"💥 خطأ في معالج الأخطاء نفسه: {e}")
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 # ================================ نقطة البداية ================================
 if __name__ == "__main__":
-    logger.info("🚀 بدء تشغيل FC26 Smart Bot مع Threading المتقدم")
-    logger.info("📊 النظام جاهز لدعم 1000+ مستخدم متزامن")
-
-    try:
-        bot = FC26SmartBot()  # 👈 إنشاء كائن من الكلاس
-        bot.run()  # 👈 تشغيل البوت
-    except KeyboardInterrupt:
-        logger.info("⏹️ تم إيقاف البوت بواسطة المستخدم")
-    except Exception as e:
-        logger.error(f"💥 خطأ في تشغيل البوت: {e}")
-    finally:
-        logger.info("🔚 تم إغلاق البوت بنجاح")
+    bot = FC26SmartBot()
+    bot.run()
