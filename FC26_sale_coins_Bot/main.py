@@ -60,6 +60,7 @@ class FC26Bot:
         username = update.effective_user.username or "Unknown"
         
         if is_rate_limited(user_id):
+            self.logger.info(f"🚫 Rate limited user {user_id}")
             await update.message.reply_text(ErrorMessages.get_rate_limit_error())
             return
         
@@ -69,12 +70,25 @@ class FC26Bot:
             async with user_lock_manager.acquire_user_lock(user_id, "start"):
                 # Check existing user
                 user_data = UserOperations.get_user_data(user_id)
+                self.logger.info(f"📊 User {user_id} data: {user_data}")
                 
-                if user_data and user_data["registration_step"] != "start":
-                    await self._continue_registration(update, context, user_data)
-                    return
+                if user_data:
+                    current_step = user_data.get("registration_step", "unknown")
+                    self.logger.info(f"👤 User {user_id} current step: {current_step}")
+                    
+                    if current_step == "completed":
+                        # User has completed registration - show main menu
+                        self.logger.info(f"✅ User {user_id} registration completed - showing main menu")
+                        await self._show_main_menu(update, context, user_data)
+                        return
+                    elif current_step != "start":
+                        # User is in middle of registration - continue
+                        self.logger.info(f"🔄 User {user_id} continuing from step: {current_step}")
+                        await self._continue_registration(update, context, user_data)
+                        return
                 
-                # Show welcome and platforms
+                # New user or user at start - show welcome and platforms
+                self.logger.info(f"🆕 New user {user_id} - showing platform selection")
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
                 welcome_text = WelcomeMessages.get_start_message()
                 
@@ -115,12 +129,16 @@ class FC26Bot:
         query = update.callback_query
         user_id = query.from_user.id
         
+        self.logger.info(f"🎮 User {user_id} selecting platform: {query.data}")
+        
         try:
             async with user_lock_manager.acquire_user_lock(user_id, "platform_selection"):
                 await query.answer()
                 
                 platform_key = query.data.replace("platform_", "")
                 platform_name = PlatformKeyboard.get_platform_name(platform_key)
+                
+                self.logger.info(f"✅ User {user_id} selected platform: {platform_name}")
                 
                 # Update user data
                 UserOperations.save_user_step(user_id, "entering_whatsapp", {"platform": platform_key})
@@ -140,12 +158,16 @@ class FC26Bot:
         query = update.callback_query
         user_id = query.from_user.id
         
+        self.logger.info(f"💳 User {user_id} selecting payment method: {query.data}")
+        
         try:
             async with user_lock_manager.acquire_user_lock(user_id, "payment_selection"):
                 await query.answer()
                 
                 payment_key = query.data.replace("payment_", "")
                 payment_name = PaymentKeyboard.get_payment_display_name(payment_key)
+                
+                self.logger.info(f"✅ User {user_id} selected payment: {payment_name}")
                 
                 # Get user data
                 user_data = UserOperations.get_user_data(user_id)
@@ -178,19 +200,36 @@ class FC26Bot:
     async def handle_message(self, update, context):
         """Handle text messages"""
         user_id = update.effective_user.id
+        message_text = update.message.text.strip()
+        
+        self.logger.info(f"📩 Message from user {user_id}: '{message_text}'")
+        
         user_data = UserOperations.get_user_data(user_id)
         
         if not user_data:
+            self.logger.info(f"⚠️ User {user_id} has no data - requiring /start")
             await update.message.reply_text(ErrorMessages.get_start_required_error())
             return
         
-        step = user_data["registration_step"]
+        step = user_data.get("registration_step", "unknown")
+        self.logger.info(f"📝 User {user_id} in step '{step}' sent message")
         
         if step == "entering_whatsapp":
             await self._handle_whatsapp_input(update, context, user_data)
         elif step == "entering_payment_details":
             await self._handle_payment_details(update, context, user_data)
+        elif step == "completed":
+            # User completed registration - guide them
+            self.logger.info(f"✅ Completed user {user_id} sent message - guiding to main menu")
+            await update.message.reply_text(
+                "✅ **لقد أكملت التسجيل بالفعل!**\n\n"
+                "🔹 اضغط `/profile` لعرض ملفك الشخصي\n"
+                "🔹 اضغط `/help` للمساعدة\n"
+                "🔹 اضغط `/start` للقائمة الرئيسية",
+                parse_mode="Markdown"
+            )
         else:
+            self.logger.info(f"🔄 User {user_id} in unexpected step '{step}' - requiring restart")
             await update.message.reply_text(ErrorMessages.get_restart_required_error())
     
     async def _handle_whatsapp_input(self, update, context, user_data):
@@ -198,12 +237,17 @@ class FC26Bot:
         user_id = update.effective_user.id
         phone = update.message.text.strip()
         
+        self.logger.info(f"📱 User {user_id} entered WhatsApp: {phone[:4]}***{phone[-4:] if len(phone) > 8 else '***'}")
+        
         # Validate phone
         validation = PhoneValidator.validate_whatsapp(phone)
         if not validation["valid"]:
+            self.logger.info(f"❌ User {user_id} WhatsApp validation failed: {validation['error']}")
             error_msg = ErrorMessages.get_phone_validation_error(validation["error"])
             await update.message.reply_text(error_msg)
             return
+        
+        self.logger.info(f"✅ User {user_id} WhatsApp validated successfully")
         
         # Create payment keyboard
         keyboard = PaymentKeyboard.create_payment_selection_keyboard()
@@ -224,12 +268,17 @@ class FC26Bot:
         user_id = update.effective_user.id
         details = update.message.text.strip()
         
+        self.logger.info(f"💰 User {user_id} entered payment details for: {user_data.get('payment_method', 'unknown')}")
+        
         # Validate payment details
         validation = PaymentValidator.validate_payment_details(user_data["payment_method"], details)
         if not validation["valid"]:
+            self.logger.info(f"❌ User {user_id} payment validation failed: {validation['error']}")
             error_msg = ErrorMessages.get_payment_validation_error(user_data["payment_method"], validation["error"])
             await update.message.reply_text(error_msg)
             return
+        
+        self.logger.info(f"✅ User {user_id} payment details validated successfully - completing registration")
         
         # Create confirmation message
         payment_name = PaymentKeyboard.get_payment_display_name(user_data["payment_method"])
@@ -257,6 +306,10 @@ class FC26Bot:
     async def _continue_registration(self, update, context, user_data):
         """Continue registration from last step"""
         step = user_data["registration_step"]
+        user_id = update.effective_user.id
+        
+        self.logger.info(f"🔄 User {user_id} continuing registration from step: {step}")
+        
         continue_text = WelcomeMessages.get_continue_registration_message(step, user_data)
         
         if step == "choosing_platform":
@@ -267,6 +320,38 @@ class FC26Bot:
             await update.message.reply_text(continue_text, reply_markup=keyboard, parse_mode="Markdown")
         else:
             await update.message.reply_text(continue_text, parse_mode="Markdown")
+    
+    async def _show_main_menu(self, update, context, user_data):
+        """Show main menu for completed users"""
+        user_id = update.effective_user.id
+        username = update.effective_user.username or "Unknown"
+        
+        # Create main menu message
+        platform = user_data.get("platform", "غير محدد")
+        whatsapp = user_data.get("whatsapp", "غير محدد")
+        
+        main_menu_text = f"""✅ **أهلاً وسهلاً بعودتك!**
+
+👤 **المستخدم:** @{username}
+🎮 **المنصة:** {platform}
+📱 **الواتساب:** `{whatsapp}`
+
+**🏠 القائمة الرئيسية:**
+
+🔹 `/profile` - عرض الملف الشخصي
+🔹 `/help` - المساعدة والدعم
+🔹 **تواصل معنا للخدمات**
+
+**🎯 خدماتنا:**
+• شراء وبيع العملات
+• تجارة اللاعبين
+• خدمات التطوير
+• دعم فني متخصص
+
+💬 **للحصول على الخدمات تواصل مع الإدارة**"""
+
+        await update.message.reply_text(main_menu_text, parse_mode="Markdown")
+        log_user_action(user_id, "Shown main menu", f"Platform: {platform}")
     
     # ═══════════════════════════════════════════════════════════════════════════
     # MAIN EXECUTION
