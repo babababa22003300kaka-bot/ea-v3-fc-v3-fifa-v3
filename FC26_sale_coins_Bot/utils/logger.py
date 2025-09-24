@@ -30,27 +30,9 @@ class FC26Logger:
         # Clear existing handlers
         self.logger.handlers.clear()
         
-        # File handler with rotation
-        file_handler = RotatingFileHandler(
-            LOGGING_CONFIG['file'],
-            maxBytes=LOGGING_CONFIG['max_bytes'],
-            backupCount=LOGGING_CONFIG['backup_count'],
-            encoding=LOGGING_CONFIG['encoding']
-        )
-        file_handler.setLevel(logging.DEBUG)
-        
-        # Console handler
+        # Console handler only (no file logging)
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
-        
-        # Error file handler (for errors only)
-        error_handler = RotatingFileHandler(
-            LOGGING_CONFIG['file'].replace('.log', '_errors.log'),
-            maxBytes=LOGGING_CONFIG['max_bytes'],
-            backupCount=3,
-            encoding=LOGGING_CONFIG['encoding']
-        )
-        error_handler.setLevel(logging.ERROR)
         
         # Formatter
         formatter = logging.Formatter(
@@ -59,14 +41,10 @@ class FC26Logger:
         )
         
         # Set formatters
-        file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
-        error_handler.setFormatter(formatter)
         
         # Add handlers
-        self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
-        self.logger.addHandler(error_handler)
         
         # Initial log
         self.logger.info("🚀 FC26 Bot Logger initialized successfully")
