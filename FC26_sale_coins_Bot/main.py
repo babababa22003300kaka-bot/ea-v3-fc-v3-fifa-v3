@@ -48,36 +48,7 @@ class FC26Bot:
         self.app = None
         self.logger = fc26_logger.get_logger()
         
-    async def initialize_database(self):
-        """Initialize database and create tables"""
-        self.logger.info("💾 Initializing database...")
-        success = DatabaseModels.create_all_tables()
-        if success:
-            self.logger.info("✅ Database initialized successfully")
-            log_database_operation("Database initialized", success=True)
-        else:
-            self.logger.error("❌ Database initialization failed")
-            log_database_operation("Database initialization", success=False)
-            return False
-        return True
-    
-    async def setup_handlers(self):
-        """Setup all bot handlers"""
-        self.logger.info("🔧 Setting up bot handlers...")
-        
-        # Command handlers
-        self.app.add_handler(CommandHandler("start", self.handle_start))
-        self.app.add_handler(CommandHandler("help", self.handle_help))
-        self.app.add_handler(CommandHandler("profile", self.handle_profile))
-        
-        # Callback query handlers
-        self.app.add_handler(CallbackQueryHandler(self.handle_platform_choice, pattern="^platform_"))
-        self.app.add_handler(CallbackQueryHandler(self.handle_payment_choice, pattern="^payment_"))
-        
-        # Message handlers
-        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-        
-        self.logger.info("✅ All handlers configured successfully")
+
     
     # ═══════════════════════════════════════════════════════════════════════════
     # COMMAND HANDLERS
@@ -301,24 +272,44 @@ class FC26Bot:
     # MAIN EXECUTION
     # ═══════════════════════════════════════════════════════════════════════════
     
-    async def start_bot(self):
+    def start_bot(self):
         """Start the bot"""
         
-        # Windows event loop fix
+        # Windows event loop fix - must be called before any async operations
         if sys_platform.system() == "Windows":
             asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
             self.logger.info("✅ Windows event loop policy configured")
         
         # Initialize database
-        if not await self.initialize_database():
-            self.logger.error("❌ Failed to initialize database. Exiting.")
+        self.logger.info("💾 Initializing database...")
+        success = DatabaseModels.create_all_tables()
+        if success:
+            self.logger.info("✅ Database initialized successfully")
+            log_database_operation("Database initialized", success=True)
+        else:
+            self.logger.error("❌ Database initialization failed")
+            log_database_operation("Database initialization", success=False)
             return
         
         # Create application
         self.app = Application.builder().token(BOT_TOKEN).build()
         
         # Setup handlers
-        await self.setup_handlers()
+        self.logger.info("🔧 Setting up bot handlers...")
+        
+        # Command handlers
+        self.app.add_handler(CommandHandler("start", self.handle_start))
+        self.app.add_handler(CommandHandler("help", self.handle_help))
+        self.app.add_handler(CommandHandler("profile", self.handle_profile))
+        
+        # Callback query handlers
+        self.app.add_handler(CallbackQueryHandler(self.handle_platform_choice, pattern="^platform_"))
+        self.app.add_handler(CallbackQueryHandler(self.handle_payment_choice, pattern="^payment_"))
+        
+        # Message handlers
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        
+        self.logger.info("✅ All handlers configured successfully")
         
         # Log startup
         fc26_logger.log_bot_start()
@@ -343,7 +334,7 @@ class FC26Bot:
         
         # Start polling
         try:
-            self.app.run_polling(drop_pending_updates=True, close_loop=False)
+            self.app.run_polling(drop_pending_updates=True)
         except Exception as e:
             self.logger.error(f"❌ Critical error: {e}")
         finally:
@@ -351,13 +342,22 @@ class FC26Bot:
 
 def main():
     """Main entry point"""
+    # Configure Windows event loop before creating any async operations
+    if sys_platform.system() == "Windows":
+        try:
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        except:
+            pass
+    
     try:
         bot = FC26Bot()
-        asyncio.run(bot.start_bot()) if sys.version_info >= (3, 7) else bot.start_bot()
+        bot.start_bot()
     except KeyboardInterrupt:
         print("🔴 Bot stopped by user")
     except Exception as e:
         print(f"❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
