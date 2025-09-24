@@ -6,7 +6,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from utils.logger import log_user_action, log_registration_step, logger
-from utils.locks import acquire_user_lock, is_rate_limited
+from utils.locks import user_lock_manager, is_rate_limited
 from database.operations import UserOperations
 from messages.welcome_messages import WelcomeMessages
 from messages.error_messages import ErrorMessages
@@ -30,7 +30,7 @@ class StartHandler:
         log_user_action(user_id, "Started bot interaction", f"Username: @{username}")
         
         try:
-            async with acquire_user_lock(user_id, "start_command"):
+            async with user_lock_manager.acquire_user_lock(user_id, "start_command"):
                 await StartHandler._process_start_command(update, context)
                 
         except Exception as e:

@@ -24,7 +24,7 @@ from database.operations import UserOperations, StatisticsOperations
 
 # Import utilities
 from utils.logger import fc26_logger, log_user_action, log_database_operation
-from utils.locks import user_lock_manager, acquire_user_lock, is_rate_limited
+from utils.locks import user_lock_manager, is_rate_limited
 
 # Import validators
 from validators.phone_validator import PhoneValidator
@@ -66,7 +66,7 @@ class FC26Bot:
         log_user_action(user_id, "Started bot", f"@{username}")
         
         try:
-            async with acquire_user_lock(user_id, "start"):
+            async with user_lock_manager.acquire_user_lock(user_id, "start"):
                 # Check existing user
                 user_data = UserOperations.get_user_data(user_id)
                 
@@ -116,7 +116,7 @@ class FC26Bot:
         user_id = query.from_user.id
         
         try:
-            async with acquire_user_lock(user_id, "platform_selection"):
+            async with user_lock_manager.acquire_user_lock(user_id, "platform_selection"):
                 await query.answer()
                 
                 platform_key = query.data.replace("platform_", "")
@@ -141,7 +141,7 @@ class FC26Bot:
         user_id = query.from_user.id
         
         try:
-            async with acquire_user_lock(user_id, "payment_selection"):
+            async with user_lock_manager.acquire_user_lock(user_id, "payment_selection"):
                 await query.answer()
                 
                 payment_key = query.data.replace("payment_", "")
