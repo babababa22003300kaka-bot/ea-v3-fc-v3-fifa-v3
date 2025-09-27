@@ -41,6 +41,9 @@ from messages.summary_messages import SummaryMessages
 from keyboards.platform_keyboard import PlatformKeyboard
 from keyboards.payment_keyboard import PaymentKeyboard
 
+# Import profile delete handler
+from handlers.profile_delete_handler import ProfileDeleteHandler
+
 class FC26Bot:
     """Main FC26 Gaming Bot class"""
     
@@ -118,7 +121,15 @@ class FC26Bot:
             return
         
         profile_text = SummaryMessages.create_user_profile_summary(user_data)
-        await update.message.reply_text(profile_text, parse_mode="HTML")
+        
+        # Add profile management keyboard with delete option
+        keyboard = ProfileDeleteHandler.create_profile_management_keyboard()
+        
+        await update.message.reply_text(
+            profile_text, 
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
     
     # ═══════════════════════════════════════════════════════════════════════════
     # CALLBACK HANDLERS
@@ -390,6 +401,10 @@ class FC26Bot:
         # Callback query handlers
         self.app.add_handler(CallbackQueryHandler(self.handle_platform_choice, pattern="^platform_"))
         self.app.add_handler(CallbackQueryHandler(self.handle_payment_choice, pattern="^payment_"))
+        
+        # Profile delete handlers
+        for handler in ProfileDeleteHandler.get_handlers():
+            self.app.add_handler(handler)
         
         # Message handlers
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
