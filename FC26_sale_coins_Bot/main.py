@@ -222,10 +222,10 @@ class FC26Bot:
             # User completed registration - guide them
             self.logger.info(f"✅ Completed user {user_id} sent message - guiding to main menu")
             await update.message.reply_text(
-                "✅ **لقد أكملت التسجيل بالفعل!**\n\n"
-                "🔹 اضغط `/profile` لعرض ملفك الشخصي\n"
-                "🔹 اضغط `/help` للمساعدة\n"
-                "🔹 اضغط `/start` للقائمة الرئيسية",
+                "✅ <b>لقد أكملت التسجيل بالفعل!</b>\n\n"
+                "🔹 اضغط <code>/profile</code> لعرض ملفك الشخصي\n"
+                "🔹 اضغط <code>/help</code> للمساعدة\n"
+                "🔹 اضغط <code>/start</code> للقائمة الرئيسية",
                 parse_mode="HTML"
             )
         else:
