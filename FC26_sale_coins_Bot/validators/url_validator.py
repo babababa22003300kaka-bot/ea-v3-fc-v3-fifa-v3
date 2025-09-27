@@ -68,7 +68,7 @@ class URLValidator:
                 "cleaned": cleaned_url,
                 "formatted": cleaned_url,
                 "display": cleaned_url,
-                "clickable": f"`{cleaned_url}`",
+                "clickable": f"<code>{cleaned_url}</code>",
                 "domain": parsed.netloc,
                 "path": parsed.path
             }

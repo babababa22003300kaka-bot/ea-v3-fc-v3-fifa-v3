@@ -27,7 +27,7 @@ async def handle_continue_registration(update: Update, context: ContextTypes.DEF
             await update.message.reply_text(
                 continue_text, 
                 reply_markup=keyboard, 
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             
         elif step == "choosing_payment":
@@ -36,7 +36,7 @@ async def handle_continue_registration(update: Update, context: ContextTypes.DEF
             await update.message.reply_text(
                 continue_text, 
                 reply_markup=keyboard, 
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             
         elif step == "entering_whatsapp":
@@ -57,4 +57,4 @@ async def handle_continue_registration(update: Update, context: ContextTypes.DEF
         logger.error(f"❌ Error in continue registration for user {user_id}: {e}")
         
         from messages.error_messages import ErrorMessages
-        await update.message.reply_text(ErrorMessages.get_general_error())
+        await update.message.reply_text(ErrorMessages.get_general_error(), parse_mode="HTML")

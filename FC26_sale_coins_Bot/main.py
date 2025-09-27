@@ -244,7 +244,7 @@ class FC26Bot:
         if not validation["valid"]:
             self.logger.info(f"❌ User {user_id} WhatsApp validation failed: {validation['error']}")
             error_msg = ErrorMessages.get_phone_validation_error(validation["error"])
-            await update.message.reply_text(error_msg)
+            await update.message.reply_text(error_msg, parse_mode="HTML")
             return
         
         self.logger.info(f"✅ User {user_id} WhatsApp validated successfully")
@@ -275,7 +275,7 @@ class FC26Bot:
         if not validation["valid"]:
             self.logger.info(f"❌ User {user_id} payment validation failed: {validation['error']}")
             error_msg = ErrorMessages.get_payment_validation_error(user_data["payment_method"], validation["error"])
-            await update.message.reply_text(error_msg)
+            await update.message.reply_text(error_msg, parse_mode="HTML")
             return
         
         self.logger.info(f"✅ User {user_id} payment details validated successfully - completing registration")

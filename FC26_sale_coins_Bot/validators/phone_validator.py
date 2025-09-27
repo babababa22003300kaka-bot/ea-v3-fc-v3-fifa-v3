@@ -74,7 +74,7 @@ class PhoneValidator:
                 "formatted": f"+20{cleaned}",
                 "display": cleaned,  # Enhanced UX: Display without country code
                 "provider": provider,
-                "clickable": f"`{cleaned}`",  # For Telegram click-to-copy
+                "clickable": f"<code>{cleaned}</code>",  # For Telegram click-to-copy
             }
 
         except Exception as e:
