@@ -68,7 +68,7 @@ class URLValidator:
                 "cleaned": cleaned_url,
                 "formatted": cleaned_url,
                 "display": cleaned_url,
-                "clickable": f"`{cleaned_url}`",
+                "clickable": f"<code>{cleaned_url}</code>",
                 "domain": parsed.netloc,
                 "path": parsed.path
             }
@@ -144,22 +144,22 @@ class URLValidator:
     @classmethod
     def get_instapay_help_message(cls) -> str:
         """Get help message for InstaPay URL format"""
-        return f"""💡 **كيفية إدخال رابط إنستاباي:**
+        return f"""💡 <b>كيفية إدخال رابط إنستاباي:</b>
 
-🔹 **النطاقات المقبولة:**
+🔹 <b>النطاقات المقبولة:</b>
 {chr(10).join([f"   • {domain}" for domain in cls.INSTAPAY_DOMAINS])}
 
-🔹 **أمثلة صحيحة:**
+🔹 <b>أمثلة صحيحة:</b>
    • https://instapay.com.eg/abc123
    • https://ipn.eg/xyz789
    • instapay.com.eg/payment/456 (سيتم إضافة https تلقائياً)
 
-🔹 **نصائح:**
+🔹 <b>نصائح:</b>
    • انسخ الرابط كاملاً من إنستاباي
    • تأكد من صحة الرابط قبل الإرسال
    • لا تحتاج لإضافة https:// (سيتم إضافتها تلقائياً)
 
-❌ **أمثلة خاطئة:**
+❌ <b>أمثلة خاطئة:</b>
    • روابط من مواقع أخرى
    • روابط غير مكتملة
    • نصوص بدون رابط"""

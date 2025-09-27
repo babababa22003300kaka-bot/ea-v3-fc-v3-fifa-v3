@@ -290,7 +290,7 @@ class PaymentValidator:
             "we_cash": "أدخل رقم وي كاش (11 رقماً يبدأ بـ 015) - أرقام فقط!",
             "bank_wallet": "أدخل رقم المحفظة البنكية (11 رقماً لأي شبكة مصرية) - أرقام فقط!",
             "telda": "أدخل رقم كارت تيلدا (16 رقماً بدون مسافات) - أرقام فقط!",
-            "instapay": "أدخل رابط إنستاباي الكامل\n**مثال:** https://instapay.com.eg/abc123",
+            "instapay": "أدخل رابط إنستاباي الكامل\n<b>مثال:</b> https://instapay.com.eg/abc123",
         }
 
         return instructions.get(payment_method, "أدخل تفاصيل الدفع")
@@ -299,13 +299,13 @@ class PaymentValidator:
     def get_payment_examples(cls, payment_method: str) -> str:
         """Get examples for payment method"""
         examples = {
-            "vodafone_cash": "**مثال:** 01012345678 (أرقام فقط)",
-            "etisalat_cash": "**مثال:** 01112345678 (أرقام فقط)",
-            "orange_cash": "**مثال:** 01212345678 (أرقام فقط)",
-            "we_cash": "**مثال:** 01512345678 (أرقام فقط)",
-            "bank_wallet": "**مثال:** 01012345678 (أي شبكة - أرقام فقط)",
-            "telda": "**مثال:** 1234567890123456 (16 رقم - أرقام فقط)",
-            "instapay": "**مثال:** https://instapay.com.eg/abc123",
+            "vodafone_cash": "<b>مثال:</b> 01012345678 (أرقام فقط)",
+            "etisalat_cash": "<b>مثال:</b> 01112345678 (أرقام فقط)",
+            "orange_cash": "<b>مثال:</b> 01212345678 (أرقام فقط)",
+            "we_cash": "<b>مثال:</b> 01512345678 (أرقام فقط)",
+            "bank_wallet": "<b>مثال:</b> 01012345678 (أي شبكة - أرقام فقط)",
+            "telda": "<b>مثال:</b> 1234567890123456 (16 رقم - أرقام فقط)",
+            "instapay": "<b>مثال:</b> https://instapay.com.eg/abc123",
         }
 
         return examples.get(payment_method, "")

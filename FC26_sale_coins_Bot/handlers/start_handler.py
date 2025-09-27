@@ -24,7 +24,7 @@ class StartHandler:
         
         # Rate limiting check
         if is_rate_limited(user_id):
-            await update.message.reply_text(ErrorMessages.get_rate_limit_error())
+            await update.message.reply_text(ErrorMessages.get_rate_limit_error(), parse_mode="HTML")
             return
         
         log_user_action(user_id, "Started bot interaction", f"Username: @{username}")
@@ -35,7 +35,7 @@ class StartHandler:
                 
         except Exception as e:
             logger.error(f"❌ Error in start handler for user {user_id}: {e}")
-            await update.message.reply_text(ErrorMessages.get_general_error())
+            await update.message.reply_text(ErrorMessages.get_general_error(), parse_mode="HTML")
     
     @staticmethod
     async def _process_start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -70,7 +70,7 @@ class StartHandler:
             message = await update.message.reply_text(
                 welcome_text,
                 reply_markup=keyboard,
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             
             # Save user step
@@ -81,7 +81,7 @@ class StartHandler:
             
         except Exception as e:
             logger.error(f"❌ Error showing welcome to user {user_id}: {e}")
-            await update.message.reply_text(ErrorMessages.get_general_error())
+            await update.message.reply_text(ErrorMessages.get_general_error(), parse_mode="HTML")
     
     @staticmethod
     async def handle_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,18 +89,18 @@ class StartHandler:
         user_id = update.effective_user.id
         
         if is_rate_limited(user_id):
-            await update.message.reply_text(ErrorMessages.get_rate_limit_error())
+            await update.message.reply_text(ErrorMessages.get_rate_limit_error(), parse_mode="HTML")
             return
         
         log_user_action(user_id, "Requested help")
         
         try:
             help_text = WelcomeMessages.get_help_message()
-            await update.message.reply_text(help_text, parse_mode="Markdown")
+            await update.message.reply_text(help_text, parse_mode="HTML")
             
         except Exception as e:
             logger.error(f"❌ Error in help handler for user {user_id}: {e}")
-            await update.message.reply_text(ErrorMessages.get_general_error())
+            await update.message.reply_text(ErrorMessages.get_general_error(), parse_mode="HTML")
     
     @staticmethod
     async def handle_about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -108,15 +108,15 @@ class StartHandler:
         user_id = update.effective_user.id
         
         if is_rate_limited(user_id):
-            await update.message.reply_text(ErrorMessages.get_rate_limit_error())
+            await update.message.reply_text(ErrorMessages.get_rate_limit_error(), parse_mode="HTML")
             return
         
         log_user_action(user_id, "Requested about info")
         
         try:
             about_text = WelcomeMessages.get_about_message()
-            await update.message.reply_text(about_text, parse_mode="Markdown")
+            await update.message.reply_text(about_text, parse_mode="HTML")
             
         except Exception as e:
             logger.error(f"❌ Error in about handler for user {user_id}: {e}")
-            await update.message.reply_text(ErrorMessages.get_general_error())
+            await update.message.reply_text(ErrorMessages.get_general_error(), parse_mode="HTML")
