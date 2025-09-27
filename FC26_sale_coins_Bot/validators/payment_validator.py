@@ -28,6 +28,30 @@ class PaymentValidator:
             Dict[str, Any]: Validation result with formatted data
         """
         try:
+            # للمحافظ المحمولة وتيلدا - تحقق من الحروف والرموز أولاً
+            if payment_method in [
+                "vodafone_cash",
+                "etisalat_cash",
+                "orange_cash",
+                "we_cash",
+                "bank_wallet",
+                "telda",
+            ]:
+                # تحقق من وجود حروف أو رموز غير مسموحة
+                if re.search(r"[^\d\s\-]", details):  # أي حاجة غير رقم أو مسافة أو شرطة
+                    return {
+                        "valid": False,
+                        "error": "❌ يُسمح بالأرقام فقط! لا تستخدم حروف أو رموز",
+                    }
+
+                # تحقق من وجود مسافات أو شرطات كتير
+                special_chars_count = details.count(" ") + details.count("-")
+                if special_chars_count > 5:
+                    return {
+                        "valid": False,
+                        "error": "❌ مسافات أو شرطات كتيرة! اكتب الرقم بشكل بسيط",
+                    }
+
             # Clean input for mobile wallets and Telda
             cleaned = (
                 re.sub(r"[^\d]", "", details)
@@ -60,6 +84,14 @@ class PaymentValidator:
         cls, cleaned: str, payment_method: str
     ) -> Dict[str, Any]:
         """Validate mobile wallet phone number"""
+
+        # تحقق من وجود أرقام أصلاً
+        if not cleaned:
+            return {
+                "valid": False,
+                "error": "❌ لم يتم العثور على أرقام! أدخل رقم صحيح",
+            }
+
         if not re.match(r"^01[0125][0-9]{8}$", cleaned):
             return {
                 "valid": False,
@@ -92,6 +124,14 @@ class PaymentValidator:
     @classmethod
     def _validate_telda_card(cls, cleaned: str) -> Dict[str, Any]:
         """Validate Telda card number"""
+
+        # تحقق من وجود أرقام أصلاً
+        if not cleaned:
+            return {
+                "valid": False,
+                "error": "❌ لم يتم العثور على أرقام! أدخل رقم كارت صحيح",
+            }
+
         if len(cleaned) != 16 or not cleaned.isdigit():
             return {
                 "valid": False,
@@ -190,8 +230,29 @@ class PaymentValidator:
     def validate_whatsapp(cls, phone: str) -> Dict[str, Any]:
         """Validate WhatsApp phone number - 11 digits only starting with 010/011/012/015"""
         try:
+            # تحقق من وجود حروف أو رموز قبل التنظيف
+            if re.search(r"[^\d\s]", phone):  # أي حاجة غير رقم أو مسافة
+                return {
+                    "valid": False,
+                    "error": "❌ يُسمح بالأرقام فقط! لا تستخدم حروف أو رموز",
+                }
+
+            # تحقق من وجود مسافات كتير
+            if phone.count(" ") > 3:  # لو المسافات كتير أوي
+                return {
+                    "valid": False,
+                    "error": "❌ مسافات كتيرة! اكتب الرقم بدون مسافات أو بمسافات قليلة",
+                }
+
             # Clean input - remove all non-digits
             cleaned = re.sub(r"[^\d]", "", phone)
+
+            # تحقق من وجود أرقام أصلاً
+            if not cleaned:
+                return {
+                    "valid": False,
+                    "error": "❌ لم يتم العثور على أرقام! أدخل رقم واتساب صحيح",
+                }
 
             # Check exact length
             if len(cleaned) != 11:
@@ -223,12 +284,12 @@ class PaymentValidator:
     def get_payment_instructions(cls, payment_method: str) -> str:
         """Get specific instructions for payment method"""
         instructions = {
-            "vodafone_cash": "أدخل رقم فودافون كاش (11 رقماً يبدأ بـ 010)",
-            "etisalat_cash": "أدخل رقم اتصالات كاش (11 رقماً يبدأ بـ 011)",
-            "orange_cash": "أدخل رقم أورانج كاش (11 رقماً يبدأ بـ 012)",
-            "we_cash": "أدخل رقم وي كاش (11 رقماً يبدأ بـ 015)",
-            "bank_wallet": "أدخل رقم المحفظة البنكية (11 رقماً لأي شبكة مصرية)",
-            "telda": "أدخل رقم كارت تيلدا (16 رقماً بدون مسافات)",
+            "vodafone_cash": "أدخل رقم فودافون كاش (11 رقماً يبدأ بـ 010) - أرقام فقط!",
+            "etisalat_cash": "أدخل رقم اتصالات كاش (11 رقماً يبدأ بـ 011) - أرقام فقط!",
+            "orange_cash": "أدخل رقم أورانج كاش (11 رقماً يبدأ بـ 012) - أرقام فقط!",
+            "we_cash": "أدخل رقم وي كاش (11 رقماً يبدأ بـ 015) - أرقام فقط!",
+            "bank_wallet": "أدخل رقم المحفظة البنكية (11 رقماً لأي شبكة مصرية) - أرقام فقط!",
+            "telda": "أدخل رقم كارت تيلدا (16 رقماً بدون مسافات) - أرقام فقط!",
             "instapay": "أدخل رابط إنستاباي الكامل\n**مثال:** https://instapay.com.eg/abc123",
         }
 
@@ -238,12 +299,12 @@ class PaymentValidator:
     def get_payment_examples(cls, payment_method: str) -> str:
         """Get examples for payment method"""
         examples = {
-            "vodafone_cash": "**مثال:** 01012345678",
-            "etisalat_cash": "**مثال:** 01112345678",
-            "orange_cash": "**مثال:** 01212345678",
-            "we_cash": "**مثال:** 01512345678",
-            "bank_wallet": "**مثال:** 01012345678 (أي شبكة)",
-            "telda": "**مثال:** 1234567890123456",
+            "vodafone_cash": "**مثال:** 01012345678 (أرقام فقط)",
+            "etisalat_cash": "**مثال:** 01112345678 (أرقام فقط)",
+            "orange_cash": "**مثال:** 01212345678 (أرقام فقط)",
+            "we_cash": "**مثال:** 01512345678 (أرقام فقط)",
+            "bank_wallet": "**مثال:** 01012345678 (أي شبكة - أرقام فقط)",
+            "telda": "**مثال:** 1234567890123456 (16 رقم - أرقام فقط)",
             "instapay": "**مثال:** https://instapay.com.eg/abc123",
         }
 
