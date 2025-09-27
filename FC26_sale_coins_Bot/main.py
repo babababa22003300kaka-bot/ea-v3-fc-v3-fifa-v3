@@ -92,7 +92,7 @@ class FC26Bot:
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
                 welcome_text = WelcomeMessages.get_start_message()
                 
-                await update.message.reply_text(welcome_text, reply_markup=keyboard, parse_mode="Markdown")
+                await update.message.reply_text(welcome_text, reply_markup=keyboard, parse_mode="HTML")
                 UserOperations.save_user_step(user_id, "choosing_platform")
                 
         except Exception as e:
@@ -105,7 +105,7 @@ class FC26Bot:
         log_user_action(user_id, "Requested help")
         
         help_text = WelcomeMessages.get_help_message()
-        await update.message.reply_text(help_text, parse_mode="Markdown")
+        await update.message.reply_text(help_text, parse_mode="HTML")
     
     async def handle_profile(self, update, context):
         """Handle /profile command"""
@@ -118,7 +118,7 @@ class FC26Bot:
             return
         
         profile_text = SummaryMessages.create_user_profile_summary(user_data)
-        await update.message.reply_text(profile_text, parse_mode="Markdown")
+        await update.message.reply_text(profile_text, parse_mode="HTML")
     
     # ═══════════════════════════════════════════════════════════════════════════
     # CALLBACK HANDLERS
@@ -145,7 +145,7 @@ class FC26Bot:
                 
                 # Send WhatsApp request message
                 success_text = WelcomeMessages.get_platform_selected_message(platform_name)
-                await query.edit_message_text(success_text, parse_mode="Markdown")
+                await query.edit_message_text(success_text, parse_mode="HTML")
                 
                 log_user_action(user_id, f"Selected platform: {platform_key}")
                 
@@ -185,7 +185,7 @@ class FC26Bot:
                 # Send payment details request
                 instruction = PaymentValidator.get_payment_instructions(payment_key)
                 details_text = WelcomeMessages.get_payment_method_selected_message(payment_name, instruction)
-                await query.edit_message_text(details_text, parse_mode="Markdown")
+                await query.edit_message_text(details_text, parse_mode="HTML")
                 
                 log_user_action(user_id, f"Selected payment: {payment_key}")
                 
@@ -226,7 +226,7 @@ class FC26Bot:
                 "🔹 اضغط `/profile` لعرض ملفك الشخصي\n"
                 "🔹 اضغط `/help` للمساعدة\n"
                 "🔹 اضغط `/start` للقائمة الرئيسية",
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
         else:
             self.logger.info(f"🔄 User {user_id} in unexpected step '{step}' - requiring restart")
@@ -253,7 +253,7 @@ class FC26Bot:
         keyboard = PaymentKeyboard.create_payment_selection_keyboard()
         success_text = WelcomeMessages.get_whatsapp_confirmed_message(validation["display"])
         
-        message = await update.message.reply_text(success_text, reply_markup=keyboard, parse_mode="Markdown")
+        message = await update.message.reply_text(success_text, reply_markup=keyboard, parse_mode="HTML")
         
         # Update user data
         UserOperations.save_user_step(user_id, "choosing_payment", {
@@ -288,7 +288,7 @@ class FC26Bot:
         # Create final summary
         user_info = {"id": user_id, "username": update.effective_user.username or "غير متوفر"}
         final_summary = ConfirmationMessages.create_final_summary(user_data, payment_name, validation, user_info)
-        await update.message.reply_text(final_summary, parse_mode="Markdown")
+        await update.message.reply_text(final_summary, parse_mode="HTML")
         
         # Complete registration
         UserOperations.save_user_step(user_id, "completed", {
@@ -314,12 +314,12 @@ class FC26Bot:
         
         if step == "choosing_platform":
             keyboard = PlatformKeyboard.create_platform_selection_keyboard()
-            await update.message.reply_text(continue_text, reply_markup=keyboard, parse_mode="Markdown")
+            await update.message.reply_text(continue_text, reply_markup=keyboard, parse_mode="HTML")
         elif step == "choosing_payment":
             keyboard = PaymentKeyboard.create_payment_selection_keyboard()
-            await update.message.reply_text(continue_text, reply_markup=keyboard, parse_mode="Markdown")
+            await update.message.reply_text(continue_text, reply_markup=keyboard, parse_mode="HTML")
         else:
-            await update.message.reply_text(continue_text, parse_mode="Markdown")
+            await update.message.reply_text(continue_text, parse_mode="HTML")
     
     async def _show_main_menu(self, update, context, user_data):
         """Show main menu for completed users"""
@@ -330,27 +330,27 @@ class FC26Bot:
         platform = user_data.get("platform", "غير محدد")
         whatsapp = user_data.get("whatsapp", "غير محدد")
         
-        main_menu_text = f"""✅ **أهلاً وسهلاً بعودتك!**
+        main_menu_text = f"""✅ <b>أهلاً وسهلاً بعودتك!</b>
 
-👤 **المستخدم:** @{username}
-🎮 **المنصة:** {platform}
-📱 **الواتساب:** `{whatsapp}`
+👤 <b>المستخدم:</b> @{username}
+🎮 <b>المنصة:</b> {platform}
+📱 <b>الواتساب:</b> <code>{whatsapp}</code>
 
-**🏠 القائمة الرئيسية:**
+<b>🏠 القائمة الرئيسية:</b>
 
-🔹 `/profile` - عرض الملف الشخصي
-🔹 `/help` - المساعدة والدعم
-🔹 **تواصل معنا للخدمات**
+🔹 <code>/profile</code> - عرض الملف الشخصي
+🔹 <code>/help</code> - المساعدة والدعم
+🔹 <b>تواصل معنا للخدمات</b>
 
-**🎯 خدماتنا:**
+<b>🎯 خدماتنا:</b>
 • شراء وبيع العملات
 • تجارة اللاعبين
 • خدمات التطوير
 • دعم فني متخصص
 
-💬 **للحصول على الخدمات تواصل مع الإدارة**"""
+💬 <b>للحصول على الخدمات تواصل مع الإدارة</b>"""
 
-        await update.message.reply_text(main_menu_text, parse_mode="Markdown")
+        await update.message.reply_text(main_menu_text, parse_mode="HTML")
         log_user_action(user_id, "Shown main menu", f"Platform: {platform}")
     
     # ═══════════════════════════════════════════════════════════════════════════

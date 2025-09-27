@@ -15,26 +15,26 @@ class SummaryMessages:
         
         formatted = formatted_data or {}
         
-        return f"""👤 **ملفك الشخصي - FC26**
+        return f"""👤 <b>ملفك الشخصي - FC26</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**📋 البيانات الأساسية**
+<b>📋 البيانات الأساسية</b>
 
-🎮 **المنصة:** {user_data.get('platform_name', 'غير محدد')}
-📱 **رقم الواتساب:** {formatted.get('whatsapp_display', user_data.get('whatsapp', 'غير محدد'))}
-💳 **طريقة الدفع:** {user_data.get('payment_name', 'غير محدد')}
-💰 **بيانات الدفع:** {formatted.get('payment_display', 'غير محدد')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**📊 معلومات الحساب**
-
-✅ **حالة التسجيل:** مكتمل
-📅 **تاريخ التسجيل:** {user_data.get('created_at', 'غير محدد')}
-🔄 **آخر تحديث:** {user_data.get('updated_at', 'غير محدد')}
-🆔 **معرف المستخدم:** {user_data.get('telegram_id', 'غير محدد')}
+🎮 <b>المنصة:</b> {user_data.get('platform_name', 'غير محدد')}
+📱 <b>رقم الواتساب:</b> {formatted.get('whatsapp_display', user_data.get('whatsapp', 'غير محدد'))}
+💳 <b>طريقة الدفع:</b> {user_data.get('payment_name', 'غير محدد')}
+💰 <b>بيانات الدفع:</b> {formatted.get('payment_display', 'غير محدد')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎮 **مرحباً بك في مجتمع FC26!**"""
+<b>📊 معلومات الحساب</b>
+
+✅ <b>حالة التسجيل:</b> مكتمل
+📅 <b>تاريخ التسجيل:</b> {user_data.get('created_at', 'غير محدد')}
+🔄 <b>آخر تحديث:</b> {user_data.get('updated_at', 'غير محدد')}
+🆔 <b>معرف المستخدم:</b> {user_data.get('telegram_id', 'غير محدد')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 <b>مرحباً بك في مجتمع FC26!</b>"""
     
     @staticmethod
     def create_registration_progress_summary(step: str, completed_steps: List[str]) -> str:
@@ -48,13 +48,13 @@ class SummaryMessages:
             ('completed', '5️⃣ إتمام التسجيل')
         ]
         
-        progress_text = "📊 **تقدم التسجيل**\n\n"
+        progress_text = "📊 <b>تقدم التسجيل</b>\n\n"
         
         for step_key, step_name in all_steps:
             if step_key in completed_steps:
                 progress_text += f"✅ {step_name}\n"
             elif step_key == step:
-                progress_text += f"🔄 {step_name} ← **جاري الآن**\n"
+                progress_text += f"🔄 {step_name} ← <b>جاري الآن</b>\n"
             else:
                 progress_text += f"⏳ {step_name}\n"
         
@@ -63,7 +63,7 @@ class SummaryMessages:
         completed_count = len(completed_steps)
         percentage = int((completed_count / total_steps) * 100)
         
-        progress_text += f"\n📈 **نسبة الإنجاز:** {percentage}%"
+        progress_text += f"\n📈 <b>نسبة الإنجاز:</b> {percentage}%"
         
         return progress_text
     
