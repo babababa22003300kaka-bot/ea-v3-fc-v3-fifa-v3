@@ -4,6 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 from typing import Any, Dict
+from config import GAMING_PLATFORMS  # إضافة هذا الimport
 
 
 class ConfirmationMessages:
@@ -68,6 +69,10 @@ class ConfirmationMessages:
     ) -> str:
         """Create enhanced final registration summary"""
 
+        # الحصول على اسم المنصة من الconfig
+        platform_key = user_data.get('platform', '')
+        platform_name = GAMING_PLATFORMS.get(platform_key, {}).get('name', 'غير محدد')
+
         # Format payment details based on method
         if user_data["payment_method"] == "telda":
             # For Telda, show full card number (غير مشفر)
@@ -86,7 +91,7 @@ class ConfirmationMessages:
 
 📊 ملخص البيانات المحدثة:
 ━━━━━━━━━━━━━━━━
-🎮 المنصة: {user_data.get('platform_name', 'غير محدد')}
+🎮 المنصة: {platform_name}
 📱 واتساب: {user_data['whatsapp']}
 💳 طريقة الدفع: {payment_name}
 💰 بيانات الدفع:
@@ -104,11 +109,15 @@ class ConfirmationMessages:
     ) -> str:
         """Create message for already completed registration"""
 
+        # الحصول على اسم المنصة من الconfig
+        platform_key = user_data.get('platform', '')
+        platform_name = GAMING_PLATFORMS.get(platform_key, {}).get('name', 'غير محدد')
+
         return f"""✅ **تسجيلك مكتمل بالفعل!**
 
 📋 **ملخص بياناتك:**
 
-🎮 **المنصة:** {user_data.get('platform_name', 'غير محدد')}
+🎮 **المنصة:** {platform_name}
 📱 **الواتساب:** {display_format.get('whatsapp_display', user_data.get('whatsapp', 'غير محدد'))}
 💳 **الدفع:** {user_data.get('payment_name', 'غير محدد')}
 💰 **التفاصيل:** {display_format.get('payment_display', 'غير محدد')}
@@ -149,25 +158,29 @@ class ConfirmationMessages:
         """Create complete profile summary"""
 
         formatted = formatted_data or {}
+        
+        # الحصول على اسم المنصة من الconfig
+        platform_key = user_data.get('platform', '')
+        platform_name = GAMING_PLATFORMS.get(platform_key, {}).get('name', 'غير محدد')
 
         return f"""👤 **ملفك الشخصي في FC26**
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 **📋 البيانات الأساسية:**
 
-🎮 **المنصة:** {user_data.get('platform_name', 'غير محدد')}
+🎮 **المنصة:** {platform_name}
 📱 **الواتساب:** {formatted.get('whatsapp_display', user_data.get('whatsapp', 'غير محدد'))}
 💳 **طريقة الدفع:** {user_data.get('payment_name', 'غير محدد')}
 💰 **بيانات الدفع:** {formatted.get('payment_display', 'غير محدد')}
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 **⏰ معلومات التسجيل:**
 
 📅 **تاريخ التسجيل:** {user_data.get('created_at', 'غير محدد')}
 🔄 **آخر تحديث:** {user_data.get('updated_at', 'غير محدد')}
 ✅ **حالة التسجيل:** مكتمل
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎮 **مرحباً بك في عائلة FC26!**"""
 
     @staticmethod
