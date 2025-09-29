@@ -8,7 +8,7 @@ from states.sell_states import SellStates
 
 class SellConversationHandler:
     """معالج محادثة البيع البسيط"""
-    
+
     @staticmethod
     def parse_amount(text: str):
         """تحليل كمية الكوينز - أرقام فقط (2-5 أرقام)"""
@@ -47,7 +47,7 @@ class SellConversationHandler:
 
         amount = int(amount)
 
-        if 100 <= amount <= 999:
+        if 50 <= amount <= 999:
             # من 100 إلى 999: عرض بصيغة K
             return f"{amount} K"
         elif 1000 <= amount <= 20000:
@@ -62,14 +62,14 @@ class SellConversationHandler:
     def calculate_price(amount, transfer_type="normal"):
         """حساب السعر حسب الكمية ونوع التحويل"""
         base_price_per_1000 = 5  # 5 جنيه لكل 1000 كوين
-        
+
         # حساب السعر الأساسي
         base_price = (amount / 1000) * base_price_per_1000
-        
+
         # إضافة رسوم حسب نوع التحويل
         if transfer_type == "instant":
             base_price *= 1.2  # زيادة 20% للتحويل الفوري
-        
+
         return int(base_price)
 
     @staticmethod
@@ -77,22 +77,22 @@ class SellConversationHandler:
         """التحقق من صحة الكمية"""
         if amount < min_amount:
             return False, f"الكمية قليلة جداً! الحد الأدنى: {min_amount:,} كوين"
-        
+
         if amount > max_amount:
             return False, f"الكمية كبيرة جداً! الحد الأقصى: {max_amount:,} كوين"
-        
+
         return True, "كمية صحيحة"
 
     @staticmethod
     def get_platform_name(platform: str) -> str:
         """جلب اسم المنصة للعرض"""
         platforms = {
-            "playstation": "🎮 PlayStation", 
+            "playstation": "🎮 PlayStation",
             "xbox": "🎮 Xbox",
             "pc": "🖥️ PC"
         }
         return platforms.get(platform, platform)
-    
+
     @staticmethod
     def get_transfer_type_name(transfer_type: str) -> str:
         """جلب اسم نوع التحويل للعرض"""
