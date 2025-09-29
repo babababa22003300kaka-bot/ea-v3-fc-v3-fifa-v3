@@ -1,8 +1,11 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║                 🎯 FC26 STATES - حالات البوت المختلفة                    ║
-# ║                           Bot States Package                             ║
+# ║                🎯 FC26 SELL STATES - حالات بيع الكوينز                  ║
+# ║                       Sell Conversation States                          ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-from .sell_states import SellStates
-
-__all__ = ['SellStates']
+class SellStates:
+    """حالات محادثة بيع الكوينز"""
+    CHOOSE_PLATFORM = "choose_platform"
+    CHOOSE_TYPE = "choose_type"
+    ENTER_AMOUNT = "enter_amount"
+    CONFIRM_SALE = "confirm_sale"
