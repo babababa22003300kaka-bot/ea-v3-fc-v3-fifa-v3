@@ -38,18 +38,24 @@ class SellConversationHandler:
 
     @staticmethod
     def format_amount(amount: int) -> str:
-        """تنسيق عرض الكمية"""
+        """
+        تحويل الأرقام العادية لـ K/M format
+        مثال: 915 -> 915 K | 1500 -> 1٬500 M
+        """
         if not isinstance(amount, (int, float)):
             return "0"
 
         amount = int(amount)
 
         if 100 <= amount <= 999:
+            # من 100 إلى 999: عرض بصيغة K
             return f"{amount} K"
         elif 1000 <= amount <= 20000:
+            # من 1,000 إلى 20,000: عرض بصيغة M مع الفاصلة العربية
             formatted = f"{amount:,}".replace(",", "٬")
             return f"{formatted} M"
         else:
+            # للقيم خارج النطاق: عرض بالأرقام العادية
             return str(amount)
 
     @staticmethod

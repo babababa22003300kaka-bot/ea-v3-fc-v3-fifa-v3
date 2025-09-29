@@ -278,8 +278,8 @@ class SellCoinsHandler:
         if amount < MIN_SELL_AMOUNT:
             await update.message.reply_text(
                 f"❌ **الكمية قليلة جداً!**\n\n"
-                f"📍 **الحد الأدنى:** {MIN_SELL_AMOUNT:,} كوين\n"
-                f"أنت أدخلت: {amount:,} كوين\n\n"
+                f"📍 **الحد الأدنى:** {self.format_amount(MIN_SELL_AMOUNT)} كوين\n"
+                f"أنت أدخلت: {self.format_amount(amount)} كوين\n\n"
                 "يرجى إدخال كمية أكبر:",
                 parse_mode="Markdown"
             )
@@ -288,8 +288,8 @@ class SellCoinsHandler:
         if amount > MAX_SELL_AMOUNT:
             await update.message.reply_text(
                 f"❌ **الكمية كبيرة جداً!**\n\n"
-                f"📍 **الحد الأقصى:** {MAX_SELL_AMOUNT:,} كوين\n"
-                f"أنت أدخلت: {amount:,} كوين\n\n"
+                f"📍 **الحد الأقصى:** {self.format_amount(MAX_SELL_AMOUNT)} كوين\n"
+                f"أنت أدخلت: {self.format_amount(amount)} كوين\n\n"
                 "لبيع كميات أكبر، يرجى التواصل مع الدعم.",
                 parse_mode="Markdown"
             )
@@ -317,7 +317,7 @@ class SellCoinsHandler:
             "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
             f"📊 **تفاصيل الطلب:**\n"
             f"🎮 المنصة: {platform_name}\n"
-            f"💰 الكمية: {coins:,} كوين\n"
+            f"💰 الكمية: {self.format_amount(coins)} كوين\n"
             f"💵 السعر: {price} جنيه\n"
             f"⏰ نوع التحويل: {transfer_name}\n\n"
             "📞 **الخطوات التالية:**\n"
@@ -594,3 +594,25 @@ class SellCoinsHandler:
             base_price *= 1.2  # زيادة 20% للتحويل الفوري
         
         return int(base_price)
+    
+    @staticmethod
+    def format_amount(amount: int) -> str:
+        """
+        تحويل الأرقام العادية لـ K/M format
+        مثال: 915 -> 915 K | 1500 -> 1٬500 M
+        """
+        if not isinstance(amount, (int, float)):
+            return "0"
+
+        amount = int(amount)
+
+        if 100 <= amount <= 999:
+            # من 100 إلى 999: عرض بصيغة K
+            return f"{amount} K"
+        elif 1000 <= amount <= 20000:
+            # من 1,000 إلى 20,000: عرض بصيغة M مع الفاصلة العربية
+            formatted = f"{amount:,}".replace(",", "٬")
+            return f"{formatted} M"
+        else:
+            # للقيم خارج النطاق: عرض بالأرقام العادية
+            return str(amount)
