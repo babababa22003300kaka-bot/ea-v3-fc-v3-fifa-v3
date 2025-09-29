@@ -33,7 +33,6 @@ class SellCoinsHandler:
             CommandHandler("sell", self.handle_sell_command),
             CallbackQueryHandler(self.handle_platform_selection, pattern="^sell_platform_"),
             CallbackQueryHandler(self.handle_transfer_type_selection, pattern="^sell_transfer_"),
-            CallbackQueryHandler(self.handle_package_selection, pattern="^sell_package_"),
             CallbackQueryHandler(self.handle_custom_amount, pattern="^sell_custom_"),
             CallbackQueryHandler(self.handle_price_confirmation, pattern="^sell_confirm_"),
             CallbackQueryHandler(self.handle_sale_instructions, pattern="^sell_ready_"),
@@ -180,49 +179,7 @@ class SellCoinsHandler:
                 parse_mode="Markdown"
             )
     
-    async def handle_package_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة اختيار الباقة"""
-        query = update.callback_query
-        user_id = query.from_user.id
-        
-        await query.answer()
-        
-        # استخراج البيانات من callback_data
-        # تنسيق: sell_package_{platform}_{coins}
-        parts = query.data.split("_")
-        if len(parts) >= 4:
-            platform = parts[2]
-            coins = int(parts[3])
-            
-            # حساب السعر
-            price = CoinSellPricing.get_price(platform, coins)
-            if not price:
-                await query.edit_message_text(
-                    SellMessages.get_error_message('system_error'),
-                    reply_markup=SellKeyboards.get_error_keyboard(),
-                    parse_mode="HTML"
-                )
-                return
-            
-            # حفظ البيانات في الجلسة
-            self.user_sessions[user_id].update({
-                'step': 'price_confirmation',
-                'coins': coins,
-                'price': price
-            })
-            
-            log_user_action(user_id, f"Selected package: {coins} coins for {price} EGP")
-            
-            # عرض تأكيد السعر
-            confirmation_message = SellMessages.get_price_confirmation_message(platform, coins, price)
-            keyboard = SellKeyboards.get_price_confirmation_keyboard(platform, coins, price)
-            
-            await query.edit_message_text(
-                confirmation_message,
-                reply_markup=keyboard,
-                parse_mode="HTML"
-            )
-    
+
     async def handle_custom_amount(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة طلب كمية مخصصة"""
         query = update.callback_query
@@ -508,17 +465,7 @@ class SellCoinsHandler:
                 parse_mode="HTML"
             )
         
-        elif action.startswith("packages_"):
-            # العودة لباقات المنصة
-            platform = action.replace("packages_", "")
-            packages_message = SellMessages.get_packages_message(platform)
-            keyboard = SellKeyboards.get_platform_packages_keyboard(platform)
-            
-            await query.edit_message_text(
-                packages_message,
-                reply_markup=keyboard,
-                parse_mode="HTML"
-            )
+
     
     async def handle_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة طلب المساعدة"""

@@ -22,60 +22,13 @@ class SellKeyboards:
         ]
         return InlineKeyboardMarkup(keyboard)
     
-    @staticmethod
-    def get_platform_packages_keyboard(platform: str) -> InlineKeyboardMarkup:
-        """لوحة مفاتيح باقات المنصة"""
-        packages = CoinSellPricing.get_available_packages(platform)
-        keyboard = []
-        
-        # إضافة الباقات المحددة المسبقاً (صفين في كل سطر)
-        for i in range(0, len(packages), 2):
-            row = []
-            
-            # الباقة الأولى في السطر
-            package1 = packages[i]
-            coins1 = package1['coins']
-            coins_display1 = package1['coins_display']
-            price_display1 = package1['price_display']
-            
-            row.append(InlineKeyboardButton(
-                f"💎 {coins_display1} - {price_display1}",
-                callback_data=f"sell_package_{platform}_{coins1}"
-            ))
-            
-            # الباقة الثانية في السطر (إن وجدت)
-            if i + 1 < len(packages):
-                package2 = packages[i + 1]
-                coins2 = package2['coins']
-                coins_display2 = package2['coins_display']
-                price_display2 = package2['price_display']
-                
-                row.append(InlineKeyboardButton(
-                    f"💎 {coins_display2} - {price_display2}",
-                    callback_data=f"sell_package_{platform}_{coins2}"
-                ))
-            
-            keyboard.append(row)
-        
-        # زر الكمية المخصصة
-        keyboard.append([
-            InlineKeyboardButton("🎯 كمية مخصصة", callback_data=f"sell_custom_{platform}")
-        ])
-        
-        # أزرار التنقل
-        keyboard.append([
-            InlineKeyboardButton("🔙 اختر منصة أخرى", callback_data="sell_back_platforms"),
-            InlineKeyboardButton("❓ مساعدة", callback_data="sell_help")
-        ])
-        
-        return InlineKeyboardMarkup(keyboard)
-    
+
     @staticmethod
     def get_price_confirmation_keyboard(platform: str, coins: int, price: int) -> InlineKeyboardMarkup:
         """لوحة تأكيد السعر"""
         keyboard = [
             [InlineKeyboardButton("✅ تأكيد البيع", callback_data=f"sell_confirm_{platform}_{coins}_{price}")],
-            [InlineKeyboardButton("📝 تعديل الكمية", callback_data=f"sell_back_packages_{platform}"),
+            [InlineKeyboardButton("📝 إدخال كمية أخرى", callback_data=f"sell_platform_{platform}"),
              InlineKeyboardButton("🎮 تغيير المنصة", callback_data="sell_back_platforms")],
             [InlineKeyboardButton("🚫 إلغاء البيع", callback_data="sell_cancel")]
         ]
@@ -130,7 +83,7 @@ class SellKeyboards:
     def get_custom_amount_cancel_keyboard(platform: str) -> InlineKeyboardMarkup:
         """لوحة إلغاء الكمية المخصصة"""
         keyboard = [
-            [InlineKeyboardButton("🔙 العودة للباقات", callback_data=f"sell_back_packages_{platform}")],
+            [InlineKeyboardButton("🔙 العودة لاختيار المنصة", callback_data="sell_back_platforms")],
             [InlineKeyboardButton("🎮 تغيير المنصة", callback_data="sell_back_platforms")],
             [InlineKeyboardButton("🚫 إلغاء البيع", callback_data="sell_cancel")]
         ]
