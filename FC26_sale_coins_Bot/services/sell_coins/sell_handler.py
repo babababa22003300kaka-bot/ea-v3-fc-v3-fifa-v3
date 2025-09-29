@@ -98,25 +98,19 @@ class SellCoinsHandler:
 
         log_user_action(user_id, f"Selected platform: {platform}")
 
-        # عرض أسعار المنصة مع اختيار نوع التحويل
-        pricing_message = CoinSellPricing.get_platform_pricing_message(platform)
+        # عرض رسالة الأسعار البسيطة
+        transfer_message = CoinSellPricing.get_platform_pricing_message(platform)
         
-        transfer_message = f"""✅ **تم اختيار المنصة**
-
-{pricing_message}
-
-🎯 **اختر نوع التحويل:**"""
-
-        # جلب أسعار عينة للعرض في الأزرار
-        sample_price_normal = CoinSellPricing.get_price(platform, 100000, "normal")
-        sample_price_instant = CoinSellPricing.get_price(platform, 100000, "instant")
+        # جلب أسعار 1M للأزرار
+        normal_price = CoinSellPricing.get_price(platform, 1000000, "normal")
+        instant_price = CoinSellPricing.get_price(platform, 1000000, "instant")
         
-        normal_formatted = CoinSellPricing.format_price(sample_price_normal)["egp"] if sample_price_normal else "غير متاح"
-        instant_formatted = CoinSellPricing.format_price(sample_price_instant)["egp"] if sample_price_instant else "غير متاح"
+        normal_formatted = f"{normal_price:,} ج.م" if normal_price else "غير متاح"
+        instant_formatted = f"{instant_price:,} ج.م" if instant_price else "غير متاح"
         
         keyboard = [
-            [InlineKeyboardButton(f"⚡ تحويل فوري - {instant_formatted}", callback_data=f"sell_transfer_instant_{platform}")],
             [InlineKeyboardButton(f"📅 تحويل عادي - {normal_formatted}", callback_data=f"sell_transfer_normal_{platform}")],
+            [InlineKeyboardButton(f"⚡️ تحويل فوري - {instant_formatted}", callback_data=f"sell_transfer_instant_{platform}")],
             [InlineKeyboardButton("🔙 اختر منصة أخرى", callback_data="sell_back_platforms"),
              InlineKeyboardButton("🚫 إلغاء", callback_data="sell_cancel")]
         ]
