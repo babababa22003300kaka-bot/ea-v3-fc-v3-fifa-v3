@@ -3,7 +3,7 @@
 # ║                    Sell Conversation Logic Handler                      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-from states.sell_states import SellStates
+# from states.sell_states import SellStates  # مش محتاجها دلوقتي
 
 
 class SellConversationHandler:
@@ -60,17 +60,16 @@ class SellConversationHandler:
 
     @staticmethod
     def calculate_price(amount, transfer_type="normal"):
-        """حساب السعر حسب الكمية ونوع التحويل"""
-        base_price_per_1000 = 5  # 5 جنيه لكل 1000 كوين
-
-        # حساب السعر الأساسي
-        base_price = (amount / 1000) * base_price_per_1000
-
-        # إضافة رسوم حسب نوع التحويل
+        """حساب السعر - الفوري أرخص من العادي"""
         if transfer_type == "instant":
-            base_price *= 1.2  # زيادة 20% للتحويل الفوري
-
-        return int(base_price)
+            # الفوري أرخص (5.3 جنيه لكل 1000 كوين)
+            base_price_per_1000 = 5.3
+        else:
+            # العادي أغلى (5.6 جنيه لكل 1000 كوين)
+            base_price_per_1000 = 5.6
+        
+        total_price = (amount / 1000) * base_price_per_1000
+        return int(total_price)
 
     @staticmethod
     def validate_amount(amount, min_amount=50, max_amount=20000):
