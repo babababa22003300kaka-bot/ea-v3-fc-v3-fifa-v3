@@ -44,12 +44,18 @@ from keyboards.payment_keyboard import PaymentKeyboard
 # Import profile delete handler
 from handlers.profile_delete_handler import ProfileDeleteHandler
 
+# Import coin selling service
+from services.sell_coins import SellCoinsHandler
+
 class FC26Bot:
     """Main FC26 Gaming Bot class"""
     
     def __init__(self):
         self.app = None
         self.logger = fc26_logger.get_logger()
+        
+        # Initialize services
+        self.sell_coins_handler = SellCoinsHandler()
         
 
     
@@ -454,7 +460,11 @@ class FC26Bot:
         for handler in ProfileDeleteHandler.get_handlers():
             self.app.add_handler(handler)
         
-        # Message handlers
+        # Coin selling service handlers
+        for handler in self.sell_coins_handler.get_handlers():
+            self.app.add_handler(handler)
+        
+        # Message handlers (this should be last to avoid conflicts)
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         
         self.logger.info("✅ All handlers configured successfully")
