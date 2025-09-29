@@ -131,6 +131,53 @@ class FC26Bot:
             parse_mode="HTML"
         )
     
+    async def handle_delete(self, update, context):
+        """Handle /delete command - direct profile deletion"""
+        user_id = update.effective_user.id
+        log_user_action(user_id, "Requested profile deletion via /delete command")
+        
+        user_data = UserOperations.get_user_data(user_id)
+        if not user_data:
+            await update.message.reply_text(
+                "❌ <b>لا يوجد ملف شخصي للحذف!</b>\n\n🚀 اكتب /start لبدء التسجيل",
+                parse_mode="HTML"
+            )
+            return
+        
+        # Show deletion confirmation directly
+        username = update.effective_user.username or "غير محدد"
+        
+        confirmation_text = f"""⚠️ <b>تحذير هام!</b>
+
+🗑️ <b>أنت على وشك مسح ملفك الشخصي نهائياً</b>
+
+<b>📋 سيتم مسح البيانات التالية:</b>
+• 🎮 المنصة: {user_data.get('platform', 'غير محدد')}
+• 📱 رقم الواتساب: {user_data.get('whatsapp', 'غير محدد')}  
+• 💳 طريقة الدفع: {user_data.get('payment_method', 'غير محدد')}
+• 📊 سجل التسجيل والإحصائيات
+• 🗂️ جميع البيانات المرتبطة بحسابك
+
+<b>⚠️ هذا الإجراء لا يمكن التراجع عنه!</b>
+
+<b>🔄 بعد المسح:</b>
+• ستحتاج للتسجيل من البداية
+• ستفقد جميع بياناتك المحفوظة
+• لن نتمكن من استرداد أي معلومات
+
+<b>👤 المستخدم:</b> @{username}
+<b>🆔 معرف التليجرام:</b> {user_id}
+
+<b>❓ هل أنت متأكد من رغبتك في المتابعة؟</b>"""
+        
+        keyboard = ProfileDeleteHandler.create_delete_confirmation_keyboard()
+        
+        await update.message.reply_text(
+            confirmation_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    
     # ═══════════════════════════════════════════════════════════════════════════
     # CALLBACK HANDLERS
     # ═══════════════════════════════════════════════════════════════════════════
@@ -397,6 +444,7 @@ class FC26Bot:
         self.app.add_handler(CommandHandler("start", self.handle_start))
         self.app.add_handler(CommandHandler("help", self.handle_help))
         self.app.add_handler(CommandHandler("profile", self.handle_profile))
+        self.app.add_handler(CommandHandler("delete", self.handle_delete))
         
         # Callback query handlers
         self.app.add_handler(CallbackQueryHandler(self.handle_platform_choice, pattern="^platform_"))
