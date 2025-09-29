@@ -32,6 +32,7 @@ class SellCoinsHandler:
         return [
             CommandHandler("sell", self.handle_sell_command),
             CallbackQueryHandler(self.handle_platform_selection, pattern="^sell_platform_"),
+            CallbackQueryHandler(self.handle_transfer_type_selection, pattern="^sell_transfer_"),
             CallbackQueryHandler(self.handle_package_selection, pattern="^sell_package_"),
             CallbackQueryHandler(self.handle_custom_amount, pattern="^sell_custom_"),
             CallbackQueryHandler(self.handle_price_confirmation, pattern="^sell_confirm_"),
@@ -92,21 +93,92 @@ class SellCoinsHandler:
             self.user_sessions[user_id] = {}
         
         self.user_sessions[user_id].update({
-            'step': 'package_selection',
+            'step': 'transfer_type_selection',
             'platform': platform
         })
         
         log_user_action(user_id, f"Selected platform: {platform}")
         
-        # عرض باقات المنصة
-        packages_message = SellMessages.get_packages_message(platform)
-        keyboard = SellKeyboards.get_platform_packages_keyboard(platform)
+        # عرض اختيار نوع التحويل
+        platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
+        
+        transfer_message = f"""✅ **تم اختيار {platform_name}**
+
+💰 **اختر نوع التحويل:**
+
+⚡ **تحويل فوري:** خلال ساعة واحدة (سعر أعلى بـ 20%)
+📅 **تحويل عادي:** خلال 24 ساعة (السعر العادي)
+
+💡 **الأسعار تختلف حسب الكمية ونوع التحويل**"""
+
+        keyboard = [
+            [InlineKeyboardButton("⚡ تحويل فوري", callback_data=f"sell_transfer_instant_{platform}")],
+            [InlineKeyboardButton("📅 تحويل عادي", callback_data=f"sell_transfer_normal_{platform}")],
+            [InlineKeyboardButton("🔙 اختر منصة أخرى", callback_data="sell_back_platforms"),
+             InlineKeyboardButton("🚫 إلغاء", callback_data="sell_cancel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            packages_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            transfer_message,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
         )
+    
+    async def handle_transfer_type_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة اختيار نوع التحويل"""
+        query = update.callback_query
+        user_id = query.from_user.id
+        
+        await query.answer()
+        
+        # استخراج نوع التحويل والمنصة من callback_data
+        # تنسيق: sell_transfer_{transfer_type}_{platform}
+        parts = query.data.split("_")
+        if len(parts) >= 4:
+            transfer_type = parts[2]  # instant أو normal
+            platform = parts[3]
+            
+            # حفظ نوع التحويل في الجلسة
+            self.user_sessions[user_id].update({
+                'step': 'amount_input',
+                'transfer_type': transfer_type,
+                'platform': platform
+            })
+            
+            log_user_action(user_id, f"Selected transfer type: {transfer_type} for {platform}")
+            
+            # إعداد أسماء العرض
+            platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
+            transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
+            
+            # رسالة طلب إدخال الكمية
+            amount_message = f"""✅ **تم اختيار {platform_name} - {transfer_name}**
+
+💰 **أدخل كمية الكوينز للبيع:**
+
+📝 **قواعد الإدخال:**
+• أرقام فقط (بدون حروف أو رموز)
+• الحد الأدنى: 2 أرقام (مثال: 50)
+• الحد الأقصى: 5 أرقام (مثال: 20000)
+• ممنوع استخدام k أو m
+
+💡 **أمثلة صحيحة:** 500، 1500، 20000
+
+اكتب الكمية بالأرقام العادية:"""
+
+            keyboard = [
+                [InlineKeyboardButton("🔙 تغيير نوع التحويل", callback_data=f"sell_platform_{platform}")],
+                [InlineKeyboardButton("🎮 تغيير المنصة", callback_data="sell_back_platforms")],
+                [InlineKeyboardButton("🚫 إلغاء البيع", callback_data="sell_cancel")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                amount_message,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
     
     async def handle_package_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة اختيار الباقة"""
@@ -190,58 +262,120 @@ class SellCoinsHandler:
         session = self.user_sessions[user_id]
         
         # التحقق من الخطوة الحالية
-        if session.get('step') != 'custom_amount_input':
+        if session.get('step') not in ['custom_amount_input', 'amount_input']:
             return
         
         text = update.message.text.strip()
         platform = session.get('platform')
+        transfer_type = session.get('transfer_type', 'normal')
         
-        # التحقق من صحة الإدخال
-        try:
-            coins = int(text)
-        except ValueError:
+        # تحليل الكمية المدخلة
+        amount = self.parse_amount(text)
+
+        # التحقق من الصيغة الخاطئة (k أو m)
+        if amount == "invalid_format":
             await update.message.reply_text(
-                SellMessages.get_error_message('invalid_amount'),
-                parse_mode="HTML"
+                "❌ **صيغة غير صحيحة!**\n\n"
+                "🚫 **ممنوع استخدام k أو m**\n\n"
+                "✅ **المطلوب:** أرقام فقط (2-5 أرقام)\n"
+                "📝 **مثال صحيح:** 500 أو 1500 أو 20000\n\n"
+                "يرجى إدخال الكمية بالأرقام العادية فقط:",
+                parse_mode="Markdown"
             )
             return
-        
-        # التحقق من صحة الكمية
-        is_valid, validation_message = CoinSellPricing.validate_coin_amount(coins)
-        if not is_valid:
+
+        # التحقق من طول الرقم
+        if amount == "invalid_length":
             await update.message.reply_text(
-                validation_message,
-                parse_mode="HTML"
+                "❌ **عدد الأرقام غير صحيح!**\n\n"
+                "📍 **المطلوب:**\n"
+                "• الحد الأدنى: 2 أرقام (مثال: 50)\n"
+                "• الحد الأقصى: 5 أرقام (مثال: 20000)\n\n"
+                f"أنت أدخلت: {len(text)} أرقام\n\n"
+                "📝 **أمثلة صحيحة:** 500، 1500، 20000\n\n"
+                "يرجى إدخال رقم بين 2-5 أرقام:",
+                parse_mode="Markdown"
             )
             return
-        
-        # حساب السعر للكمية المخصصة
-        price = CoinSellPricing.calculate_custom_price(platform, coins)
-        if not price:
+
+        # التحقق من صحة الصيغة العامة
+        if amount is None:
             await update.message.reply_text(
-                SellMessages.get_error_message('system_error'),
-                parse_mode="HTML"
+                "❌ **صيغة غير صحيحة!**\n\n"
+                "✅ **المطلوب:** أرقام فقط (2-5 أرقام)\n"
+                "🚫 **ممنوع:** حروف، رموز، k، m\n\n"
+                "📝 **أمثلة صحيحة:**\n"
+                "• 500 \n"
+                "• 1500 \n"
+                "• 20000\n\n"
+                "يرجى المحاولة مرة أخرى:",
+                parse_mode="Markdown"
             )
             return
+
+        # تعريف الحدود الفعلية
+        MIN_SELL_AMOUNT = 50  # 50 كوين
+        MAX_SELL_AMOUNT = 20000  # 20000 كوين
+
+        # التحقق من الحدود
+        if amount < MIN_SELL_AMOUNT:
+            await update.message.reply_text(
+                f"❌ **الكمية قليلة جداً!**\n\n"
+                f"📍 **الحد الأدنى:** {MIN_SELL_AMOUNT:,} كوين\n"
+                f"أنت أدخلت: {amount:,} كوين\n\n"
+                "يرجى إدخال كمية أكبر:",
+                parse_mode="Markdown"
+            )
+            return
+
+        if amount > MAX_SELL_AMOUNT:
+            await update.message.reply_text(
+                f"❌ **الكمية كبيرة جداً!**\n\n"
+                f"📍 **الحد الأقصى:** {MAX_SELL_AMOUNT:,} كوين\n"
+                f"أنت أدخلت: {amount:,} كوين\n\n"
+                "لبيع كميات أكبر، يرجى التواصل مع الدعم.",
+                parse_mode="Markdown"
+            )
+            return
+
+        coins = amount
+        # حساب السعر للكمية المدخلة
+        price = self.calculate_price(coins, transfer_type)
         
         # تحديث الجلسة
         session.update({
-            'step': 'price_confirmation',
+            'step': 'sale_completed',
             'coins': coins,
             'price': price
         })
         
-        log_user_action(user_id, f"Entered custom amount: {coins} coins for {price} EGP")
+        log_user_action(user_id, f"Entered amount: {coins} coins, {transfer_type} transfer, price: {price} EGP")
         
-        # عرض تأكيد السعر
-        confirmation_message = SellMessages.get_price_confirmation_message(platform, coins, price)
-        keyboard = SellKeyboards.get_price_confirmation_keyboard(platform, coins, price)
+        # إعداد أسماء العرض  
+        platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
+        transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
         
+        # رسالة التأكيد النهائية
         await update.message.reply_text(
-            confirmation_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
+            f"📊 **تفاصيل الطلب:**\n"
+            f"🎮 المنصة: {platform_name}\n"
+            f"💰 الكمية: {coins:,} كوين\n"
+            f"💵 السعر: {price} جنيه\n"
+            f"⏰ نوع التحويل: {transfer_name}\n\n"
+            "📞 **الخطوات التالية:**\n"
+            "1️⃣ سيتم التواصل معك خلال دقائق\n"
+            "2️⃣ تسليم الكوينز للممثل\n"
+            "3️⃣ استلام المبلغ حسب نوع التحويل\n\n"
+            "✅ **تم حفظ طلبك في النظام**\n"
+            f"🆔 **رقم الطلب:** #{user_id}{coins}\n\n"
+            "💬 **للاستفسار:** /sell\n"
+            "🏠 **القائمة الرئيسية:** /start",
+            parse_mode="Markdown"
         )
+        
+        # مسح بيانات المحادثة
+        self.clear_user_session(user_id)
     
     async def handle_price_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة تأكيد السعر"""
@@ -472,3 +606,44 @@ class SellCoinsHandler:
         """مسح جلسة المستخدم"""
         if user_id in self.user_sessions:
             del self.user_sessions[user_id]
+    
+    @staticmethod
+    def parse_amount(text: str):
+        """تحليل كمية الكوينز - أرقام فقط (2-5 أرقام)"""
+        if not text or not isinstance(text, str):
+            return None
+
+        text = text.strip()
+
+        # التحقق من وجود k أو m - ممنوع
+        if "k" in text.lower() or "m" in text.lower():
+            return "invalid_format"
+
+        try:
+            if not text.isdigit():
+                return None
+
+            number = int(text)
+
+            # التحقق من عدد الأرقام (2-5 أرقام)
+            if len(text) < 2 or len(text) > 5:
+                return "invalid_length"
+
+            return number
+
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def calculate_price(amount, transfer_type="normal"):
+        """حساب السعر حسب الكمية ونوع التحويل"""
+        base_price_per_1000 = 5  # 5 جنيه لكل 1000 كوين
+        
+        # حساب السعر الأساسي
+        base_price = (amount / 1000) * base_price_per_1000
+        
+        # إضافة رسوم حسب نوع التحويل
+        if transfer_type == "instant":
+            base_price *= 1.2  # زيادة 20% للتحويل الفوري
+        
+        return int(base_price)
