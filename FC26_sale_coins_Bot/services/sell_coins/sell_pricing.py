@@ -45,23 +45,7 @@ class CoinSellPricing:
         }
     }
     
-    @classmethod
-    def get_available_packages(cls, platform: str) -> List[Dict]:
-        """جلب الباقات المتاحة لمنصة معينة"""
-        if platform not in cls.CURRENT_PRICES:
-            return []
-        
-        packages = []
-        for coins, price in cls.CURRENT_PRICES[platform].items():
-            packages.append({
-                'coins': coins,
-                'price': price,
-                'coins_display': cls._format_coins(coins),
-                'price_display': f"{price} ج.م"
-            })
-        
-        return sorted(packages, key=lambda x: x['coins'])
-    
+
     @classmethod
     def get_price(cls, platform: str, coins: int) -> Optional[int]:
         """جلب السعر لكمية كوينز معينة"""
@@ -82,7 +66,7 @@ class CoinSellPricing:
         if coins in platform_prices:
             return platform_prices[coins]
         
-        # حساب السعر بناءً على أقرب باقة
+        # حساب السعر بناءً على أقرب كمية
         price_per_100k = cls._get_price_per_100k(platform)
         if price_per_100k:
             return int((coins / 100000) * price_per_100k)
@@ -159,7 +143,7 @@ class CoinSellPricing:
     
     @classmethod 
     def update_price(cls, platform: str, coins: int, new_price: int) -> bool:
-        """تحديث سعر باقة معينة (للإدارة)"""
+        """تحديث سعر كمية معينة (للإدارة)"""
         if platform not in cls.CURRENT_PRICES:
             return False
         
@@ -174,7 +158,7 @@ class CoinSellPricing:
             comparison[platform] = {
                 "platform_name": cls.get_platform_display_name(platform),
                 "base_price": cls.CURRENT_PRICES[platform].get(100000, 0),
-                "packages": len(cls.CURRENT_PRICES[platform])
+                "price_tiers": len(cls.CURRENT_PRICES[platform])
             }
         
         return comparison

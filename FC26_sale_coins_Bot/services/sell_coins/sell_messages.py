@@ -44,42 +44,7 @@ class SellMessages:
 
 اختر المنصة اللي عندك عليها الكوينز:"""
 
-    @staticmethod
-    def get_packages_message(platform: str) -> str:
-        """رسالة عرض الباقات المتاحة"""
-        platform_name = CoinSellPricing.get_platform_display_name(platform)
-        packages = CoinSellPricing.get_available_packages(platform)
-        
-        message = f"""💰 <b>باقات الكوينز المتاحة - {platform_name}</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 <b>الباقات المحددة المسبقاً:</b>
-
-"""
-        
-        for package in packages:
-            coins_display = package['coins_display']
-            price_display = package['price_display']
-            
-            # إضافة معلومات الخصم إن وجد
-            discount_info = CoinSellPricing.get_discount_info(package['coins'])
-            discount_text = f" {discount_info}" if discount_info else ""
-            
-            message += f"💎 <b>{coins_display} كوين</b> ← <b>{price_display}</b>{discount_text}\n"
-        
-        message += """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 <b>كمية مخصصة؟</b>
-إذا كان عندك كمية مختلفة، اختر "كمية مخصصة"
-
-⚠️ <b>شروط البيع:</b>
-• الحد الأدنى: 50,000 كوين
-• الحد الأقصى: 10,000,000 كوين
-• يجب أن تكون من مضاعفات 10,000
-
-اختر الباقة أو الكمية المطلوبة 👇"""
-        
-        return message
 
     @staticmethod
     def get_custom_amount_message(platform: str) -> str:
