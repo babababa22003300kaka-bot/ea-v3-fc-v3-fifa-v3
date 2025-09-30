@@ -6,6 +6,13 @@
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
+# استيراد قاعدة بيانات الادمن للربط مع الأسعار
+try:
+    from database.admin_operations import AdminOperations
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
+
 class Platform(Enum):
     """منصات اللعب المدعومة"""
     PLAYSTATION = "playstation"
@@ -51,7 +58,18 @@ class CoinSellPricing:
 
     @classmethod
     def get_price(cls, platform: str, coins: int, transfer_type: str = "normal") -> Optional[int]:
-        """جلب السعر لكمية كوينز معينة حسب نوع التحويل"""
+        """جلب السعر من قاعدة البيانات أولاً، ثم الكود كاحتياطي"""
+        
+        # محاولة جلب السعر من قاعدة البيانات الذكية أولاً
+        if DATABASE_AVAILABLE:
+            try:
+                db_price = AdminOperations.get_price(platform, transfer_type, coins)
+                if db_price is not None:
+                    return db_price
+            except Exception:
+                pass  # في حالة الخطأ، استخدم الأسعار الافتراضية
+        
+        # في حالة عدم وجود السعر في قاعدة البيانات، استخدم القيم الافتراضية
         price_table = cls.INSTANT_PRICES if transfer_type == "instant" else cls.NORMAL_PRICES
         
         if platform not in price_table:
