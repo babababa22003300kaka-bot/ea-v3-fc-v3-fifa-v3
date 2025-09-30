@@ -478,7 +478,6 @@ class FC26Bot:
         self.app.add_handler(sell_conv_handler, group=2)
         
         # Register /sell command
-        from telegram.ext import CommandHandler
         self.app.add_handler(CommandHandler("sell", sell_command), group=2)
         
         print("✅ [SYSTEM] Sell ConversationHandler registered successfully (group=2)")
