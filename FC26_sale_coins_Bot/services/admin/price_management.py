@@ -55,9 +55,9 @@ class PriceManagement:
         return AdminOperations.get_price(platform, transfer_type, cls.DEFAULT_AMOUNT)
     
     @classmethod
-    def update_price(cls, platform: str, transfer_type: str, new_price: int, admin_id: int) -> bool:
-        """تحديث السعر"""
-        return AdminOperations.update_price(
+    async def update_price(cls, platform: str, transfer_type: str, new_price: int, admin_id: int) -> bool:
+        """تحديث السعر - Thread-safe async version"""
+        return await AdminOperations.update_price(
             platform, transfer_type, cls.DEFAULT_AMOUNT, new_price, admin_id
         )
     

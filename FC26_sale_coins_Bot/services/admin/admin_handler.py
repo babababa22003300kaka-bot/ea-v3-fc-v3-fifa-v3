@@ -466,8 +466,8 @@ class AdminHandler:
         
         print(f"🔄 [ADMIN] Updating price: {platform} {transfer_type} from {old_price} to {new_price}")
         
-        # تحديث السعر في قاعدة البيانات
-        success = PriceManagement.update_price(platform, transfer_type, new_price, user_id)
+        # تحديث السعر في قاعدة البيانات - THREAD-SAFE ASYNC VERSION
+        success = await PriceManagement.update_price(platform, transfer_type, new_price, user_id)
         
         if not success:
             print(f"❌ [ADMIN] Failed to update price in database")
