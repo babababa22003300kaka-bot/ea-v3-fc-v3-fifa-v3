@@ -45,7 +45,7 @@ from keyboards.payment_keyboard import PaymentKeyboard
 from handlers.profile_delete_handler import ProfileDeleteHandler
 
 # Import coin selling service
-from services.sell_coins import SellCoinsHandler
+from services.sell_coins import SellCoinsHandler, get_sell_conversation_handler, sell_command
 
 class FC26Bot:
     """Main FC26 Gaming Bot class"""
@@ -473,8 +473,15 @@ class FC26Bot:
             self.app.add_handler(handler)
         
         # Coin selling service handlers
-        for handler in self.sell_coins_handler.get_handlers():
-            self.app.add_handler(handler)
+        # 💰 Register ConversationHandler for proper sell flow (group=2 to avoid admin conflict)
+        sell_conv_handler = get_sell_conversation_handler()
+        self.app.add_handler(sell_conv_handler, group=2)
+        
+        # Register /sell command
+        from telegram.ext import CommandHandler
+        self.app.add_handler(CommandHandler("sell", sell_command), group=2)
+        
+        print("✅ [SYSTEM] Sell ConversationHandler registered successfully (group=2)")
         
         # Admin system handlers (MUST be before main message handler)
         if self.admin_handler:
