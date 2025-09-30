@@ -217,7 +217,7 @@ def _create_sale_summary(user_id, amount, transfer_type, platform, price):
         f"📊 **تفاصيل الطلب:**\n"
         f"🎮 المنصة: {platform_name}\n"
         f"💰 الكمية: {formatted_amount} كوين\n"
-        f"💵 السعر الإجمالي: {price} جنيه\n"
+        f"💵 السعر: {price} جنيه\n"
         f"⭐ (سعر المليون: {million_price_formatted} جنيه)\n"
         f"⏰ نوع التحويل: {type_name}\n\n"
         "📞 **الخطوات التالية:**\n"
