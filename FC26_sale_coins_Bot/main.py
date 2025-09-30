@@ -46,6 +46,7 @@ from handlers.profile_delete_handler import ProfileDeleteHandler
 
 # Import coin selling service
 from services.sell_coins import SellCoinsHandler, get_sell_conversation_handler, sell_command
+from services.sell_coins.sell_conversation_functions import sell_coins_start
 
 class FC26Bot:
     """Main FC26 Gaming Bot class"""
@@ -479,6 +480,9 @@ class FC26Bot:
         
         # Register /sell command
         self.app.add_handler(CommandHandler("sell", sell_command), group=2)
+        
+        # ✨ Register sell button callback (Entry Point for sell conversation)
+        self.app.add_handler(CallbackQueryHandler(sell_coins_start, pattern="^sell_fc26$"), group=2)
         
         print("✅ [SYSTEM] Sell ConversationHandler registered successfully (group=2)")
         
