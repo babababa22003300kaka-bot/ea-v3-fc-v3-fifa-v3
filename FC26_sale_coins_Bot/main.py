@@ -475,10 +475,18 @@ class FC26Bot:
         
         # Admin system handlers (MUST be before main message handler)
         if self.admin_handler:
-            for handler in self.admin_handler.get_handlers():
+            admin_handlers = self.admin_handler.get_handlers()
+            print(f"\n🔧 [SYSTEM] Registering {len(admin_handlers)} admin handlers...")
+            
+            for i, handler in enumerate(admin_handlers, 1):
                 self.app.add_handler(handler)
+                handler_type = type(handler).__name__
+                print(f"   {i:2d}. {handler_type} registered")
+            
             self.logger.info("✅ Admin system handlers configured")
-            print("🔧 [SYSTEM] Admin handlers registered before main message handler")
+            print("✅ [SYSTEM] All admin handlers registered successfully")
+        else:
+            print("❌ [SYSTEM] Admin handler not available!")
         
         # Message handlers (this should be last to avoid conflicts)
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
