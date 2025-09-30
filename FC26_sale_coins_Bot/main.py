@@ -473,14 +473,16 @@ class FC26Bot:
         for handler in self.sell_coins_handler.get_handlers():
             self.app.add_handler(handler)
         
-        # Admin system handlers
+        # Admin system handlers (MUST be before main message handler)
         if self.admin_handler:
             for handler in self.admin_handler.get_handlers():
                 self.app.add_handler(handler)
             self.logger.info("✅ Admin system handlers configured")
+            print("🔧 [SYSTEM] Admin handlers registered before main message handler")
         
         # Message handlers (this should be last to avoid conflicts)
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        print("🔧 [SYSTEM] Main message handler registered last")
         
         self.logger.info("✅ All handlers configured successfully")
         
