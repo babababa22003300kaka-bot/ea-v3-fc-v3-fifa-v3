@@ -65,14 +65,20 @@ class AdminHandler:
     async def handle_admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج أمر /admin"""
         user_id = update.effective_user.id
+        username = update.effective_user.username or "Unknown"
+        
+        print(f"\n🔑 [ADMIN] Admin command received from user {user_id} (@{username})")
         
         if not self.is_admin(user_id):
+            print(f"❌ [ADMIN] Unauthorized access attempt by user {user_id}")
             await update.message.reply_text(
                 AdminMessages.get_unauthorized_message(),
                 reply_markup=AdminKeyboards.get_unauthorized_keyboard(),
                 parse_mode="HTML"
             )
             return
+        
+        print(f"✅ [ADMIN] Admin {user_id} successfully logged in")
         
         # تسجيل دخول الادمن
         AdminOperations.log_admin_action(user_id, "ADMIN_LOGIN", f"Accessed via /admin command")
@@ -86,6 +92,8 @@ class AdminHandler:
             reply_markup=keyboard,
             parse_mode="HTML"
         )
+        
+        print(f"📊 [ADMIN] Admin dashboard sent to user {user_id}")
     
     async def handle_prices_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج أمر /prices - عرض الأسعار مباشرة"""
@@ -156,13 +164,18 @@ class AdminHandler:
         """معالج عرض الأسعار الحالية"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
         
         await query.answer()
         
+        print(f"\n📊 [ADMIN] View prices requested by {user_id} (@{username})")
+        
         if not self.is_admin(user_id):
+            print(f"❌ [ADMIN] Unauthorized view prices request from user {user_id}")
             return
         
         await self._show_current_prices_callback(query, user_id)
+        print(f"✅ [ADMIN] Prices displayed to admin {user_id}")
     
     async def handle_platform_edit(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج اختيار منصة للتعديل"""
@@ -192,10 +205,14 @@ class AdminHandler:
         """معالج اختيار نوع التحويل للتعديل"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
         
         await query.answer()
         
+        print(f"\n⚡ [ADMIN] Transfer type edit requested by {user_id} (@{username})")
+        
         if not self.is_admin(user_id):
+            print(f"❌ [ADMIN] Unauthorized callback from user {user_id}")
             return
         
         # استخراج البيانات من callback_data
@@ -204,15 +221,20 @@ class AdminHandler:
         platform = parts[2]  # playstation
         transfer_type = parts[3]  # normal
         
+        print(f"🎮 [ADMIN] Editing {platform} {transfer_type} price")
+        
         # جلب السعر الحالي
         current_price = PriceManagement.get_current_price(platform, transfer_type)
         
         if current_price is None:
+            print(f"❌ [ADMIN] Failed to get current price for {platform} {transfer_type}")
             await query.edit_message_text(
                 AdminMessages.get_error_message("database_error"),
                 parse_mode="HTML"
             )
             return
+        
+        print(f"💰 [ADMIN] Current price for {platform} {transfer_type}: {current_price}")
         
         # حفظ بيانات الجلسة
         self.user_sessions[user_id] = {
@@ -222,17 +244,23 @@ class AdminHandler:
             'current_price': current_price
         }
         
+        print(f"📝 [ADMIN] Session created for admin {user_id}: waiting for price input")
+        
         AdminOperations.log_admin_action(user_id, "STARTED_PRICE_EDIT", 
                                        f"Platform: {platform}, Type: {transfer_type}, Current: {current_price}")
         
         message = AdminMessages.get_price_edit_prompt(platform, transfer_type, current_price)
         keyboard = AdminKeyboards.get_price_edit_keyboard(platform, transfer_type)
         
-        await query.edit_message_text(
-            message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        try:
+            await query.edit_message_text(
+                message,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            print(f"✅ [ADMIN] Price edit prompt sent to admin {user_id}")
+        except Exception as e:
+            print(f"❌ [ADMIN] Failed to send price edit prompt: {e}")
     
     async def handle_admin_logs(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج عرض سجل الأعمال"""
@@ -278,22 +306,34 @@ class AdminHandler:
     async def handle_price_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج إدخال السعر الجديد"""
         user_id = update.effective_user.id
+        username = update.effective_user.username or "Unknown"
+        
+        print(f"\n💰 [ADMIN] Price input received from user {user_id} (@{username})")
+        
+        # التحقق من صلاحية الادمن أولاً
+        if not self.is_admin(user_id):
+            print(f"❌ [ADMIN] Non-admin user {user_id} trying to update price")
+            return
         
         # التحقق من وجود جلسة تعديل سعر
         if user_id not in self.user_sessions:
+            print(f"⚠️ [ADMIN] No active session found for admin {user_id}")
             return
         
         session = self.user_sessions[user_id]
         
         if session.get('step') != 'waiting_price':
+            print(f"⚠️ [ADMIN] Admin {user_id} not in price waiting step: {session.get('step', 'unknown')}")
             return
         
         price_text = update.message.text.strip()
+        print(f"📝 [ADMIN] Admin {user_id} entered price: '{price_text}'")
         
         # التحقق من صحة السعر
         is_valid, new_price, error_message = PriceManagement.validate_price_input(price_text)
         
         if not is_valid:
+            print(f"❌ [ADMIN] Invalid price input from admin {user_id}: {error_message}")
             await update.message.reply_text(
                 f"❌ {error_message}\n\nيرجى المحاولة مرة أخرى:",
                 parse_mode="HTML"
@@ -305,30 +345,41 @@ class AdminHandler:
         transfer_type = session['transfer_type']
         old_price = session['current_price']
         
+        print(f"🔄 [ADMIN] Updating price: {platform} {transfer_type} from {old_price} to {new_price}")
+        
         # تحديث السعر في قاعدة البيانات
         success = PriceManagement.update_price(platform, transfer_type, new_price, user_id)
         
         if not success:
+            print(f"❌ [ADMIN] Failed to update price in database")
             await update.message.reply_text(
                 AdminMessages.get_error_message("database_error"),
                 parse_mode="HTML"
             )
             return
         
+        print(f"✅ [ADMIN] Price successfully updated in database")
+        
         # رسالة النجاح
         success_message = AdminMessages.get_price_update_success(platform, transfer_type, old_price, new_price)
         keyboard = AdminKeyboards.get_price_update_success_keyboard()
         
-        await update.message.reply_text(
-            success_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        try:
+            await update.message.reply_text(
+                success_message,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            print(f"✅ [ADMIN] Success message sent to admin {user_id}")
+        except Exception as e:
+            print(f"❌ [ADMIN] Failed to send success message: {e}")
         
         # مسح الجلسة
         del self.user_sessions[user_id]
+        print(f"🧹 [ADMIN] Session cleared for admin {user_id}")
         
         logger.info(f"✅ Price updated by admin {user_id}: {platform} {transfer_type} {old_price} -> {new_price}")
+        print(f"💾 [ADMIN] Price update logged: {platform} {transfer_type} {old_price} -> {new_price}")
     
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS
@@ -350,14 +401,27 @@ class AdminHandler:
     
     async def _show_current_prices_callback(self, query, user_id: int):
         """عرض الأسعار الحالية (للأزرار)"""
-        prices = PriceManagement.get_all_current_prices()
-        message = AdminMessages.get_current_prices_message(prices)
-        keyboard = AdminKeyboards.get_view_prices_keyboard()
+        print(f"📋 [ADMIN] Fetching current prices for admin {user_id}")
         
-        AdminOperations.log_admin_action(user_id, "VIEWED_PRICES")
-        
-        await query.edit_message_text(
-            message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        try:
+            prices = PriceManagement.get_all_current_prices()
+            print(f"💰 [ADMIN] Retrieved {len(prices)} price entries from database")
+            
+            message = AdminMessages.get_current_prices_message(prices)
+            keyboard = AdminKeyboards.get_view_prices_keyboard()
+            
+            AdminOperations.log_admin_action(user_id, "VIEWED_PRICES")
+            
+            await query.edit_message_text(
+                message,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            print(f"✅ [ADMIN] Prices successfully displayed to admin {user_id}")
+            
+        except Exception as e:
+            print(f"❌ [ADMIN] Error displaying prices to admin {user_id}: {e}")
+            await query.edit_message_text(
+                "❌ حدث خطأ في عرض الأسعار. يرجى المحاولة مرة أخرى.",
+                parse_mode="HTML"
+            )
