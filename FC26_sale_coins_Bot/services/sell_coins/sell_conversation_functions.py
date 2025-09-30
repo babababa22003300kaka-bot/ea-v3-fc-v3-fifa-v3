@@ -52,6 +52,9 @@ async def sell_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def sell_coins_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """بداية محادثة البيع"""
     user_id = update.callback_query.from_user.id
+    
+    # ✨ وضع علامة إن المستخدم دخل محادثة بيع
+    context.user_data['in_sell_conversation'] = True
 
     # عرض خيارات المنصة
     keyboard = [
@@ -203,7 +206,8 @@ async def sell_amount_entered(update: Update, context: ContextTypes.DEFAULT_TYPE
     summary = _create_sale_summary(user_id, amount, transfer_type, platform, price)
     await update.message.reply_text(summary, parse_mode="Markdown")
 
-    # مسح بيانات المحادثة وإنهاء المحادثة
+    # ✨ مسح علامة محادثة البيع وإنهاء المحادثة
+    context.user_data.pop('in_sell_conversation', None)
     context.user_data.clear()
     return ConversationHandler.END
 
@@ -258,6 +262,8 @@ async def sell_conversation_cancel(update: Update, context: ContextTypes.DEFAULT
         "✅ **تم إلغاء عملية البيع**\n\nيمكنك البدء من جديد باستخدام /sell",
         parse_mode="Markdown",
     )
+    # ✨ مسح علامة محادثة البيع عند الإلغاء
+    context.user_data.pop('in_sell_conversation', None)
     context.user_data.clear()
     return ConversationHandler.END
 
