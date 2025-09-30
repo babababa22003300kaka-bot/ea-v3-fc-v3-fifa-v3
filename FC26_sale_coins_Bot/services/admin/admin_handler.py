@@ -44,6 +44,7 @@ class AdminHandler:
     def get_handlers(self) -> List:
         """جلب جميع معالجات الادارة"""
         print(f"\n🔧 [ADMIN] Registering admin handlers...")
+        
         handlers = [
             # أوامر الادمن
             CommandHandler("admin", self.handle_admin_command),
@@ -59,14 +60,15 @@ class AdminHandler:
             CallbackQueryHandler(self.handle_admin_stats, pattern="^admin_stats$"),
             
             # معالج النصوص لتعديل الأسعار
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_price_input),
+            # REMOVED: Generic MessageHandler - will be handled by main.py delegation
+            # MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_price_input),
             
             # معالج عام للـ callbacks غير المعروفة (آخر واحد عشان ميتداخلش)
             CallbackQueryHandler(self.handle_unknown_callback, pattern="^admin_.*$")
         ]
         
         print(f"✅ [ADMIN] {len(handlers)} admin handlers prepared for registration")
-        print(f"🎯 [ADMIN] Handlers include: commands, callbacks, and message handler")
+        print(f"🎯 [ADMIN] Handlers include: commands and callbacks (message handling via delegation)")
         return handlers
     
     def is_admin(self, user_id: int) -> bool:
@@ -420,23 +422,31 @@ class AdminHandler:
         user_id = update.effective_user.id
         username = update.effective_user.username or "Unknown"
         
-        print(f"\n💰 [ADMIN] Price input received from user {user_id} (@{username})")
+        print(f"\n💰 [ADMIN] ========== PRICE INPUT HANDLER CALLED ==========")
+        print(f"💰 [ADMIN] Price input received from user {user_id} (@{username})")
         
         # التحقق من صلاحية الادمن أولاً
         if not self.is_admin(user_id):
             print(f"❌ [ADMIN] Non-admin user {user_id} trying to update price")
             return
         
+        print(f"✅ [ADMIN] User {user_id} is admin - continuing")
+        
         # التحقق من وجود جلسة تعديل سعر
         if user_id not in self.user_sessions:
             print(f"⚠️ [ADMIN] No active session found for admin {user_id}")
+            print(f"📊 [ADMIN] Current sessions: {list(self.user_sessions.keys())}")
             return
         
+        print(f"✅ [ADMIN] Session found for admin {user_id}")
         session = self.user_sessions[user_id]
+        print(f"📋 [ADMIN] Session data: {session}")
         
         if session.get('step') != 'waiting_price':
             print(f"⚠️ [ADMIN] Admin {user_id} not in price waiting step: {session.get('step', 'unknown')}")
             return
+        
+        print(f"✅ [ADMIN] Admin {user_id} is in correct step: waiting_price")
         
         price_text = update.message.text.strip()
         print(f"📝 [ADMIN] Admin {user_id} entered price: '{price_text}'")
