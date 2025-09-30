@@ -57,6 +57,15 @@ class FC26Bot:
         # Initialize services
         self.sell_coins_handler = SellCoinsHandler()
         
+        # Initialize admin system
+        try:
+            from services.admin import AdminHandler
+            self.admin_handler = AdminHandler()
+            self.logger.info("✅ Admin system initialized successfully")
+        except ImportError as e:
+            self.admin_handler = None
+            self.logger.warning(f"⚠️ Admin system not available: {e}")
+        
 
     
     # ═══════════════════════════════════════════════════════════════════════════
@@ -463,6 +472,12 @@ class FC26Bot:
         # Coin selling service handlers
         for handler in self.sell_coins_handler.get_handlers():
             self.app.add_handler(handler)
+        
+        # Admin system handlers
+        if self.admin_handler:
+            for handler in self.admin_handler.get_handlers():
+                self.app.add_handler(handler)
+            self.logger.info("✅ Admin system handlers configured")
         
         # Message handlers (this should be last to avoid conflicts)
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
