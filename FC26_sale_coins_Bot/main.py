@@ -272,47 +272,26 @@ class FC26Bot:
     # ═══════════════════════════════════════════════════════════════════════════
     
     async def handle_message(self, update, context):
-        """Handle text messages"""
+        """Handle text messages for users NOT in an active conversation"""
         user_id = update.effective_user.id
-        message_text = update.message.text.strip()
         
-        self.logger.info(f"📩 Message from user {user_id}: '{message_text}'")
-        
-        # ✨ لو المستخدم جوه محادثة بيع، متعملش حاجة وسيب ConversationHandler يكمل شغله
+        # --- ✨✨ الجزء الأهم في الحل ✨✨ ---
+        # 1. لو المستخدم في محادثة بيع، اخرج فوراً
         if context.user_data.get('in_sell_conversation'):
-            self.logger.info(f"🔒 User {user_id} is in sell conversation - skipping main handler")
+            self.logger.info(f"🔒 User {user_id} is in a sell conversation. Skipping main handler.")
+            return
+
+        # 2. لو المستخدم هو الأدمن ومعندوش سيشن، اخرج فوراً (عشان ميظهرلوش رسالة /start)
+        if self.admin_handler and self.admin_handler.is_admin(user_id) and user_id not in self.admin_handler.user_sessions:
+            self.logger.info(f"👑 Admin {user_id} is not in a session. Skipping main handler.")
             return
         
-        # Note: Admin messages are handled by a separate handler with group=1 (higher priority)
-        # This handler only processes non-admin messages (group=0 - default priority)
-        
-        user_data = UserOperations.get_user_data(user_id)
-        
-        if not user_data:
-            self.logger.info(f"⚠️ User {user_id} has no data - requiring /start")
-            await update.message.reply_text(ErrorMessages.get_start_required_error())
-            return
-        
-        step = user_data.get("registration_step", "unknown")
-        self.logger.info(f"📝 User {user_id} in step '{step}' sent message")
-        
-        if step == "entering_whatsapp":
-            await self._handle_whatsapp_input(update, context, user_data)
-        elif step == "entering_payment_details":
-            await self._handle_payment_details(update, context, user_data)
-        elif step == "completed":
-            # User completed registration - guide them
-            self.logger.info(f"✅ Completed user {user_id} sent message - guiding to main menu")
-            await update.message.reply_text(
-                "✅ <b>لقد أكملت التسجيل بالفعل!</b>\n\n"
-                "🔹 اضغط <code>/profile</code> لعرض ملفك الشخصي\n"
-                "🔹 اضغط <code>/help</code> للمساعدة\n"
-                "🔹 اضغط <code>/start</code> للقائمة الرئيسية",
-                parse_mode="HTML"
-            )
-        else:
-            self.logger.info(f"🔄 User {user_id} in unexpected step '{step}' - requiring restart")
-            await update.message.reply_text(ErrorMessages.get_restart_required_error())
+        # 3. لو المستخدم مش في أي محادثة، وجهه للبداية
+        self.logger.info(f"📍 User {user_id} to start, as they are not in any active conversation.")
+        await update.message.reply_text(
+            "🚀 اكتب /start للبدء أو لعرض القائمة الرئيسية.",
+            parse_mode="HTML"
+        )
     
     async def _handle_whatsapp_input(self, update, context, user_data):
         """Handle WhatsApp number input"""
