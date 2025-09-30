@@ -197,11 +197,20 @@ def _create_sale_summary(user_id, amount, transfer_type, platform, price):
     type_name = SellConversationHandler.get_transfer_type_name(transfer_type)
     platform_name = SellConversationHandler.get_platform_name(platform)
     
-    # جلب سعر المليون كمرجع للمستخدم
+    # جلب سعر المليون كمرجع للمستخدم - مع fallback للأسعار الافتراضية
     million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
-    million_price_text = ""
-    if million_price:
-        million_price_text = f"⭐ (سعر المليون: {million_price:,} جنيه)\n\n"
+    
+    # إذا لم يتم العثور على السعر، استخدم الأسعار الافتراضية المباشرة
+    if million_price is None:
+        # أسعار احتياطية ثابتة (نفس الأسعار من sell_pricing.py)
+        default_prices = {
+            "normal": {"playstation": 5600, "xbox": 5600, "pc": 6100},
+            "instant": {"playstation": 5300, "xbox": 5300, "pc": 5800}
+        }
+        million_price = default_prices.get(transfer_type, {}).get(platform, 5600)
+    
+    # تنسيق سعر المليون مع فواصل
+    million_price_formatted = f"{million_price:,}"
 
     return (
         "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
@@ -209,7 +218,7 @@ def _create_sale_summary(user_id, amount, transfer_type, platform, price):
         f"🎮 المنصة: {platform_name}\n"
         f"💰 الكمية: {formatted_amount} كوين\n"
         f"💵 السعر الإجمالي: {price} جنيه\n"
-        f"{million_price_text}"
+        f"⭐ (سعر المليون: {million_price_formatted} جنيه)\n"
         f"⏰ نوع التحويل: {type_name}\n\n"
         "📞 **الخطوات التالية:**\n"
         "1️⃣ سيتم التواصل معك خلال دقائق\n"
