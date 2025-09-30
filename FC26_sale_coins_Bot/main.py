@@ -281,7 +281,8 @@ class FC26Bot:
         if self.admin_handler and self.admin_handler.is_admin(user_id):
             if user_id in self.admin_handler.user_sessions:
                 self.logger.info(f"🎯 Admin {user_id} has active session - delegating to admin handler")
-                # Return early - let admin handler process this message
+                # Call admin handler directly
+                await self.admin_handler.handle_price_input(update, context)
                 return
         
         user_data = UserOperations.get_user_data(user_id)
