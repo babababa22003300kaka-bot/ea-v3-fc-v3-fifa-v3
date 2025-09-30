@@ -443,6 +443,12 @@ class FC26Bot:
         # Setup handlers
         self.logger.info("🔧 Setting up bot handlers...")
         
+        # ✨✨✨ أهم تعديل: ConversationHandler للبيع يتسجل أول حاجة خالص ✨✨✨
+        # ده بيضمن إن محادثة البيع ليها أعلى أولوية وميتداخلش معاها أي handler تاني
+        sell_conv_handler = get_sell_conversation_handler()
+        self.app.add_handler(sell_conv_handler)  # <--- بدون group عشان يبقى في الأول خالص
+        print("✅ [SYSTEM] Sell ConversationHandler registered FIRST (highest priority)")
+        
         # Command handlers
         self.app.add_handler(CommandHandler("start", self.handle_start))
         self.app.add_handler(CommandHandler("help", self.handle_help))
@@ -456,19 +462,6 @@ class FC26Bot:
         # Profile delete handlers
         for handler in ProfileDeleteHandler.get_handlers():
             self.app.add_handler(handler)
-        
-        # Coin selling service handlers
-        # 💰 Register ConversationHandler for proper sell flow (group=2 to avoid admin conflict)
-        sell_conv_handler = get_sell_conversation_handler()
-        self.app.add_handler(sell_conv_handler, group=2)
-        
-        # Register /sell command
-        self.app.add_handler(CommandHandler("sell", sell_command), group=2)
-        
-        # ✨ Register sell button callback (Entry Point for sell conversation)
-        self.app.add_handler(CallbackQueryHandler(sell_coins_start, pattern="^sell_fc26$"), group=2)
-        
-        print("✅ [SYSTEM] Sell ConversationHandler registered successfully (group=2)")
         
         # Admin system handlers (MUST be before main message handler)
         if self.admin_handler:
