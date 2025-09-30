@@ -277,13 +277,8 @@ class FC26Bot:
         
         self.logger.info(f"📩 Message from user {user_id}: '{message_text}'")
         
-        # ✅ CHECK: If admin has active session, delegate to admin handler
-        if self.admin_handler and self.admin_handler.is_admin(user_id):
-            if user_id in self.admin_handler.user_sessions:
-                self.logger.info(f"🎯 Admin {user_id} has active session - delegating to admin handler")
-                # Call admin handler directly
-                await self.admin_handler.handle_price_input(update, context)
-                return
+        # Note: Admin messages are handled by a separate handler with group=1 (higher priority)
+        # This handler only processes non-admin messages (group=0 - default priority)
         
         user_data = UserOperations.get_user_data(user_id)
         
@@ -491,14 +486,24 @@ class FC26Bot:
                 handler_type = type(handler).__name__
                 print(f"   {i:2d}. {handler_type} registered")
             
+            # 🔥🔥 HIGH PRIORITY: Admin text input handler with group=1 🔥🔥
+            # This handler MUST be checked BEFORE the general message handler
+            # group=1 gives it higher priority than group=0 (default)
+            self.app.add_handler(
+                MessageHandler(filters.TEXT & ~filters.COMMAND, self.admin_handler.handle_price_input),
+                group=1
+            )
+            print("   🔑 [PRIORITY] Admin text input handler registered with HIGH PRIORITY (group=1)")
+            
             self.logger.info("✅ Admin system handlers configured")
             print("✅ [SYSTEM] All admin handlers registered successfully")
         else:
             print("❌ [SYSTEM] Admin handler not available!")
         
         # Message handlers (this should be last to avoid conflicts)
+        # group=0 (default) - lower priority than admin handler
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-        print("🔧 [SYSTEM] Main message handler registered last")
+        print("🔧 [SYSTEM] Main message handler registered (group=0 - default priority)")
         
         self.logger.info("✅ All handlers configured successfully")
         

@@ -59,16 +59,13 @@ class AdminHandler:
             CallbackQueryHandler(self.handle_admin_logs, pattern="^admin_logs$"),
             CallbackQueryHandler(self.handle_admin_stats, pattern="^admin_stats$"),
             
-            # معالج النصوص لتعديل الأسعار
-            # REMOVED: Generic MessageHandler - will be handled by main.py delegation
-            # MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_price_input),
-            
             # معالج عام للـ callbacks غير المعروفة (آخر واحد عشان ميتداخلش)
             CallbackQueryHandler(self.handle_unknown_callback, pattern="^admin_.*$")
         ]
         
         print(f"✅ [ADMIN] {len(handlers)} admin handlers prepared for registration")
-        print(f"🎯 [ADMIN] Handlers include: commands and callbacks (message handling via delegation)")
+        print(f"🎯 [ADMIN] Handlers include: commands and callbacks")
+        print(f"📝 [ADMIN] Note: Admin text message handler will be registered separately with group=1")
         return handlers
     
     def is_admin(self, user_id: int) -> bool:
