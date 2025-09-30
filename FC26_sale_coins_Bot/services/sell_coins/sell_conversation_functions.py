@@ -3,6 +3,8 @@
 # ║                    Sell Conversation Handler Functions                  ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
+import logging
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
@@ -17,6 +19,9 @@ from states.sell_states import SellStates
 
 from .sell_conversation_handler import SellConversationHandler
 from .sell_pricing import CoinSellPricing
+
+# إعداد الـLogger للتشخيص
+logger = logging.getLogger(__name__)
 
 
 # ================================ أوامر البيع ================================
@@ -81,6 +86,7 @@ async def platform_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # حفظ المنصة
     platform = query.data.replace("platform_", "")
     context.user_data["platform"] = platform
+    logger.info(f"✅ DEBUG: Platform '{platform}' saved in context.")
     platform_name = SellConversationHandler.get_platform_name(platform)
 
     # عرض خيارات نوع التحويل
@@ -127,6 +133,7 @@ async def sell_type_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # حفظ نوع التحويل
     transfer_type = "instant" if query.data == "type_instant" else "normal"
     context.user_data["transfer_type"] = transfer_type
+    logger.info(f"✅ DEBUG: Transfer type '{transfer_type}' saved in context.")
 
     type_name = SellConversationHandler.get_transfer_type_name(transfer_type)
     platform_name = SellConversationHandler.get_platform_name(
@@ -182,6 +189,16 @@ async def sell_amount_entered(update: Update, context: ContextTypes.DEFAULT_TYPE
     platform = context.user_data.get("platform", "playstation")
     price = SellConversationHandler.calculate_price(amount, transfer_type)
 
+    # --- DEBUGGING BLOCK ---
+    logger.info("--- 🔍 DEBUG: Data before creating summary ---")
+    logger.info(f"User ID: {user_id}")
+    logger.info(f"Platform from context: {context.user_data.get('platform')}")
+    logger.info(f"Transfer Type from context: {context.user_data.get('transfer_type')}")
+    logger.info(f"Amount from context: {context.user_data.get('amount')}")
+    logger.info(f"Calculated Price: {price}")
+    logger.info("-------------------------------------------------")
+    # --- END DEBUGGING BLOCK ---
+
     # عرض ملخص البيع
     summary = _create_sale_summary(user_id, amount, transfer_type, platform, price)
     await update.message.reply_text(summary, parse_mode="Markdown")
@@ -193,12 +210,16 @@ async def sell_amount_entered(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 def _create_sale_summary(user_id, amount, transfer_type, platform, price):
     """إنشاء ملخص البيع"""
+    logger.info("--- 🔍 DEBUG: Inside _create_sale_summary ---")
+    logger.info(f"Data received: platform='{platform}', transfer_type='{transfer_type}'")
+    
     formatted_amount = SellConversationHandler.format_amount(amount)
     type_name = SellConversationHandler.get_transfer_type_name(transfer_type)
     platform_name = SellConversationHandler.get_platform_name(platform)
     
     # جلب سعر المليون كمرجع للمستخدم - مع fallback للأسعار الافتراضية
     million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
+    logger.info(f"💰 DEBUG: Million price fetched from get_price(): {million_price}")
     
     # إذا لم يتم العثور على السعر، استخدم الأسعار الافتراضية المباشرة
     if million_price is None:
