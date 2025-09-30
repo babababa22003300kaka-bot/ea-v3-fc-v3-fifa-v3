@@ -32,11 +32,19 @@ class AdminHandler:
         
         # تهيئة قاعدة البيانات
         AdminOperations.init_admin_db()
+        
+        print(f"\n👑 [ADMIN] AdminHandler initialized for admin ID: {self.ADMIN_ID}")
+        print(f"🔐 [ADMIN] Session storage ready for price editing workflows")
+        
+        # طباعة الـ callback patterns للتصحيح
+        self.debug_callback_patterns()
+        
         logger.info("✅ Admin handler initialized")
     
     def get_handlers(self) -> List:
         """جلب جميع معالجات الادارة"""
-        return [
+        print(f"\n🔧 [ADMIN] Registering admin handlers...")
+        handlers = [
             # أوامر الادمن
             CommandHandler("admin", self.handle_admin_command),
             CommandHandler("prices", self.handle_prices_command),
@@ -51,12 +59,48 @@ class AdminHandler:
             CallbackQueryHandler(self.handle_admin_stats, pattern="^admin_stats$"),
             
             # معالج النصوص لتعديل الأسعار
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_price_input)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_price_input),
+            
+            # معالج عام للـ callbacks غير المعروفة (آخر واحد عشان ميتداخلش)
+            CallbackQueryHandler(self.handle_unknown_callback, pattern="^admin_.*$")
         ]
+        
+        print(f"✅ [ADMIN] {len(handlers)} admin handlers prepared for registration")
+        print(f"🎯 [ADMIN] Handlers include: commands, callbacks, and message handler")
+        return handlers
     
     def is_admin(self, user_id: int) -> bool:
         """التحقق من صلاحية الادمن"""
-        return user_id == self.ADMIN_ID
+        is_authorized = user_id == self.ADMIN_ID
+        if not is_authorized:
+            print(f"⚠️ [ADMIN] Unauthorized access attempt from user {user_id} (Expected: {self.ADMIN_ID})")
+        return is_authorized
+    
+    def debug_callback_patterns(self):
+        """طباعة جميع الـ callback patterns المتاحة للتصحيح"""
+        patterns = [
+            "admin_main",
+            "admin_prices", 
+            "admin_view_prices",
+            "admin_edit_playstation",
+            "admin_edit_xbox", 
+            "admin_edit_pc",
+            "admin_edit_playstation_normal",
+            "admin_edit_playstation_instant",
+            "admin_edit_xbox_normal",
+            "admin_edit_xbox_instant",
+            "admin_edit_pc_normal",
+            "admin_edit_pc_instant",
+            "admin_logs",
+            "admin_stats"
+        ]
+        
+        print(f"\n🎯 [ADMIN] Available callback patterns:")
+        for i, pattern in enumerate(patterns, 1):
+            print(f"   {i:2d}. {pattern}")
+        print(f"📊 [ADMIN] Total patterns: {len(patterns)}")
+        
+        return patterns
     
     # ═══════════════════════════════════════════════════════════════════════════
     # COMMAND HANDLERS
@@ -118,8 +162,13 @@ class AdminHandler:
         """معالج العودة للقائمة الرئيسية"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n🏠 [ADMIN] Main menu callback received from user {user_id} (@{username})")
+        print(f"📞 [ADMIN] Callback data: {query.data}")
         
         await query.answer()
+        print(f"✅ [ADMIN] Callback answered for user {user_id}")
         
         if not self.is_admin(user_id):
             await query.edit_message_text(
@@ -142,8 +191,13 @@ class AdminHandler:
         """معالج إدارة الأسعار"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n💰 [ADMIN] Price management callback received from user {user_id} (@{username})")
+        print(f"📞 [ADMIN] Callback data: {query.data}")
         
         await query.answer()
+        print(f"✅ [ADMIN] Callback answered for user {user_id}")
         
         if not self.is_admin(user_id):
             await query.edit_message_text(AdminMessages.get_unauthorized_message())
@@ -181,25 +235,37 @@ class AdminHandler:
         """معالج اختيار منصة للتعديل"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n🎮 [ADMIN] Platform edit callback received from user {user_id} (@{username})")
+        print(f"📞 [ADMIN] Callback data: {query.data}")
         
         await query.answer()
+        print(f"✅ [ADMIN] Callback answered for user {user_id}")
         
         if not self.is_admin(user_id):
             return
         
         # استخراج اسم المنصة
         platform = query.data.split("_")[-1]  # admin_edit_playstation -> playstation
+        print(f"🔧 [ADMIN] Extracted platform: {platform}")
         
         AdminOperations.log_admin_action(user_id, "SELECTED_PLATFORM_EDIT", f"Platform: {platform}")
+        print(f"📝 [ADMIN] Action logged for platform selection: {platform}")
         
         message = AdminMessages.get_platform_edit_message(platform)
         keyboard = AdminKeyboards.get_platform_edit_keyboard(platform)
+        print(f"📋 [ADMIN] Message and keyboard prepared for platform: {platform}")
         
-        await query.edit_message_text(
-            message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        try:
+            await query.edit_message_text(
+                message,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            print(f"✅ [ADMIN] Platform edit interface sent successfully for {platform}")
+        except Exception as e:
+            print(f"❌ [ADMIN] Failed to send platform edit interface: {e}")
     
     async def handle_transfer_type_edit(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج اختيار نوع التحويل للتعديل"""
@@ -217,11 +283,24 @@ class AdminHandler:
         
         # استخراج البيانات من callback_data
         # تنسيق: admin_edit_playstation_normal
-        parts = query.data.split("_")
-        platform = parts[2]  # playstation
-        transfer_type = parts[3]  # normal
+        print(f"🔍 [ADMIN] Parsing callback data: '{query.data}'")
         
-        print(f"🎮 [ADMIN] Editing {platform} {transfer_type} price")
+        try:
+            parts = query.data.split("_")
+            print(f"📋 [ADMIN] Split parts: {parts}")
+            
+            if len(parts) < 4:
+                print(f"❌ [ADMIN] Invalid callback data format: expected 4 parts, got {len(parts)}")
+                return
+                
+            platform = parts[2]  # playstation
+            transfer_type = parts[3]  # normal
+            
+            print(f"🎮 [ADMIN] Successfully extracted - Platform: {platform}, Type: {transfer_type}")
+            
+        except Exception as e:
+            print(f"❌ [ADMIN] Error parsing callback data: {e}")
+            return
         
         # جلب السعر الحالي
         current_price = PriceManagement.get_current_price(platform, transfer_type)
@@ -266,8 +345,13 @@ class AdminHandler:
         """معالج عرض سجل الأعمال"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n📊 [ADMIN] Logs callback received from user {user_id} (@{username})")
+        print(f"📞 [ADMIN] Callback data: {query.data}")
         
         await query.answer()
+        print(f"✅ [ADMIN] Callback answered for user {user_id}")
         
         if not self.is_admin(user_id):
             return
@@ -286,8 +370,13 @@ class AdminHandler:
         """معالج الإحصائيات (للتطوير المستقبلي)"""
         query = update.callback_query
         user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n📈 [ADMIN] Stats callback received from user {user_id} (@{username})")
+        print(f"📞 [ADMIN] Callback data: {query.data}")
         
         await query.answer()
+        print(f"✅ [ADMIN] Callback answered for user {user_id}")
         
         if not self.is_admin(user_id):
             return
@@ -298,6 +387,29 @@ class AdminHandler:
             reply_markup=AdminKeyboards.get_main_admin_keyboard(),
             parse_mode="HTML"
         )
+    
+    async def handle_unknown_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج الـ callbacks غير المعروفة للتصحيح"""
+        query = update.callback_query
+        user_id = query.from_user.id
+        username = query.from_user.username or "Unknown"
+        
+        print(f"\n❓ [ADMIN] UNKNOWN callback received from user {user_id} (@{username})")
+        print(f"🔍 [ADMIN] Callback data: '{query.data}'")
+        print(f"⚠️ [ADMIN] This callback was not handled by any specific pattern!")
+        
+        await query.answer()
+        
+        # إذا كان admin، أرسل رسالة توضيحية
+        if self.is_admin(user_id):
+            print(f"🛠️ [ADMIN] Sending debug message to admin about unknown callback")
+            await query.edit_message_text(
+                f"🐛 <b>Debug Info</b>\n\n"
+                f"❓ Unknown callback received: <code>{query.data}</code>\n\n"
+                f"This helps debug admin system issues!",
+                reply_markup=AdminKeyboards.get_main_admin_keyboard(),
+                parse_mode="HTML"
+            )
     
     # ═══════════════════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
