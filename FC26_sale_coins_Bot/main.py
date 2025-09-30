@@ -278,6 +278,11 @@ class FC26Bot:
         
         self.logger.info(f"📩 Message from user {user_id}: '{message_text}'")
         
+        # ✨ لو المستخدم جوه محادثة بيع، متعملش حاجة وسيب ConversationHandler يكمل شغله
+        if context.user_data.get('in_sell_conversation'):
+            self.logger.info(f"🔒 User {user_id} is in sell conversation - skipping main handler")
+            return
+        
         # Note: Admin messages are handled by a separate handler with group=1 (higher priority)
         # This handler only processes non-admin messages (group=0 - default priority)
         
