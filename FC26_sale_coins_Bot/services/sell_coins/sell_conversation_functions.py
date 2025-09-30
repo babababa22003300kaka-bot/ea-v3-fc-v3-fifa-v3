@@ -16,6 +16,7 @@ from telegram.ext import (
 from states.sell_states import SellStates
 
 from .sell_conversation_handler import SellConversationHandler
+from .sell_pricing import CoinSellPricing
 
 
 # ================================ أوامر البيع ================================
@@ -195,13 +196,20 @@ def _create_sale_summary(user_id, amount, transfer_type, platform, price):
     formatted_amount = SellConversationHandler.format_amount(amount)
     type_name = SellConversationHandler.get_transfer_type_name(transfer_type)
     platform_name = SellConversationHandler.get_platform_name(platform)
+    
+    # جلب سعر المليون كمرجع للمستخدم
+    million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
+    million_price_text = ""
+    if million_price:
+        million_price_text = f"⭐ (سعر المليون: {million_price:,} جنيه)\n"
 
     return (
         "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
         f"📊 **تفاصيل الطلب:**\n"
         f"🎮 المنصة: {platform_name}\n"
         f"💰 الكمية: {formatted_amount} كوين\n"
-        f"💵 السعر: {price} جنيه\n"
+        f"💵 السعر الإجمالي: {price} جنيه\n"
+        f"{million_price_text}"
         f"⏰ نوع التحويل: {type_name}\n\n"
         "📞 **الخطوات التالية:**\n"
         "1️⃣ سيتم التواصل معك خلال دقائق\n"
