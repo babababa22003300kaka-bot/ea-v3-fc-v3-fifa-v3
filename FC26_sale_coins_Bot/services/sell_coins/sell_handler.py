@@ -310,6 +310,21 @@ class SellCoinsHandler:
         platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
         transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
 
+        # جلب سعر المليون كمرجع للمستخدم
+        million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
+        
+        # إذا لم يتم العثور على السعر، استخدم الأسعار الافتراضية المباشرة
+        if million_price is None:
+            # أسعار احتياطية ثابتة (نفس الأسعار من sell_pricing.py)
+            default_prices = {
+                "normal": {"playstation": 5600, "xbox": 5600, "pc": 6100},
+                "instant": {"playstation": 5300, "xbox": 5300, "pc": 5800},
+            }
+            million_price = default_prices.get(transfer_type, {}).get(platform, 5600)
+        
+        # تنسيق سعر المليون مع فواصل
+        million_price_formatted = f"{million_price:,}"
+
         # رسالة التأكيد النهائية
         await update.message.reply_text(
             "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
@@ -317,6 +332,7 @@ class SellCoinsHandler:
             f"🎮 المنصة: {platform_name}\n"
             f"💰 الكمية: {self.format_amount(coins)} كوين\n"
             f"💵 السعر: {price} جنيه\n"
+            f"⭐ (سعر المليون: {million_price_formatted} جنيه)\n"
             f"⏰ نوع التحويل: {transfer_name}\n\n"
             "📞 **الخطوات التالية:**\n"
             "1️⃣ سيتم التواصل معك خلال دقائق\n"
