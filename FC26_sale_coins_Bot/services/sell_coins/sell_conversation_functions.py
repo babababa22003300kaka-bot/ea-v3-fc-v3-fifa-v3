@@ -201,7 +201,7 @@ def _create_sale_summary(user_id, amount, transfer_type, platform, price):
     million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
     million_price_text = ""
     if million_price:
-        million_price_text = f"⭐ (سعر المليون: {million_price:,} جنيه)\n"
+        million_price_text = f"⭐ (سعر المليون: {million_price:,} جنيه)\n\n"
 
     return (
         "🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
