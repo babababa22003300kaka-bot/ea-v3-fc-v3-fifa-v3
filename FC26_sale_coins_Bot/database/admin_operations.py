@@ -7,6 +7,8 @@ import sqlite3
 import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,10 @@ class AdminOperations:
     """عمليات قاعدة البيانات للادمن"""
     
     DB_NAME = "fc26_admin.db"
+    
+    # 🔥 Thread-safe database executor - ONLY ONE worker to prevent locks
+    # This ensures all database operations are serialized (one at a time)
+    _db_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="AdminDB")
     
     @classmethod
     def init_admin_db(cls):
@@ -96,14 +102,26 @@ class AdminOperations:
         return result[0] if result else None
     
     @classmethod
-    def update_price(cls, platform: str, transfer_type: str, amount: int, new_price: int, admin_id: int) -> bool:
-        """تحديث السعر في قاعدة البيانات"""
-        conn = sqlite3.connect(cls.DB_NAME)
-        cursor = conn.cursor()
-        
+    def _update_price_sync(cls, platform: str, transfer_type: str, amount: int, new_price: int, admin_id: int) -> bool:
+        """تحديث السعر في قاعدة البيانات - النسخة المتزامنة الداخلية"""
+        conn = None
         try:
+            # Enable WAL mode for better concurrency
+            conn = sqlite3.connect(cls.DB_NAME, timeout=30.0)
+            conn.execute('PRAGMA journal_mode=WAL')
+            cursor = conn.cursor()
+            
+            print(f"🔄 [DB] Starting price update: {platform} {transfer_type} -> {new_price}")
+            
             # جلب السعر القديم
-            old_price = cls.get_price(platform, transfer_type, amount)
+            cursor.execute('''
+                SELECT price FROM coin_prices 
+                WHERE platform = ? AND transfer_type = ? AND amount = ?
+            ''', (platform, transfer_type, amount))
+            result = cursor.fetchone()
+            old_price = result[0] if result else None
+            
+            print(f"💰 [DB] Old price: {old_price}, New price: {new_price}")
             
             # تحديث السعر
             cursor.execute('''
@@ -114,18 +132,42 @@ class AdminOperations:
             
             # تسجيل العملية في السجل
             details = f"Platform: {platform}, Type: {transfer_type}, Amount: {amount}, Old: {old_price}, New: {new_price}"
-            cls.log_admin_action(admin_id, "UPDATE_PRICE", details)
+            cursor.execute('''
+                INSERT INTO admin_logs (admin_id, action, details) 
+                VALUES (?, ?, ?)
+            ''', (admin_id, "UPDATE_PRICE", details))
             
             conn.commit()
+            print(f"✅ [DB] Price updated successfully: {platform} {transfer_type} {amount} -> {new_price}")
             logger.info(f"✅ Price updated: {platform} {transfer_type} {amount} -> {new_price}")
             return True
             
         except Exception as e:
+            print(f"❌ [DB] Failed to update price: {e}")
             logger.error(f"❌ Failed to update price: {e}")
-            conn.rollback()
+            if conn:
+                conn.rollback()
             return False
         finally:
-            conn.close()
+            if conn:
+                conn.close()
+                print(f"🔒 [DB] Connection closed")
+    
+    @classmethod
+    async def update_price(cls, platform: str, transfer_type: str, amount: int, new_price: int, admin_id: int) -> bool:
+        """تحديث السعر في قاعدة البيانات - Thread-safe version"""
+        print(f"📝 [DB-EXECUTOR] Submitting price update task to database executor")
+        loop = asyncio.get_event_loop()
+        
+        # Run database operation in dedicated thread pool
+        result = await loop.run_in_executor(
+            cls._db_executor,
+            cls._update_price_sync,
+            platform, transfer_type, amount, new_price, admin_id
+        )
+        
+        print(f"✅ [DB-EXECUTOR] Price update task completed: {result}")
+        return result
     
     @classmethod
     def get_all_prices(cls) -> List[Dict]:
