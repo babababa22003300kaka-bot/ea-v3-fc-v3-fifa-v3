@@ -41,7 +41,6 @@ class AdminKeyboards:
         keyboard = [
             [InlineKeyboardButton("📅 تعديل التحويل العادي", callback_data=f"admin_edit_{platform}_normal")],
             [InlineKeyboardButton("⚡️ تعديل التحويل الفوري", callback_data=f"admin_edit_{platform}_instant")],
-            [InlineKeyboardButton("👁️ عرض الأسعار الحالية", callback_data="admin_view_prices")],
             [InlineKeyboardButton("🔙 العودة لإدارة الأسعار", callback_data="admin_prices")]
         ]
         return InlineKeyboardMarkup(keyboard)

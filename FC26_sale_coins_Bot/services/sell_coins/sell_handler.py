@@ -110,9 +110,7 @@ class SellCoinsHandler:
         
         keyboard = [
             [InlineKeyboardButton(f"📅 تحويل عادي - {normal_formatted}", callback_data=f"sell_transfer_normal_{platform}")],
-            [InlineKeyboardButton(f"⚡️ تحويل فوري - {instant_formatted}", callback_data=f"sell_transfer_instant_{platform}")],
-            [InlineKeyboardButton("🔙 اختر منصة أخرى", callback_data="sell_back_platforms"),
-             InlineKeyboardButton("🚫 إلغاء", callback_data="sell_cancel")]
+            [InlineKeyboardButton(f"⚡️ تحويل فوري - {instant_formatted}", callback_data=f"sell_transfer_instant_{platform}")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
