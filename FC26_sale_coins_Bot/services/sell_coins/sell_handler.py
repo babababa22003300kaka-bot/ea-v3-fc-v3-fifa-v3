@@ -162,12 +162,9 @@ class SellCoinsHandler:
 
 اكتب الكمية بالأرقام العادية:"""
 
-            keyboard = [
-                [InlineKeyboardButton("🔙 تغيير نوع التحويل", callback_data=f"sell_platform_{platform}")],
-                [InlineKeyboardButton("🎮 تغيير المنصة", callback_data="sell_back_platforms")],
-                [InlineKeyboardButton("🚫 إلغاء البيع", callback_data="sell_cancel")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            # إزالة الأزرار لتبسيط الواجهة (Task #99)
+            # المستخدم سيقوم بإدخال الكمية مباشرة بدون خيارات تنقل إضافية
+            reply_markup = None
 
             await query.edit_message_text(
                 amount_message,
