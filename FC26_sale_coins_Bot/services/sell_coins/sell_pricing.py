@@ -210,14 +210,15 @@ class CoinSellPricing:
     
     @classmethod
     def get_platform_pricing_message(cls, platform: str) -> str:
-        """رسالة أسعار مختصرة - 1M فقط"""
+        """رسالة أسعار مختصرة - 1M فقط - تجلب الأسعار من قاعدة البيانات"""
         if platform not in cls.NORMAL_PRICES:
             return "❌ منصة غير مدعومة"
         
         platform_name = cls.get_platform_display_name(platform)
         
-        normal_price_1m = cls.NORMAL_PRICES[platform].get(1000000)
-        instant_price_1m = cls.INSTANT_PRICES[platform].get(1000000)
+        # جلب الأسعار من قاعدة البيانات (نفس طريقة الأزرار)
+        normal_price_1m = cls.get_price(platform, 1000000, "normal")
+        instant_price_1m = cls.get_price(platform, 1000000, "instant")
         
         normal_formatted = f"{normal_price_1m:,} ج.م" if normal_price_1m else "غير متاح"
         instant_formatted = f"{instant_price_1m:,} ج.م" if instant_price_1m else "غير متاح"
