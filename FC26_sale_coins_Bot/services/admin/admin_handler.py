@@ -53,11 +53,11 @@ class AdminHandler:
             # معالجات الأزرار
             CallbackQueryHandler(self.handle_admin_main, pattern="^admin_main$"),
             CallbackQueryHandler(self.handle_price_management, pattern="^admin_prices$"),
-            CallbackQueryHandler(self.handle_view_prices, pattern="^admin_view_prices$"),
+            # CallbackQueryHandler(self.handle_view_prices, pattern="^admin_view_prices$"),  # تم تعطيله (الزر محذوف)
             CallbackQueryHandler(self.handle_platform_edit, pattern="^admin_edit_(playstation|xbox|pc)$"),
             CallbackQueryHandler(self.handle_transfer_type_edit, pattern="^admin_edit_(playstation|xbox|pc)_(normal|instant)$"),
-            CallbackQueryHandler(self.handle_admin_logs, pattern="^admin_logs$"),
-            CallbackQueryHandler(self.handle_admin_stats, pattern="^admin_stats$"),
+            # CallbackQueryHandler(self.handle_admin_logs, pattern="^admin_logs$"),  # تم تعطيله (الزر محذوف)
+            # CallbackQueryHandler(self.handle_admin_stats, pattern="^admin_stats$"),  # تم تعطيله (الزر محذوف)
             
             # معالج عام للـ callbacks غير المعروفة (آخر واحد عشان ميتداخلش)
             CallbackQueryHandler(self.handle_unknown_callback, pattern="^admin_.*$")
@@ -79,10 +79,10 @@ class AdminHandler:
         """طباعة جميع الـ callback patterns المتاحة للتصحيح"""
         patterns = [
             "admin_main",
-            "admin_prices", 
-            "admin_view_prices",
+            "admin_prices",
+            # "admin_view_prices",  # محذوف
             "admin_edit_playstation",
-            "admin_edit_xbox", 
+            "admin_edit_xbox",
             "admin_edit_pc",
             "admin_edit_playstation_normal",
             "admin_edit_playstation_instant",
@@ -90,8 +90,8 @@ class AdminHandler:
             "admin_edit_xbox_instant",
             "admin_edit_pc_normal",
             "admin_edit_pc_instant",
-            "admin_logs",
-            "admin_stats"
+            # "admin_logs",  # محذوف
+            # "admin_stats"  # محذوف
         ]
         
         print(f"\n🎯 [ADMIN] Available callback patterns:")
@@ -214,7 +214,7 @@ class AdminHandler:
         )
     
     async def handle_view_prices(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالج عرض الأسعار الحالية"""
+        """معالج عرض الأسعار الحالية [DISABLED - الزر محذوف من القائمة الرئيسية]"""
         query = update.callback_query
         user_id = query.from_user.id
         username = query.from_user.username or "Unknown"
@@ -340,8 +340,11 @@ class AdminHandler:
         except Exception as e:
             print(f"❌ [ADMIN] Failed to send price edit prompt: {e}")
     
+    # ============= الدوال التالية تم تعطيلها (الأزرار محذوفة) =============
+    # يمكن حذفها نهائياً لاحقاً أو الاحتفاظ بها للمستقبل
+    
     async def handle_admin_logs(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالج عرض سجل الأعمال"""
+        """معالج عرض سجل الأعمال [DISABLED - الزر محذوف]"""
         query = update.callback_query
         user_id = query.from_user.id
         username = query.from_user.username or "Unknown"
@@ -366,7 +369,7 @@ class AdminHandler:
         )
     
     async def handle_admin_stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالج الإحصائيات (للتطوير المستقبلي)"""
+        """معالج الإحصائيات [DISABLED - الزر محذوف]"""
         query = update.callback_query
         user_id = query.from_user.id
         username = query.from_user.username or "Unknown"

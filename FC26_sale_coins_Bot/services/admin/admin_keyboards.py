@@ -13,11 +13,12 @@ class AdminKeyboards:
     def get_main_admin_keyboard() -> InlineKeyboardMarkup:
         """لوحة المفاتيح الرئيسية للإدارة"""
         keyboard = [
-            [InlineKeyboardButton("💰 إدارة الأسعار", callback_data="admin_prices")],
-            [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
-            [InlineKeyboardButton("📝 سجل الأعمال", callback_data="admin_logs")],
-            [InlineKeyboardButton("⚙️ إعدادات النظام", callback_data="admin_settings")],
-            [InlineKeyboardButton("🔄 تحديث البوت", callback_data="admin_refresh")]
+            [InlineKeyboardButton("💰 إدارة الأسعار", callback_data="admin_prices")]
+            # الأزرار التالية تم حذفها (غير مطلوبة حالياً):
+            # [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
+            # [InlineKeyboardButton("📝 سجل الأعمال", callback_data="admin_logs")],
+            # [InlineKeyboardButton("⚙️ إعدادات النظام", callback_data="admin_settings")],
+            # [InlineKeyboardButton("🔄 تحديث البوت", callback_data="admin_refresh")]
         ]
         return InlineKeyboardMarkup(keyboard)
     
@@ -25,11 +26,11 @@ class AdminKeyboards:
     def get_price_management_keyboard() -> InlineKeyboardMarkup:
         """لوحة إدارة الأسعار"""
         keyboard = [
-            [InlineKeyboardButton("📋 عرض الأسعار الحالية", callback_data="admin_view_prices")],
+            # [InlineKeyboardButton("📋 عرض الأسعار الحالية", callback_data="admin_view_prices")],  # تم الحذف
             [InlineKeyboardButton("✏️ تعديل أسعار PlayStation", callback_data="admin_edit_playstation")],
             [InlineKeyboardButton("✏️ تعديل أسعار Xbox", callback_data="admin_edit_xbox")],
             [InlineKeyboardButton("✏️ تعديل أسعار PC", callback_data="admin_edit_pc")],
-            [InlineKeyboardButton("📊 مقارنة الأسعار", callback_data="admin_compare_prices")],
+            # [InlineKeyboardButton("📊 مقارنة الأسعار", callback_data="admin_compare_prices")],  # تم الحذف
             [InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data="admin_main")]
         ]
         return InlineKeyboardMarkup(keyboard)
@@ -70,7 +71,7 @@ class AdminKeyboards:
         keyboard = [
             [InlineKeyboardButton("✏️ تعديل الأسعار", callback_data="admin_prices")],
             [InlineKeyboardButton("🔄 تحديث العرض", callback_data="admin_view_prices")],
-            [InlineKeyboardButton("📊 مقارنة المنصات", callback_data="admin_compare_prices")],
+            # [InlineKeyboardButton("📊 مقارنة المنصات", callback_data="admin_compare_prices")],  # تم الحذف
             [InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data="admin_main")]
         ]
         return InlineKeyboardMarkup(keyboard)
@@ -79,9 +80,10 @@ class AdminKeyboards:
     def get_admin_logs_keyboard() -> InlineKeyboardMarkup:
         """لوحة سجل الأعمال"""
         keyboard = [
-            [InlineKeyboardButton("🔄 تحديث السجل", callback_data="admin_logs")],
-            [InlineKeyboardButton("🗑️ مسح السجل القديم", callback_data="admin_clear_logs")],
-            [InlineKeyboardButton("📊 إحصائيات السجل", callback_data="admin_log_stats")],
+            # الأزرار التالية تم حذفها (غير مطلوبة حالياً):
+            # [InlineKeyboardButton("🔄 تحديث السجل", callback_data="admin_logs")],
+            # [InlineKeyboardButton("🗑️ مسح السجل القديم", callback_data="admin_clear_logs")],
+            # [InlineKeyboardButton("📊 إحصائيات السجل", callback_data="admin_log_stats")],
             [InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data="admin_main")]
         ]
         return InlineKeyboardMarkup(keyboard)
