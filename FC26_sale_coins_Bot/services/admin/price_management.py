@@ -12,16 +12,17 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from database.admin_operations import AdminOperations
+from config import PRICE_CONFIG
 
 class PriceManagement:
     """معالج إدارة الأسعار"""
     
-    # الحدود المسموحة للأسعار
-    MIN_PRICE = 1000  # 1000 ج.م
-    MAX_PRICE = 50000  # 50000 ج.م
+    # الحدود المسموحة للأسعار (من ملف الإعدادات المركزي)
+    MIN_PRICE = PRICE_CONFIG['min_price']
+    MAX_PRICE = PRICE_CONFIG['max_price']
     
     # الكمية الافتراضية
-    DEFAULT_AMOUNT = 1000000  # 1M كوين
+    DEFAULT_AMOUNT = PRICE_CONFIG['default_amount']
     
     @classmethod
     def validate_price_input(cls, price_text: str) -> Tuple[bool, Optional[int], str]:
