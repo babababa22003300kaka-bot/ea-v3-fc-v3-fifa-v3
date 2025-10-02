@@ -522,10 +522,45 @@ class FC26Bot:
         else:
             print("❌ [SYSTEM] Admin handler not available!")
         
+        # ═══════════════════════════════════════════════════════════════════
+        # 💰 MEDIUM PRIORITY: Sell service text input handler with SMART FILTER
+        # ═══════════════════════════════════════════════════════════════════
+        # 
+        # التحديث الحرج: استخدام فلتر ذكي لمنع اعتراض رسائل التسجيل
+        # CRITICAL FIX: Using smart filter to prevent intercepting registration messages
+        #
+        # الفلتر الذكي يتحقق من:
+        # Smart filter checks:
+        #   1. هل المستخدم عنده جلسة بيع نشطة؟
+        #      Does user have active sell session?
+        #   2. هل المستخدم في خطوة إدخال الكمية؟
+        #      Is user in amount input step?
+        #
+        # ✅ فقط إذا الشروط صحيحة = يعالج الرسالة
+        #    Only if conditions true = process message
+        # ❌ إذا الشروط خاطئة = تمرير للمعالج الرئيسي
+        #    If conditions false = pass to main handler
+        #
+        # group=2 = أولوية متوسطة (بعد الأدمن، قبل المعالج الرئيسي)
+        # group=2 = medium priority (after admin, before main handler)
+        # ═══════════════════════════════════════════════════════════════════
+        
+        sell_filter = self.sell_coins_handler.get_sell_session_filter()
+        self.app.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND & sell_filter,
+                self.sell_coins_handler.handle_text_input
+            ),
+            group=2
+        )
+        print("\n💰 [SYSTEM] Sell service text input handler registered with SMART FILTER (group=2)")
+        print("   🔍 [FILTER] Only processes messages from users with active sell session")
+        print("   ✅ [FIX] Registration messages will now pass through to main handler correctly")
+        
         # Message handlers (this should be last to avoid conflicts)
-        # group=0 (default) - lower priority than admin handler
+        # group=0 (default) - lower priority than admin and sell handlers
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-        print("🔧 [SYSTEM] Main message handler registered (group=0 - default priority)")
+        print("\n🔧 [SYSTEM] Main message handler registered (group=0 - default priority)")
         
         self.logger.info("✅ All handlers configured successfully")
         
