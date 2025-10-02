@@ -5,6 +5,7 @@
 
 from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext.filters import MessageFilter
 from typing import List, Dict, Optional
 import logging
 import sys
@@ -20,6 +21,71 @@ from .price_management import PriceManagement
 
 logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CUSTOM FILTER - فلتر ذكي للأدمن
+# ═══════════════════════════════════════════════════════════════════════════
+
+class AdminPriceEditFilter(MessageFilter):
+    """
+    🔍 فلتر ذكي لمعالج رسائل الأدمن
+    Smart filter for admin text message handler
+    
+    يتحقق من حاجتين:
+    Checks TWO conditions:
+    
+    1. هل المستخدم هو الأدمن؟ (ID: 1124247595)
+       Is the user the admin? (ID: 1124247595)
+       
+    2. هل الأدمن لديه جلسة نشطة في خطوة 'waiting_price'?
+       Does the admin have an active session in 'waiting_price' step?
+    
+    ✅ فقط إذا كلا الشرطين صحيحين، سيمرر الرسالة للمعالج
+       Only if BOTH conditions are true, the message will be processed
+    
+    ❌ إذا أي شرط غير صحيح، ستمرر الرسالة للمعالج الرئيسي
+       If ANY condition is false, the message passes to main handler
+    """
+    
+    def __init__(self, admin_handler_instance):
+        """تهيئة الفلتر مع مرجع لـ AdminHandler"""
+        self.admin_handler = admin_handler_instance
+        super().__init__()
+    
+    def filter(self, message):
+        """
+        التحقق من شروط الفلتر
+        Check filter conditions
+        """
+        if not message or not message.from_user:
+            return False
+        
+        user_id = message.from_user.id
+        
+        # الشرط الأول: هل المستخدم هو الأدمن؟
+        # Condition 1: Is the user the admin?
+        is_admin = (user_id == self.admin_handler.ADMIN_ID)
+        
+        # الشرط الثاني: هل الأدمن في جلسة تعديل سعر نشطة؟
+        # Condition 2: Does the admin have an active price editing session?
+        has_active_session = (
+            user_id in self.admin_handler.user_sessions and 
+            self.admin_handler.user_sessions.get(user_id, {}).get('step') == 'waiting_price'
+        )
+        
+        # طباعة معلومات التصحيح
+        # Print debug information
+        if is_admin or has_active_session:
+            print(f"\n🔍 [FILTER] Admin Price Edit Filter Check:")
+            print(f"   👤 User ID: {user_id}")
+            print(f"   🔑 Is Admin: {is_admin}")
+            print(f"   📝 Has Active Session: {has_active_session}")
+            print(f"   ✅ Filter Result: {is_admin and has_active_session}")
+        
+        # يجب أن يكون الاثنين صحيحين
+        # Both must be true
+        return is_admin and has_active_session
+
 class AdminHandler:
     """معالج الادارة الرئيسي"""
     
@@ -30,11 +96,16 @@ class AdminHandler:
         """تهيئة معالج الادارة"""
         self.user_sessions = {}  # جلسات تعديل الأسعار
         
+        # إنشاء الفلتر الذكي للأدمن
+        # Create the smart filter for admin text handler
+        self.admin_price_filter = AdminPriceEditFilter(self)
+        
         # تهيئة قاعدة البيانات
         AdminOperations.init_admin_db()
         
         print(f"\n👑 [ADMIN] AdminHandler initialized for admin ID: {self.ADMIN_ID}")
         print(f"🔐 [ADMIN] Session storage ready for price editing workflows")
+        print(f"🔍 [ADMIN] Smart filter created for admin text handler")
         
         # طباعة الـ callback patterns للتصحيح
         self.debug_callback_patterns()
@@ -67,6 +138,17 @@ class AdminHandler:
         print(f"🎯 [ADMIN] Handlers include: commands and callbacks")
         print(f"📝 [ADMIN] Note: Admin text message handler will be registered separately with group=1")
         return handlers
+    
+    def get_admin_price_filter(self):
+        """
+        جلب الفلتر الذكي لمعالج رسائل الأدمن
+        Get the smart filter for admin text message handler
+        
+        Returns:
+            AdminPriceEditFilter: فلتر مخصص يتحقق من الأدمن والجلسة النشطة
+                                 Custom filter that checks admin ID and active session
+        """
+        return self.admin_price_filter
     
     def is_admin(self, user_id: int) -> bool:
         """التحقق من صلاحية الادمن"""
@@ -418,35 +500,24 @@ class AdminHandler:
     # ═══════════════════════════════════════════════════════════════════════════
     
     async def handle_price_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالج إدخال السعر الجديد"""
+        """
+        معالج إدخال السعر الجديد
+        Handler for new price input
+        
+        ملاحظة: الفلتر الذكي يتحقق من صلاحية الأدمن والجلسة النشطة قبل الوصول هنا
+        Note: The smart filter verifies admin authorization and active session before reaching here
+        """
         user_id = update.effective_user.id
         username = update.effective_user.username or "Unknown"
         
         print(f"\n💰 [ADMIN] ========== PRICE INPUT HANDLER CALLED ==========")
         print(f"💰 [ADMIN] Price input received from user {user_id} (@{username})")
+        print(f"✅ [ADMIN] Smart filter passed - admin and active session verified")
         
-        # التحقق من صلاحية الادمن أولاً
-        if not self.is_admin(user_id):
-            print(f"❌ [ADMIN] Non-admin user {user_id} trying to update price")
-            return
-        
-        print(f"✅ [ADMIN] User {user_id} is admin - continuing")
-        
-        # التحقق من وجود جلسة تعديل سعر
-        if user_id not in self.user_sessions:
-            print(f"⚠️ [ADMIN] No active session found for admin {user_id}")
-            print(f"📊 [ADMIN] Current sessions: {list(self.user_sessions.keys())}")
-            return
-        
-        print(f"✅ [ADMIN] Session found for admin {user_id}")
+        # الفلتر الذكي ضمن أن الأدمن لديه جلسة نشطة في 'waiting_price'
+        # The smart filter ensures admin has an active session in 'waiting_price'
         session = self.user_sessions[user_id]
         print(f"📋 [ADMIN] Session data: {session}")
-        
-        if session.get('step') != 'waiting_price':
-            print(f"⚠️ [ADMIN] Admin {user_id} not in price waiting step: {session.get('step', 'unknown')}")
-            return
-        
-        print(f"✅ [ADMIN] Admin {user_id} is in correct step: waiting_price")
         
         price_text = update.message.text.strip()
         print(f"📝 [ADMIN] Admin {user_id} entered price: '{price_text}'")
