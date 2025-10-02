@@ -3,21 +3,67 @@
 # ║                    Main Coin Selling Handler                            ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from typing import Dict, List, Optional
-import re
 import logging
+import re
+from typing import Dict, List, Optional
 
-from .sell_pricing import CoinSellPricing, Platform
-from .sell_messages import SellMessages
-from .sell_keyboards import SellKeyboards
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+from database.operations import UserOperations
 
 # استيراد الأدوات المساعدة من البوت الرئيسي
 from utils.logger import log_user_action
-from database.operations import UserOperations
+
+from .sell_keyboards import SellKeyboards
+from .sell_messages import SellMessages
+from .sell_pricing import CoinSellPricing, Platform
 
 logger = logging.getLogger(__name__)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CUSTOM FILTER - SMART SELL SESSION DETECTION
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class SellSessionFilter(filters.MessageFilter):
+    """
+    فلتر ذكي لخدمة البيع: يسمح بالرسائل فقط إذا المستخدم عنده session بيع نشط
+    """
+
+    def __init__(self, session_storage: dict):
+        """
+        Args:
+            session_storage: مرجع لـ self.user_sessions
+        """
+        self.session_storage = session_storage
+        super().__init__()
+
+    def filter(self, message):
+        """
+        بترجع True فقط إذا المستخدم عنده session بيع نشط
+        """
+        user_id = message.from_user.id
+
+        # لو مفيش session، return False عشان الرسالة تعدي للـ handler التاني
+        if user_id not in self.session_storage:
+            return False
+
+        session = self.session_storage[user_id]
+
+        # لو المستخدم مش في خطوة إدخال نص، return False
+        if session.get("step") not in ["custom_amount_input", "amount_input"]:
+            return False
+
+        # لو كل شيء تمام، return True
+        return True
+
 
 class SellCoinsHandler:
     """معالج خدمة بيع الكوينز الرئيسي"""
@@ -27,24 +73,41 @@ class SellCoinsHandler:
         self.user_sessions = {}  # جلسات المستخدمين النشطة
         self.pending_sales = {}  # البيوعات المعلقة
 
+        # 🔥 إنشاء الفلتر الذكي
+        self.smart_filter = SellSessionFilter(session_storage=self.user_sessions)
+
     def get_handlers(self) -> List:
         """جلب جميع معالجات خدمة البيع"""
         return [
             CommandHandler("sell", self.handle_sell_command),
-            CallbackQueryHandler(self.handle_platform_selection, pattern="^sell_platform_"),
-            CallbackQueryHandler(self.handle_transfer_type_selection, pattern="^sell_transfer_"),
+            CallbackQueryHandler(
+                self.handle_platform_selection, pattern="^sell_platform_"
+            ),
+            CallbackQueryHandler(
+                self.handle_transfer_type_selection, pattern="^sell_transfer_"
+            ),
             CallbackQueryHandler(self.handle_custom_amount, pattern="^sell_custom_"),
-            CallbackQueryHandler(self.handle_price_confirmation, pattern="^sell_confirm_"),
+            CallbackQueryHandler(
+                self.handle_price_confirmation, pattern="^sell_confirm_"
+            ),
             CallbackQueryHandler(self.handle_sale_instructions, pattern="^sell_ready_"),
-            CallbackQueryHandler(self.handle_payment_selection, pattern="^sell_payment_"),
+            CallbackQueryHandler(
+                self.handle_payment_selection, pattern="^sell_payment_"
+            ),
             CallbackQueryHandler(self.handle_navigation, pattern="^sell_back_"),
             CallbackQueryHandler(self.handle_help, pattern="^sell_help"),
             CallbackQueryHandler(self.handle_cancel, pattern="^sell_cancel"),
             CallbackQueryHandler(self.handle_support, pattern="^sell_support"),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_text_input)
+            # ❌ تم إزالة MessageHandler من هنا - سيتم تسجيله منفصلاً مع الفلتر الذكي
         ]
 
-    async def handle_sell_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    def get_sell_text_filter(self):
+        """جلب الفلتر الذكي لمعالج الرسائل النصية"""
+        return self.smart_filter
+
+    async def handle_sell_command(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة أمر /sell"""
         user_id = update.effective_user.id
         log_user_action(user_id, "Started coin selling service")
@@ -54,17 +117,17 @@ class SellCoinsHandler:
         if not user_data:
             await update.message.reply_text(
                 "❌ <b>يجب التسجيل أولاً!</b>\n\n🚀 استخدم /start للتسجيل قبل بيع الكوينز",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
             return
 
         # بدء جلسة بيع جديدة
         self.user_sessions[user_id] = {
-            'step': 'platform_selection',
-            'platform': None,
-            'coins': None,
-            'price': None,
-            'started_at': update.message.date
+            "step": "platform_selection",
+            "platform": None,
+            "coins": None,
+            "price": None,
+            "started_at": update.message.date,
         }
 
         # عرض رسالة الترحيب
@@ -72,12 +135,12 @@ class SellCoinsHandler:
         keyboard = SellKeyboards.get_main_sell_keyboard()
 
         await update.message.reply_text(
-            welcome_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            welcome_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
-    async def handle_platform_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_platform_selection(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة اختيار المنصة"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -91,36 +154,45 @@ class SellCoinsHandler:
         if user_id not in self.user_sessions:
             self.user_sessions[user_id] = {}
 
-        self.user_sessions[user_id].update({
-            'step': 'transfer_type_selection',
-            'platform': platform
-        })
+        self.user_sessions[user_id].update(
+            {"step": "transfer_type_selection", "platform": platform}
+        )
 
         log_user_action(user_id, f"Selected platform: {platform}")
 
         # عرض رسالة الأسعار البسيطة
         transfer_message = CoinSellPricing.get_platform_pricing_message(platform)
-        
+
         # جلب أسعار 1M للأزرار
         normal_price = CoinSellPricing.get_price(platform, 1000000, "normal")
         instant_price = CoinSellPricing.get_price(platform, 1000000, "instant")
-        
+
         normal_formatted = f"{normal_price:,} ج.م" if normal_price else "غير متاح"
         instant_formatted = f"{instant_price:,} ج.م" if instant_price else "غير متاح"
-        
+
         keyboard = [
-            [InlineKeyboardButton(f"📅 تحويل عادي - {normal_formatted}", callback_data=f"sell_transfer_normal_{platform}")],
-            [InlineKeyboardButton(f"⚡️ تحويل فوري - {instant_formatted}", callback_data=f"sell_transfer_instant_{platform}")]
+            [
+                InlineKeyboardButton(
+                    f"📅 تحويل عادي - {normal_formatted}",
+                    callback_data=f"sell_transfer_normal_{platform}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    f"⚡️ تحويل فوري - {instant_formatted}",
+                    callback_data=f"sell_transfer_instant_{platform}",
+                )
+            ],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await query.edit_message_text(
-            transfer_message,
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
+            transfer_message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
-    async def handle_transfer_type_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_transfer_type_selection(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة اختيار نوع التحويل"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -135,16 +207,24 @@ class SellCoinsHandler:
             platform = parts[3]
 
             # حفظ نوع التحويل في الجلسة
-            self.user_sessions[user_id].update({
-                'step': 'amount_input',
-                'transfer_type': transfer_type,
-                'platform': platform
-            })
+            self.user_sessions[user_id].update(
+                {
+                    "step": "amount_input",
+                    "transfer_type": transfer_type,
+                    "platform": platform,
+                }
+            )
 
-            log_user_action(user_id, f"Selected transfer type: {transfer_type} for {platform}")
+            log_user_action(
+                user_id, f"Selected transfer type: {transfer_type} for {platform}"
+            )
 
             # إعداد أسماء العرض
-            platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
+            platform_name = {
+                "playstation": "🎮 PlayStation",
+                "xbox": "🎮 Xbox",
+                "pc": "🖥️ PC",
+            }.get(platform, platform)
             transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
 
             # رسالة طلب إدخال الكمية
@@ -162,18 +242,15 @@ class SellCoinsHandler:
 
 اكتب الكمية بالأرقام العادية:"""
 
-            # إزالة الأزرار لتبسيط الواجهة (Task #99)
-            # المستخدم سيقوم بإدخال الكمية مباشرة بدون خيارات تنقل إضافية
             reply_markup = None
 
             await query.edit_message_text(
-                amount_message,
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
+                amount_message, reply_markup=reply_markup, parse_mode="Markdown"
             )
 
-
-    async def handle_custom_amount(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_custom_amount(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة طلب كمية مخصصة"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -184,10 +261,9 @@ class SellCoinsHandler:
         platform = query.data.replace("sell_custom_", "")
 
         # تحديث الجلسة
-        self.user_sessions[user_id].update({
-            'step': 'custom_amount_input',
-            'platform': platform
-        })
+        self.user_sessions[user_id].update(
+            {"step": "custom_amount_input", "platform": platform}
+        )
 
         log_user_action(user_id, f"Requested custom amount for {platform}")
 
@@ -196,28 +272,29 @@ class SellCoinsHandler:
         keyboard = SellKeyboards.get_custom_amount_cancel_keyboard(platform)
 
         await query.edit_message_text(
-            custom_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            custom_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
-    async def handle_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_text_input(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة النص المُدخل (للكمية المخصصة)"""
         user_id = update.effective_user.id
 
-        # التحقق من وجود جلسة نشطة
+        # ✅ الفلتر ضمن إننا هنا فقط لو في session، بس للتأكيد:
         if user_id not in self.user_sessions:
+            print(f"⚠️ [SELL] No active session (filter should have caught this)")
             return
 
         session = self.user_sessions[user_id]
 
         # التحقق من الخطوة الحالية
-        if session.get('step') not in ['custom_amount_input', 'amount_input']:
+        if session.get("step") not in ["custom_amount_input", "amount_input"]:
             return
 
         text = update.message.text.strip()
-        platform = session.get('platform')
-        transfer_type = session.get('transfer_type', 'normal')
+        platform = session.get("platform")
+        transfer_type = session.get("transfer_type", "normal")
 
         # تحليل الكمية المدخلة
         amount = self.parse_amount(text)
@@ -230,7 +307,7 @@ class SellCoinsHandler:
                 "✅ **المطلوب:** أرقام فقط (2-5 أرقام)\n"
                 "📝 **مثال صحيح:** 500 أو 1500 أو 20000\n\n"
                 "يرجى إدخال الكمية بالأرقام العادية فقط:",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -244,7 +321,7 @@ class SellCoinsHandler:
                 f"أنت أدخلت: {len(text)} أرقام\n\n"
                 "📝 **أمثلة صحيحة:** 500، 1500، 20000\n\n"
                 "يرجى إدخال رقم بين 2-5 أرقام:",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -259,7 +336,7 @@ class SellCoinsHandler:
                 "• 1500 \n"
                 "• 20000\n\n"
                 "يرجى المحاولة مرة أخرى:",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -274,7 +351,7 @@ class SellCoinsHandler:
                 f"📍 **الحد الأدنى:** {self.format_amount(MIN_SELL_AMOUNT)} كوين\n"
                 f"أنت أدخلت: {self.format_amount(amount)} كوين\n\n"
                 "يرجى إدخال كمية أكبر:",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -284,7 +361,7 @@ class SellCoinsHandler:
                 f"📍 **الحد الأقصى:** {self.format_amount(MAX_SELL_AMOUNT)} كوين\n"
                 f"أنت أدخلت: {self.format_amount(amount)} كوين\n\n"
                 "لبيع كميات أكبر، يرجى التواصل مع الدعم.",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
 
@@ -293,21 +370,24 @@ class SellCoinsHandler:
         price = self.calculate_price(coins, transfer_type)
 
         # تحديث الجلسة
-        session.update({
-            'step': 'sale_completed',
-            'coins': coins,
-            'price': price
-        })
+        session.update({"step": "sale_completed", "coins": coins, "price": price})
 
-        log_user_action(user_id, f"Entered amount: {coins} coins, {transfer_type} transfer, price: {price} EGP")
+        log_user_action(
+            user_id,
+            f"Entered amount: {coins} coins, {transfer_type} transfer, price: {price} EGP",
+        )
 
         # إعداد أسماء العرض
-        platform_name = {"playstation": "🎮 PlayStation", "xbox": "🎮 Xbox", "pc": "🖥️ PC"}.get(platform, platform)
+        platform_name = {
+            "playstation": "🎮 PlayStation",
+            "xbox": "🎮 Xbox",
+            "pc": "🖥️ PC",
+        }.get(platform, platform)
         transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
 
         # جلب سعر المليون كمرجع للمستخدم
         million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
-        
+
         # إذا لم يتم العثور على السعر، استخدم الأسعار الافتراضية المباشرة
         if million_price is None:
             # أسعار احتياطية ثابتة (نفس الأسعار من sell_pricing.py)
@@ -316,7 +396,7 @@ class SellCoinsHandler:
                 "instant": {"playstation": 5300, "xbox": 5300, "pc": 5800},
             }
             million_price = default_prices.get(transfer_type, {}).get(platform, 5600)
-        
+
         # تنسيق سعر المليون مع فواصل
         million_price_formatted = f"{million_price:,}"
 
@@ -337,13 +417,15 @@ class SellCoinsHandler:
             f"🆔 **رقم الطلب:** #{user_id}{coins}\n\n"
             "💬 **للاستفسار:** /sell\n"
             "🏠 **القائمة الرئيسية:** /start",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
         # مسح بيانات المحادثة
         self.clear_user_session(user_id)
 
-    async def handle_price_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_price_confirmation(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة تأكيد السعر"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -359,26 +441,30 @@ class SellCoinsHandler:
             price = int(parts[4])
 
             # تحديث الجلسة
-            self.user_sessions[user_id].update({
-                'step': 'sale_instructions',
-                'platform': platform,
-                'coins': coins,
-                'price': price
-            })
+            self.user_sessions[user_id].update(
+                {
+                    "step": "sale_instructions",
+                    "platform": platform,
+                    "coins": coins,
+                    "price": price,
+                }
+            )
 
             log_user_action(user_id, f"Confirmed sale: {coins} coins for {price} EGP")
 
             # عرض تعليمات البيع
-            instructions_message = SellMessages.get_sale_instructions_message(platform, coins)
+            instructions_message = SellMessages.get_sale_instructions_message(
+                platform, coins
+            )
             keyboard = SellKeyboards.get_sale_instructions_keyboard(platform, coins)
 
             await query.edit_message_text(
-                instructions_message,
-                reply_markup=keyboard,
-                parse_mode="HTML"
+                instructions_message, reply_markup=keyboard, parse_mode="HTML"
             )
 
-    async def handle_sale_instructions(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_sale_instructions(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة الموافقة على تعليمات البيع"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -393,17 +479,19 @@ class SellCoinsHandler:
         log_user_action(user_id, f"Started sale process, sale_id: {sale_id}")
 
         # عرض اختيار طريقة الدفع
-        payment_message = "💳 <b>اختر طريقة الدفع المفضلة:</b>\n\n" + \
-                         "ستستلم أموالك على الطريقة المختارة فور إتمام البيع"
+        payment_message = (
+            "💳 <b>اختر طريقة الدفع المفضلة:</b>\n\n"
+            + "ستستلم أموالك على الطريقة المختارة فور إتمام البيع"
+        )
         keyboard = SellKeyboards.get_payment_method_keyboard()
 
         await query.edit_message_text(
-            payment_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            payment_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
-    async def handle_payment_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_payment_selection(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة اختيار طريقة الدفع"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -415,7 +503,7 @@ class SellCoinsHandler:
 
         # حفظ طريقة الدفع في الجلسة
         if user_id in self.user_sessions:
-            self.user_sessions[user_id]['payment_method'] = payment_method
+            self.user_sessions[user_id]["payment_method"] = payment_method
 
         log_user_action(user_id, f"Selected payment method: {payment_method}")
 
@@ -438,12 +526,12 @@ class SellCoinsHandler:
         keyboard = SellKeyboards.get_sale_progress_keyboard()
 
         await query.edit_message_text(
-            success_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            success_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
-    async def handle_navigation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_navigation(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """معالجة التنقل بين الصفحات"""
         query = update.callback_query
         user_id = query.from_user.id
@@ -458,9 +546,7 @@ class SellCoinsHandler:
             keyboard = SellKeyboards.get_main_sell_keyboard()
 
             await query.edit_message_text(
-                welcome_message,
-                reply_markup=keyboard,
-                parse_mode="HTML"
+                welcome_message, reply_markup=keyboard, parse_mode="HTML"
             )
 
         elif action == "platforms":
@@ -469,12 +555,8 @@ class SellCoinsHandler:
             keyboard = SellKeyboards.get_main_sell_keyboard()
 
             await query.edit_message_text(
-                platform_message,
-                reply_markup=keyboard,
-                parse_mode="HTML"
+                platform_message, reply_markup=keyboard, parse_mode="HTML"
             )
-
-
 
     async def handle_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة طلب المساعدة"""
@@ -485,9 +567,7 @@ class SellCoinsHandler:
         keyboard = SellKeyboards.get_help_keyboard()
 
         await query.edit_message_text(
-            help_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            help_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
     async def handle_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -503,13 +583,11 @@ class SellCoinsHandler:
 
         log_user_action(user_id, "Cancelled coin selling")
 
-        cancel_message = SellMessages.get_error_message('sale_cancelled')
+        cancel_message = SellMessages.get_error_message("sale_cancelled")
         keyboard = SellKeyboards.get_error_keyboard()
 
         await query.edit_message_text(
-            cancel_message,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            cancel_message, reply_markup=keyboard, parse_mode="HTML"
         )
 
     async def handle_support(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -531,10 +609,7 @@ class SellCoinsHandler:
 
 نحن هنا لمساعدتك! 🤝"""
 
-        await query.edit_message_text(
-            support_message,
-            parse_mode="HTML"
-        )
+        await query.edit_message_text(support_message, parse_mode="HTML")
 
     def _create_sale_request(self, user_id: int, session: Dict) -> str:
         """إنشاء طلب بيع جديد"""
@@ -544,12 +619,12 @@ class SellCoinsHandler:
 
         # حفظ طلب البيع
         self.pending_sales[sale_id] = {
-            'user_id': user_id,
-            'platform': session.get('platform'),
-            'coins': session.get('coins'),
-            'price': session.get('price'),
-            'status': 'pending',
-            'created_at': time.time()
+            "user_id": user_id,
+            "platform": session.get("platform"),
+            "coins": session.get("coins"),
+            "price": session.get("price"),
+            "status": "pending",
+            "created_at": time.time(),
         }
 
         return sale_id
