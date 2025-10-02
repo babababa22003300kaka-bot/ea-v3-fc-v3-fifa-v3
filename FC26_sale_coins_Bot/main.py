@@ -435,11 +435,7 @@ class FC26Bot:
     
     def start_bot(self):
         """Start the bot"""
-        
-        # Windows event loop fix - must be called before any async operations
-        if sys_platform.system() == "Windows":
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-            self.logger.info("✅ Windows event loop policy configured")
+        # Note: Windows event loop is now configured in main() function
         
         # Initialize database
         self.logger.info("💾 Initializing database...")
