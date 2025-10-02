@@ -501,8 +501,8 @@ class FC26Bot:
             # ❌ إذا أي شرط خاطئ = تمرير للمعالج الرئيسي
             #    If ANY condition false = pass to main handler
             #
-            # group=1 = أولوية عالية (يُفحص قبل المعالج الرئيسي)
-            # group=1 = high priority (checked before main handler)
+            # group=-2 = أعلى أولوية (يُفحص قبل كل المعالجات - الأرقام الأصغر لها أولوية أعلى)
+            # group=-2 = highest priority (checked before all handlers - lower numbers = higher priority)
             # ═══════════════════════════════════════════════════════════════════
             
             admin_filter = self.admin_handler.get_admin_price_filter()
@@ -511,9 +511,9 @@ class FC26Bot:
                     filters.TEXT & ~filters.COMMAND & admin_filter,
                     self.admin_handler.handle_price_input
                 ),
-                group=1
+                group=-2
             )
-            print("   🔑 [PRIORITY] Admin text input handler registered with SMART FILTER (group=1)")
+            print("   🔑 [PRIORITY] Admin text input handler registered with SMART FILTER (group=-2 - HIGHEST)")
             print("   🔍 [FILTER] Only processes messages from admin with active price editing session")
             print("   ✅ [FIX] User messages will now pass through to main handler correctly")
             
@@ -541,8 +541,8 @@ class FC26Bot:
         # ❌ إذا الشروط خاطئة = تمرير للمعالج الرئيسي
         #    If conditions false = pass to main handler
         #
-        # group=2 = أولوية متوسطة (بعد الأدمن، قبل المعالج الرئيسي)
-        # group=2 = medium priority (after admin, before main handler)
+        # group=-1 = أولوية عالية (بعد الأدمن، قبل المعالج الرئيسي - الأرقام الأصغر لها أولوية أعلى)
+        # group=-1 = high priority (after admin, before main handler - lower numbers = higher priority)
         # ═══════════════════════════════════════════════════════════════════
         
         sell_filter = self.sell_coins_handler.get_sell_session_filter()
@@ -551,16 +551,17 @@ class FC26Bot:
                 filters.TEXT & ~filters.COMMAND & sell_filter,
                 self.sell_coins_handler.handle_text_input
             ),
-            group=2
+            group=-1
         )
-        print("\n💰 [SYSTEM] Sell service text input handler registered with SMART FILTER (group=2)")
+        print("\n💰 [SYSTEM] Sell service text input handler registered with SMART FILTER (group=-1 - HIGH)")
         print("   🔍 [FILTER] Only processes messages from users with active sell session")
         print("   ✅ [FIX] Registration messages will now pass through to main handler correctly")
         
         # Message handlers (this should be last to avoid conflicts)
-        # group=0 (default) - lower priority than admin and sell handlers
+        # group=0 (default) - أقل أولوية من admin (-2) و sell (-1) - الأرقام الأصغر لها أولوية أعلى
+        # group=0 (default) - lowest priority after admin (-2) and sell (-1) - lower numbers = higher priority
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-        print("\n🔧 [SYSTEM] Main message handler registered (group=0 - default priority)")
+        print("\n🔧 [SYSTEM] Main message handler registered (group=0 - DEFAULT/LOWEST priority)")
         
         self.logger.info("✅ All handlers configured successfully")
         
