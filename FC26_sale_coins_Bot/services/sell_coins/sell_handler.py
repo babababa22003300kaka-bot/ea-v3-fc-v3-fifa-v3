@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ApplicationHandlerStop
 from telegram.ext.filters import MessageFilter
 from typing import Dict, List, Optional
 import re
@@ -428,10 +428,10 @@ class SellCoinsHandler:
         # مسح بيانات المحادثة
         self.clear_user_session(user_id)
         
-        # إيقاف انتشار الرسالة إلى المعالجات الأخرى - الطريقة الصحيحة
-        # Stop message propagation to other handlers - The correct way
-        print(f"🛑 [SELL] Stopping message propagation using stop_propagation()")
-        context.application.stop_propagation()
+        # إيقاف انتشار الرسالة إلى المعالجات الأخرى - الطريقة الصحيحة الوحيدة
+        # Stop message propagation to other handlers - The ONLY correct way
+        print(f"🛑 [SELL] Stopping message propagation using ApplicationHandlerStop")
+        raise ApplicationHandlerStop()
 
     async def handle_price_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة تأكيد السعر"""
