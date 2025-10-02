@@ -428,10 +428,10 @@ class SellCoinsHandler:
         # مسح بيانات المحادثة
         self.clear_user_session(user_id)
         
-        # إيقاف انتشار الرسالة إلى المعالجات الأخرى
-        # Stop message propagation to other handlers
-        print(f"🛑 [SELL] Stopping message propagation - message consumed successfully")
-        return
+        # إيقاف انتشار الرسالة إلى المعالجات الأخرى - الطريقة الصحيحة
+        # Stop message propagation to other handlers - The correct way
+        print(f"🛑 [SELL] Stopping message propagation using stop_propagation()")
+        context.application.stop_propagation()
 
     async def handle_price_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة تأكيد السعر"""
