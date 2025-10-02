@@ -482,16 +482,42 @@ class FC26Bot:
                 handler_type = type(handler).__name__
                 print(f"   {i:2d}. {handler_type} registered")
             
-            # 🔥🔥 HIGH PRIORITY: Admin text input handler with group=1 🔥🔥
-            # This handler MUST be checked BEFORE the general message handler
-            # group=1 gives it higher priority than group=0 (default)
+            # ═══════════════════════════════════════════════════════════════════
+            # 🔥 HIGH PRIORITY: Admin text input handler with SMART FILTER
+            # ═══════════════════════════════════════════════════════════════════
+            # 
+            # التحديث الحرج: استخدام فلتر ذكي لمنع اعتراض رسائل المستخدمين
+            # CRITICAL FIX: Using smart filter to prevent intercepting user messages
+            #
+            # الفلتر الذكي يتحقق من:
+            # Smart filter checks:
+            #   1. هل المستخدم هو الأدمن؟ (ID: 1124247595)
+            #      Is the user the admin? (ID: 1124247595)
+            #   2. هل الأدمن في جلسة تعديل سعر نشطة؟
+            #      Does admin have active price editing session?
+            #
+            # ✅ فقط إذا كلا الشرطين صحيحين = يعالج الرسالة
+            #    Only if BOTH conditions true = process message
+            # ❌ إذا أي شرط خاطئ = تمرير للمعالج الرئيسي
+            #    If ANY condition false = pass to main handler
+            #
+            # group=1 = أولوية عالية (يُفحص قبل المعالج الرئيسي)
+            # group=1 = high priority (checked before main handler)
+            # ═══════════════════════════════════════════════════════════════════
+            
+            admin_filter = self.admin_handler.get_admin_price_filter()
             self.app.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self.admin_handler.handle_price_input),
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND & admin_filter,
+                    self.admin_handler.handle_price_input
+                ),
                 group=1
             )
-            print("   🔑 [PRIORITY] Admin text input handler registered with HIGH PRIORITY (group=1)")
+            print("   🔑 [PRIORITY] Admin text input handler registered with SMART FILTER (group=1)")
+            print("   🔍 [FILTER] Only processes messages from admin with active price editing session")
+            print("   ✅ [FIX] User messages will now pass through to main handler correctly")
             
-            self.logger.info("✅ Admin system handlers configured")
+            self.logger.info("✅ Admin system handlers configured with smart filter")
             print("✅ [SYSTEM] All admin handlers registered successfully")
         else:
             print("❌ [SYSTEM] Admin handler not available!")
