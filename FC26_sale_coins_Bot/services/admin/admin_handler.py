@@ -574,10 +574,10 @@ class AdminHandler:
         logger.info(f"✅ Price updated by admin {user_id}: {platform} {transfer_type} {old_price} -> {new_price}")
         print(f"💾 [ADMIN] Price update logged: {platform} {transfer_type} {old_price} -> {new_price}")
         
-        # إيقاف انتشار الرسالة إلى المعالجات الأخرى
-        # Stop message propagation to other handlers
-        print(f"🛑 [ADMIN] Stopping message propagation - message consumed successfully")
-        return
+        # إيقاف انتشار الرسالة إلى المعالجات الأخرى - الطريقة الصحيحة
+        # Stop message propagation to other handlers - The correct way
+        print(f"🛑 [ADMIN] Stopping message propagation using stop_propagation()")
+        context.application.stop_propagation()
     
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS
