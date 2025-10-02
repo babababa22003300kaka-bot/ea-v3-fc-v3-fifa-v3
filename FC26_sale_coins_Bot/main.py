@@ -435,7 +435,11 @@ class FC26Bot:
     
     def start_bot(self):
         """Start the bot"""
-        # Note: Windows event loop is now configured in main() function
+        
+        # Windows event loop fix - must be called before any async operations
+        if sys_platform.system() == "Windows":
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+            self.logger.info("✅ Windows event loop policy configured")
         
         # Initialize database
         self.logger.info("💾 Initializing database...")
@@ -482,86 +486,24 @@ class FC26Bot:
                 handler_type = type(handler).__name__
                 print(f"   {i:2d}. {handler_type} registered")
             
-            # ═══════════════════════════════════════════════════════════════════
-            # 🔥 HIGH PRIORITY: Admin text input handler with SMART FILTER
-            # ═══════════════════════════════════════════════════════════════════
-            # 
-            # التحديث الحرج: استخدام فلتر ذكي لمنع اعتراض رسائل المستخدمين
-            # CRITICAL FIX: Using smart filter to prevent intercepting user messages
-            #
-            # الفلتر الذكي يتحقق من:
-            # Smart filter checks:
-            #   1. هل المستخدم هو الأدمن؟ (ID: 1124247595)
-            #      Is the user the admin? (ID: 1124247595)
-            #   2. هل الأدمن في جلسة تعديل سعر نشطة؟
-            #      Does admin have active price editing session?
-            #
-            # ✅ فقط إذا كلا الشرطين صحيحين = يعالج الرسالة
-            #    Only if BOTH conditions true = process message
-            # ❌ إذا أي شرط خاطئ = تمرير للمعالج الرئيسي
-            #    If ANY condition false = pass to main handler
-            #
-            # group=-2 = أعلى أولوية (يُفحص قبل كل المعالجات - الأرقام الأصغر لها أولوية أعلى)
-            # group=-2 = highest priority (checked before all handlers - lower numbers = higher priority)
-            # ═══════════════════════════════════════════════════════════════════
-            
-            admin_filter = self.admin_handler.get_admin_price_filter()
+            # 🔥🔥 HIGH PRIORITY: Admin text input handler with group=1 🔥🔥
+            # This handler MUST be checked BEFORE the general message handler
+            # group=1 gives it higher priority than group=0 (default)
             self.app.add_handler(
-                MessageHandler(
-                    filters.TEXT & ~filters.COMMAND & admin_filter,
-                    self.admin_handler.handle_price_input
-                ),
-                group=-2
+                MessageHandler(filters.TEXT & ~filters.COMMAND, self.admin_handler.handle_price_input),
+                group=1
             )
-            print("   🔑 [PRIORITY] Admin text input handler registered with SMART FILTER (group=-2 - HIGHEST)")
-            print("   🔍 [FILTER] Only processes messages from admin with active price editing session")
-            print("   ✅ [FIX] User messages will now pass through to main handler correctly")
+            print("   🔑 [PRIORITY] Admin text input handler registered with HIGH PRIORITY (group=1)")
             
-            self.logger.info("✅ Admin system handlers configured with smart filter")
+            self.logger.info("✅ Admin system handlers configured")
             print("✅ [SYSTEM] All admin handlers registered successfully")
         else:
             print("❌ [SYSTEM] Admin handler not available!")
         
-        # ═══════════════════════════════════════════════════════════════════
-        # 💰 MEDIUM PRIORITY: Sell service text input handler with SMART FILTER
-        # ═══════════════════════════════════════════════════════════════════
-        # 
-        # التحديث الحرج: استخدام فلتر ذكي لمنع اعتراض رسائل التسجيل
-        # CRITICAL FIX: Using smart filter to prevent intercepting registration messages
-        #
-        # الفلتر الذكي يتحقق من:
-        # Smart filter checks:
-        #   1. هل المستخدم عنده جلسة بيع نشطة؟
-        #      Does user have active sell session?
-        #   2. هل المستخدم في خطوة إدخال الكمية؟
-        #      Is user in amount input step?
-        #
-        # ✅ فقط إذا الشروط صحيحة = يعالج الرسالة
-        #    Only if conditions true = process message
-        # ❌ إذا الشروط خاطئة = تمرير للمعالج الرئيسي
-        #    If conditions false = pass to main handler
-        #
-        # group=-1 = أولوية عالية (بعد الأدمن، قبل المعالج الرئيسي - الأرقام الأصغر لها أولوية أعلى)
-        # group=-1 = high priority (after admin, before main handler - lower numbers = higher priority)
-        # ═══════════════════════════════════════════════════════════════════
-        
-        sell_filter = self.sell_coins_handler.get_sell_session_filter()
-        self.app.add_handler(
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND & sell_filter,
-                self.sell_coins_handler.handle_text_input
-            ),
-            group=-1
-        )
-        print("\n💰 [SYSTEM] Sell service text input handler registered with SMART FILTER (group=-1 - HIGH)")
-        print("   🔍 [FILTER] Only processes messages from users with active sell session")
-        print("   ✅ [FIX] Registration messages will now pass through to main handler correctly")
-        
         # Message handlers (this should be last to avoid conflicts)
-        # group=0 (default) - أقل أولوية من admin (-2) و sell (-1) - الأرقام الأصغر لها أولوية أعلى
-        # group=0 (default) - lowest priority after admin (-2) and sell (-1) - lower numbers = higher priority
+        # group=0 (default) - lower priority than admin handler
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-        print("\n🔧 [SYSTEM] Main message handler registered (group=0 - DEFAULT/LOWEST priority)")
+        print("🔧 [SYSTEM] Main message handler registered (group=0 - default priority)")
         
         self.logger.info("✅ All handlers configured successfully")
         

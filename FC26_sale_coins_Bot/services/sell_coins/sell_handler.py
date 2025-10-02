@@ -4,8 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ApplicationHandlerStop
-from telegram.ext.filters import MessageFilter
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from typing import Dict, List, Optional
 import re
 import logging
@@ -20,61 +19,6 @@ from database.operations import UserOperations
 
 logger = logging.getLogger(__name__)
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# CUSTOM FILTER - فلتر ذكي لخدمة بيع الكوينز
-# ═══════════════════════════════════════════════════════════════════════════
-
-class SellSessionFilter(MessageFilter):
-    """
-    🔍 فلتر ذكي لمعالج رسائل بيع الكوينز
-    Smart filter for coin selling text message handler
-    
-    يتحقق من شرط واحد:
-    Checks ONE condition:
-    
-    1. هل المستخدم عنده جلسة بيع نشطة في خطوة إدخال الكمية؟
-       Does the user have an active sell session in amount input step?
-    
-    ✅ إذا الشرط صحيح، سيمرر الرسالة للمعالج
-       If condition is true, the message will be processed
-    
-    ❌ إذا الشرط غير صحيح، ستمرر الرسالة للمعالج الرئيسي
-       If condition is false, the message passes to main handler
-    """
-    
-    def __init__(self, sell_handler_instance):
-        """تهيئة الفلتر مع مرجع لـ SellCoinsHandler"""
-        self.sell_handler = sell_handler_instance
-        super().__init__()
-    
-    def filter(self, message):
-        """
-        التحقق من شرط الفلتر
-        Check filter condition
-        """
-        if not message or not message.from_user:
-            return False
-        
-        user_id = message.from_user.id
-        
-        # الشرط: هل المستخدم عنده جلسة بيع نشطة في خطوة إدخال الكمية؟
-        # Condition: Does user have active sell session in amount input step?
-        has_active_session = (
-            user_id in self.sell_handler.user_sessions and 
-            self.sell_handler.user_sessions.get(user_id, {}).get('step') in ['amount_input', 'custom_amount_input']
-        )
-        
-        # طباعة معلومات التصحيح
-        # Print debug information
-        if has_active_session:
-            print(f"\n🔍 [FILTER] Sell Session Filter Check:")
-            print(f"   👤 User ID: {user_id}")
-            print(f"   📝 Has Active Sell Session: {has_active_session}")
-            print(f"   ✅ Filter Result: {has_active_session}")
-        
-        return has_active_session
-
 class SellCoinsHandler:
     """معالج خدمة بيع الكوينز الرئيسي"""
 
@@ -82,22 +26,9 @@ class SellCoinsHandler:
         """تهيئة معالج البيع"""
         self.user_sessions = {}  # جلسات المستخدمين النشطة
         self.pending_sales = {}  # البيوعات المعلقة
-        
-        # إنشاء الفلتر الذكي لخدمة البيع
-        # Create the smart filter for sell service
-        self.sell_session_filter = SellSessionFilter(self)
-        
-        print(f"\n💰 [SELL] SellCoinsHandler initialized")
-        print(f"🔍 [SELL] Smart filter created for sell text handler")
 
     def get_handlers(self) -> List:
-        """
-        جلب جميع معالجات خدمة البيع
-        Get all sell service handlers
-        
-        ملاحظة: معالج الرسائل النصية بدون فلتر هنا
-        Note: Text message handler WITHOUT filter here (will be added separately in main.py with filter)
-        """
+        """جلب جميع معالجات خدمة البيع"""
         return [
             CommandHandler("sell", self.handle_sell_command),
             CallbackQueryHandler(self.handle_platform_selection, pattern="^sell_platform_"),
@@ -109,21 +40,9 @@ class SellCoinsHandler:
             CallbackQueryHandler(self.handle_navigation, pattern="^sell_back_"),
             CallbackQueryHandler(self.handle_help, pattern="^sell_help"),
             CallbackQueryHandler(self.handle_cancel, pattern="^sell_cancel"),
-            CallbackQueryHandler(self.handle_support, pattern="^sell_support")
-            # ملاحظة: MessageHandler سيتم إضافته في main.py مع الفلتر الذكي
-            # Note: MessageHandler will be added in main.py with smart filter
+            CallbackQueryHandler(self.handle_support, pattern="^sell_support"),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_text_input)
         ]
-    
-    def get_sell_session_filter(self):
-        """
-        جلب الفلتر الذكي لمعالج رسائل بيع الكوينز
-        Get the smart filter for sell text message handler
-        
-        Returns:
-            SellSessionFilter: فلتر مخصص يتحقق من الجلسة النشطة
-                              Custom filter that checks active session
-        """
-        return self.sell_session_filter
 
     async def handle_sell_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة أمر /sell"""
@@ -283,23 +202,19 @@ class SellCoinsHandler:
         )
 
     async def handle_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        معالجة النص المُدخل (للكمية المخصصة)
-        Handle text input (for custom amount)
-        
-        ملاحظة: الفلتر الذكي يضمن أن المستخدم عنده جلسة نشطة في خطوة إدخال الكمية
-        Note: The smart filter ensures user has active session in amount input step
-        """
+        """معالجة النص المُدخل (للكمية المخصصة)"""
         user_id = update.effective_user.id
-        
-        print(f"\n💰 [SELL] ========== AMOUNT INPUT HANDLER CALLED ==========")
-        print(f"💰 [SELL] Amount input received from user {user_id}")
-        print(f"✅ [SELL] Smart filter passed - active sell session verified")
 
-        # الفلتر الذكي ضمن أن المستخدم عنده جلسة نشطة
-        # The smart filter ensures user has an active session
+        # التحقق من وجود جلسة نشطة
+        if user_id not in self.user_sessions:
+            return
+
         session = self.user_sessions[user_id]
-        
+
+        # التحقق من الخطوة الحالية
+        if session.get('step') not in ['custom_amount_input', 'amount_input']:
+            return
+
         text = update.message.text.strip()
         platform = session.get('platform')
         transfer_type = session.get('transfer_type', 'normal')
@@ -427,11 +342,6 @@ class SellCoinsHandler:
 
         # مسح بيانات المحادثة
         self.clear_user_session(user_id)
-        
-        # إيقاف انتشار الرسالة إلى المعالجات الأخرى - الطريقة الصحيحة الوحيدة
-        # Stop message propagation to other handlers - The ONLY correct way
-        print(f"🛑 [SELL] Stopping message propagation using ApplicationHandlerStop")
-        raise ApplicationHandlerStop()
 
     async def handle_price_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة تأكيد السعر"""
