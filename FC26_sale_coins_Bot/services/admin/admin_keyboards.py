@@ -59,7 +59,6 @@ class AdminKeyboards:
         """لوحة بعد نجاح التحديث"""
         keyboard = [
             [InlineKeyboardButton("💰 تعديل سعر آخر", callback_data="admin_prices")],
-            [InlineKeyboardButton("📋 عرض جميع الأسعار", callback_data="admin_view_prices")],
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="admin_main")]
         ]
         return InlineKeyboardMarkup(keyboard)
