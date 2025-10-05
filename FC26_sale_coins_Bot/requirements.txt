@@ -2,7 +2,7 @@
 # مكتبات بوت FC26 للألعاب
 
 # Telegram Bot Library (Main requirement)
-python-telegram-bot>=22.0
+python-telegram-bot>=20.7
 
 # Environment Variables
 python-dotenv

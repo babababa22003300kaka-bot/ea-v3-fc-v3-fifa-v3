@@ -1,12 +1,15 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║              💰 SELL COINS - CONVERSATION HANDLER                        ║
 # ║                   خدمة بيع الكوينز - ConversationHandler                ║
+# ║                  🔥 WITH MESSAGE TAGGING SYSTEM 🔥                       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 """
 خدمة بيع الكوينز باستخدام ConversationHandler
 - معزولة تماماً عن باقي الخدمات
 - بدون تضارب نهائياً
+- 🏷️ نظام وسم الرسائل لمنع الردود المزدوجة
+- 🔥 EXCLUSIVE CONSUMPTION MODE (block=True INSIDE)
 """
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -21,6 +24,7 @@ from telegram.ext import (
 
 from database.operations import UserOperations
 from utils.logger import log_user_action
+from utils.message_tagger import MessageTagger  # 🔥 النظام الجديد
 
 from .sell_pricing import CoinSellPricing
 
@@ -32,7 +36,7 @@ SELL_PLATFORM, SELL_TYPE, SELL_AMOUNT = range(3)
 
 
 class SellCoinsConversation:
-    """معالج بيع الكوينز - ConversationHandler"""
+    """معالج بيع الكوينز - ConversationHandler مع نظام الوسم"""
 
     # ═══════════════════════════════════════════════════════════════════════
     # ENTRY POINT
@@ -41,10 +45,13 @@ class SellCoinsConversation:
     @staticmethod
     async def start_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بدء عملية البيع - /sell"""
+        # 🏷️ وسم الرسالة
+        MessageTagger.mark_as_handled(context)
+
         user_id = update.effective_user.id
         log_user_action(user_id, "Started coin selling service")
 
-        print(f"💰 [SELL] Service started for user {user_id}")
+        print(f"\n💰 [SELL] Service started for user {user_id}")
 
         # التحقق من التسجيل
         user_data = UserOperations.get_user_data(user_id)
@@ -82,6 +89,9 @@ class SellCoinsConversation:
     @staticmethod
     async def choose_platform(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار المنصة"""
+        # 🏷️ وسم الرسالة
+        MessageTagger.mark_as_handled(context)
+
         query = update.callback_query
         await query.answer()
 
@@ -135,6 +145,9 @@ class SellCoinsConversation:
     @staticmethod
     async def choose_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار نوع التحويل"""
+        # 🏷️ وسم الرسالة
+        MessageTagger.mark_as_handled(context)
+
         query = update.callback_query
         await query.answer()
 
@@ -197,6 +210,9 @@ class SellCoinsConversation:
     @staticmethod
     async def enter_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إدخال الكمية"""
+        # 🏷️ وسم الرسالة - الأهم!
+        MessageTagger.mark_as_handled(context)
+
         user_id = update.effective_user.id
         text = update.message.text.strip()
 
@@ -204,6 +220,7 @@ class SellCoinsConversation:
 
         # التحقق من الصيغة
         if not text.isdigit():
+            print(f"   ❌ [SELL] Invalid format: {text}")
             await update.message.reply_text(
                 "❌ **صيغة غير صحيحة!**\n\n"
                 "✅ **المطلوب:** أرقام فقط\n"
@@ -217,6 +234,7 @@ class SellCoinsConversation:
 
         # التحقق من الحدود
         if amount < 50:
+            print(f"   ❌ [SELL] Amount too low: {amount}")
             await update.message.reply_text(
                 f"❌ **الكمية قليلة جداً!**\n\n"
                 f"📍 **الحد الأدنى:** 50 كوين\n"
@@ -227,6 +245,7 @@ class SellCoinsConversation:
             return SELL_AMOUNT
 
         if amount > 20000:
+            print(f"   ❌ [SELL] Amount too high: {amount}")
             await update.message.reply_text(
                 f"❌ **الكمية كبيرة جداً!**\n\n"
                 f"📍 **الحد الأقصى:** 20,000 كوين\n"
@@ -299,6 +318,9 @@ class SellCoinsConversation:
     @staticmethod
     async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء العملية"""
+        # 🏷️ وسم الرسالة
+        MessageTagger.mark_as_handled(context)
+
         user_id = update.effective_user.id
         print(f"❌ [SELL] User {user_id} cancelled sell service")
 
@@ -330,12 +352,12 @@ class SellCoinsConversation:
         return int(base_price)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # CONVERSATION HANDLER
+    # CONVERSATION HANDLER - 🔥 WITH block=True INSIDE 🔥
     # ═══════════════════════════════════════════════════════════════════════
 
     @staticmethod
     def get_conversation_handler():
-        """إنشاء ConversationHandler للخدمة"""
+        """إنشاء ConversationHandler للخدمة - مع block=True بالداخل"""
         return ConversationHandler(
             entry_points=[CommandHandler("sell", SellCoinsConversation.start_sell)],
             states={
@@ -361,4 +383,5 @@ class SellCoinsConversation:
             fallbacks=[CommandHandler("cancel", SellCoinsConversation.cancel)],
             name="sell_coins_conversation",
             persistent=False,
+            block=True,  # 🔥 المكان الصحيح!
         )
