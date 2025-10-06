@@ -125,7 +125,8 @@ class RegistrationHandlers:
                 context,
                 update.effective_chat.id,
                 question_text,
-                InlineKeyboardMarkup(keyboard)
+                InlineKeyboardMarkup(keyboard),
+                user_message_id=update.message.message_id,
             )
 
             print(f"➡️ [SMART-ROUTER] → REG_INTERRUPTED state")
@@ -299,7 +300,8 @@ class RegistrationHandlers:
                 update.effective_chat.id,
                 "🎮 <b>من فضلك اختر منصتك من الأزرار أدناه</b>\n\n"
             "⬇️ اضغط على أحد الأزرار:",
-                keyboard
+                keyboard,
+                user_message_id=update.message.message_id,
             )
 
         print(f"   ✅ Nudge sent - staying in REG_PLATFORM")
@@ -347,7 +349,8 @@ class RegistrationHandlers:
                 context,
                 update.effective_chat.id,
                 question_text,
-                InlineKeyboardMarkup(keyboard)
+                InlineKeyboardMarkup(keyboard),
+                user_message_id=update.message.message_id,
             )
 
         print(f"   ✅ Nudge sent - staying in REG_INTERRUPTED")
@@ -419,6 +422,7 @@ class RegistrationHandlers:
                 ErrorMessages.get_phone_validation_error(validation["error"]
             ),
                 parse_mode="HTML",
+                user_message_id=update.message.message_id,
             )
             print(f"   ⏸️ Staying in REG_WHATSAPP")
             print(f"{'='*80}\n")
@@ -444,7 +448,8 @@ class RegistrationHandlers:
                 context,
                 update.effective_chat.id,
                 WelcomeMessages.get_whatsapp_confirmed_message(validation["display"]),
-                keyboard
+                keyboard,
+                user_message_id=update.message.message_id,
             )
 
         log_user_action(user_id, f"WhatsApp: {validation['display']}")
@@ -526,7 +531,8 @@ class RegistrationHandlers:
                 update.effective_chat.id,
                 "⚠️ <b>يجب اختيار طريقة الدفع أولاً!</b>\n\n"
                 "💳 اختر طريقة الدفع من الأزرار:",
-                keyboard
+                keyboard,
+                user_message_id=update.message.message_id,
             )
 
             print(f"   ⏸️ Staying in REG_PAYMENT")
@@ -551,6 +557,7 @@ class RegistrationHandlers:
                 
             ),
                 parse_mode="HTML",
+                user_message_id=update.message.message_id,
             )
             print(f"   ⏸️ Staying in REG_PAYMENT")
             print(f"{'='*80}\n")
@@ -583,7 +590,8 @@ class RegistrationHandlers:
         await send_or_edit(
                 context,
                 update.effective_chat.id,
-                confirmation
+                confirmation,
+                user_message_id=update.message.message_id,
             )
 
         user_info = {
@@ -597,7 +605,8 @@ class RegistrationHandlers:
         await send_or_edit(
                 context,
                 update.effective_chat.id,
-                final_summary
+                final_summary,
+                user_message_id=update.message.message_id,
             )
 
         StatisticsOperations.update_daily_metric("completed_registrations")
