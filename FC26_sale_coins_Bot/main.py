@@ -1,6 +1,6 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║                🎮 FC26 GAMING BOT - MAIN ORCHESTRATOR                   ║
-# ║              بوت FC26 - الملف الرئيسي (المنسق فقط) 🔥                  ║
+# ║              🎮 FC26 GAMING BOT - MAIN                                   ║
+# ║              بوت FC26 - الملف الرئيسي (منسق فقط) 🔥                    ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 import asyncio
@@ -13,33 +13,26 @@ from handlers.recovery.global_router import get_recovery_handler
 from handlers.registration.conversation import get_registration_handler
 from services.admin.admin_conversation_handler import AdminConversation
 from services.sell_coins.sell_conversation_handler import SellCoinsConversation
+from utils.backup_job import register_backup_job
 from utils.logger import fc26_logger
+from utils.session_monitor import register_monitoring
 
 
 def setup_handlers(app):
     """
     🎯 تسجيل جميع الـ handlers
-
-    ✅ لإضافة خدمة جديدة:
-       1. Import الخدمة في الأعلى
-       2. أضف سطر واحد هنا: app.add_handler(...)
-       3. خلاص! 🔥
     """
 
     print("\n" + "=" * 80)
     print("🎯 [SYSTEM] REGISTERING HANDLERS")
     print("=" * 80)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # 1️⃣ REGISTRATION (أولوية: group=0)
-    # ═══════════════════════════════════════════════════════════════════════
+    # 1️⃣ REGISTRATION
     print("\n🧠 [REGISTRATION] Registering...")
     app.add_handler(get_registration_handler())
     print("   ✅ Done")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # 2️⃣ SELL SERVICE (أولوية: group=0)
-    # ═══════════════════════════════════════════════════════════════════════
+    # 2️⃣ SELL SERVICE
     print("\n🔧 [SELL] Registering...")
     try:
         app.add_handler(SellCoinsConversation.get_conversation_handler())
@@ -47,9 +40,7 @@ def setup_handlers(app):
     except Exception as e:
         print(f"   ❌ Failed: {e}")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # 3️⃣ ADMIN SERVICE (أولوية: group=0)
-    # ═══════════════════════════════════════════════════════════════════════
+    # 3️⃣ ADMIN SERVICE
     print("\n🔧 [ADMIN] Registering...")
     try:
         app.add_handler(AdminConversation.get_conversation_handler())
@@ -57,17 +48,13 @@ def setup_handlers(app):
     except Exception as e:
         print(f"   ❌ Failed: {e}")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # 4️⃣ SIMPLE COMMANDS (أولوية: group=0)
-    # ═══════════════════════════════════════════════════════════════════════
+    # 4️⃣ SIMPLE COMMANDS
     print("\n🔧 [COMMANDS] Registering...")
     for handler in get_command_handlers():
         app.add_handler(handler)
     print("   ✅ Done")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # 5️⃣ GLOBAL RECOVERY (أولوية: group=99 - آخر خط دفاع)
-    # ═══════════════════════════════════════════════════════════════════════
+    # 5️⃣ GLOBAL RECOVERY
     print("\n🛡️ [RECOVERY] Registering...")
     app.add_handler(get_recovery_handler(), group=99)
     print("   ✅ Done")
@@ -93,27 +80,33 @@ def main():
         print("❌ Database initialization failed!")
         return
 
-    # إنشاء تطبيق البوت
+    # إنشاء تطبيق البوت (مع Persistence)
     bot_app = FC26BotApp()
     app = bot_app.create_application()
 
     # تسجيل الـ handlers
     setup_handlers(app)
 
+    # 🔥 تسجيل وظائف الصيانة (النسخ الاحتياطي والمراقبة)
+    register_backup_job(app)
+    register_monitoring(app)
+
     # طباعة البانر
     fc26_logger.log_bot_start()
     print(
         """
 ╔══════════════════════════════════════════════════════════════════════════╗
-║       🎮 FC26 GAMING BOT - MODULAR ARCHITECTURE 🎮                       ║
-║         بوت FC26 - هيكل معياري احترافي 🔥                               ║
+║       🎮 FC26 GAMING BOT - COMPLETE SYSTEM 🎮                            ║
+║         بوت FC26 - النظام الكامل مع Persistence 🔥                      ║
 ║                                                                          ║
 ║  🔥 FEATURES:                                                           ║
 ║  ✅ Modular architecture - هيكل معياري                                 ║
-║  ✅ Easy maintenance - سهولة الصيانة                                   ║
-║  ✅ Add new service = 1 line! - إضافة خدمة = سطر واحد!                 ║
+║  ✅ Session persistence - جلسات دائمة                                  ║
+║  ✅ Session buckets - عزل البيانات                                    ║
+║  ✅ Auto backup - نسخ احتياطي تلقائي                                   ║
+║  ✅ Health monitoring - مراقبة الصحة                                   ║
+║  ✅ Message tagging - نظام الوسم                                       ║
 ║  ✅ Zero duplicates - بدون تكرار                                       ║
-║  ✅ Message tagging system - نظام الوسم                                ║
 ║  ✅ Production ready - جاهز للإنتاج                                    ║
 ╚══════════════════════════════════════════════════════════════════════════╝
     """
