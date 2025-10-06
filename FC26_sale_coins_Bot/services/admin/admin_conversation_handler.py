@@ -251,7 +251,7 @@ class AdminConversation:
 
         if not price_text.isdigit():
             print(f"   ❌ [ADMIN] Invalid format")
-            await send_or_edit(context, update.effective_chat.id, "❌ صيغة غير صحيحة! أدخل أرقاماً فقط")
+            await send_or_edit(context, update.effective_chat.id, "❌ صيغة غير صحيحة! أدخل أرقاماً فقط", user_message_id=update.message.message_id)
             return ADMIN_PRICE_INPUT
 
         new_price = int(price_text)
@@ -259,14 +259,16 @@ class AdminConversation:
         if new_price < 1000:
             print(f"   ❌ [ADMIN] Price too low: {new_price}")
             await send_or_edit(context, update.effective_chat.id, 
-                f"❌ السعر قليل جداً! الحد الأدنى: 1,000 ج.م"
+                f"❌ السعر قليل جداً! الحد الأدنى: 1,000 ج.م",
+                user_message_id=update.message.message_id,
             )
             return ADMIN_PRICE_INPUT
 
         if new_price > 50000:
             print(f"   ❌ [ADMIN] Price too high: {new_price}")
             await send_or_edit(context, update.effective_chat.id, 
-                f"❌ السعر عالي جداً! الحد الأقصى: 50,000 ج.م"
+                f"❌ السعر عالي جداً! الحد الأقصى: 50,000 ج.م",
+                user_message_id=update.message.message_id,
             )
             return ADMIN_PRICE_INPUT
 
@@ -301,7 +303,8 @@ class AdminConversation:
             f"⚡ النوع: {transfer_name}\n"
             f"💰 السعر القديم: {old_price:,} ج.م\n"
             f"💵 السعر الجديد: {new_price:,} ج.م\n\n"
-            f"🔹 /admin للرجوع للوحة التحكم")
+            f"🔹 /admin للرجوع للوحة التحكم",
+            user_message_id=update.message.message_id)
 
         # 🔥 مسح bucket فقط
         clear_bucket(context, "admin")
