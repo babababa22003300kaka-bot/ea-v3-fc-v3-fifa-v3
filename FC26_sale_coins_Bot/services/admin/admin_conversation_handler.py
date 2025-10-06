@@ -1,15 +1,13 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║              👑 ADMIN - CONVERSATION HANDLER                             ║
-# ║                   خدمة الأدمن - ConversationHandler                     ║
-# ║                  🔥 WITH MESSAGE TAGGING SYSTEM 🔥                       ║
+# ║                   خدمة الأدمن - مع bucket و persistence                 ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 """
 خدمة الأدمن باستخدام ConversationHandler
-- معزولة تماماً عن باقي الخدمات
-- بدون تضارب نهائياً
-- 🏷️ نظام وسم الرسائل لمنع الردود المزدوجة
-- 🔥 EXCLUSIVE CONSUMPTION MODE (block=True INSIDE)
+- مع نظام وسم الرسائل (MessageTagger)
+- مع نظام عزل البيانات (Session Buckets)
+- مع Persistence
 """
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -23,7 +21,8 @@ from telegram.ext import (
 )
 
 from database.admin_operations import AdminOperations
-from utils.message_tagger import MessageTagger  # 🔥 النظام الجديد
+from utils.message_tagger import MessageTagger
+from utils.session_bucket import bucket, clear_bucket
 
 from .price_management import PriceManagement
 
@@ -35,18 +34,13 @@ ADMIN_MAIN, ADMIN_PRICES, ADMIN_PLATFORM, ADMIN_PRICE_INPUT = range(4)
 
 
 class AdminConversation:
-    """معالج الأدمن - ConversationHandler مع نظام الوسم"""
+    """معالج الأدمن - مع bucket"""
 
-    ADMIN_ID = 1124247595  # ضع معرف الأدمن هنا
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # ENTRY POINT
-    # ═══════════════════════════════════════════════════════════════════════
+    ADMIN_ID = 1124247595
 
     @staticmethod
     async def start_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بدء لوحة الأدمن - /admin"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -54,7 +48,6 @@ class AdminConversation:
 
         print(f"\n👑 [ADMIN] Admin command from user {user_id} (@{username})")
 
-        # التحقق من الصلاحية
         if user_id != AdminConversation.ADMIN_ID:
             print(f"❌ [ADMIN] Unauthorized access by {user_id}")
             await update.message.reply_text("❌ غير مصرح لك بالوصول لهذه الخدمة!")
@@ -63,7 +56,6 @@ class AdminConversation:
         AdminOperations.log_admin_action(user_id, "ADMIN_LOGIN", "Accessed via /admin")
         print(f"✅ [ADMIN] Admin {user_id} logged in")
 
-        # عرض اللوحة الرئيسية
         keyboard = [
             [InlineKeyboardButton("💰 إدارة الأسعار", callback_data="admin_prices")],
             [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
@@ -78,14 +70,9 @@ class AdminConversation:
 
         return ADMIN_MAIN
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # STATE HANDLERS
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة القائمة الرئيسية"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
@@ -101,7 +88,6 @@ class AdminConversation:
             print(f"💰 [ADMIN] {user_id} accessing price management")
             AdminOperations.log_admin_action(user_id, "ACCESSED_PRICE_MANAGEMENT")
 
-            # عرض إدارة الأسعار
             keyboard = [
                 [
                     InlineKeyboardButton(
@@ -135,14 +121,12 @@ class AdminConversation:
         update: Update, context: ContextTypes.DEFAULT_TYPE
     ):
         """معالجة اختيار المنصة"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
         await query.answer()
 
         if query.data == "admin_back_main":
-            # رجوع للقائمة الرئيسية
             keyboard = [
                 [
                     InlineKeyboardButton(
@@ -166,7 +150,6 @@ class AdminConversation:
 
         print(f"🎮 [ADMIN] {user_id} selected platform: {platform}")
 
-        # عرض أنواع التحويل
         normal_price = PriceManagement.get_current_price(platform, "normal")
         instant_price = PriceManagement.get_current_price(platform, "instant")
 
@@ -205,14 +188,12 @@ class AdminConversation:
         update: Update, context: ContextTypes.DEFAULT_TYPE
     ):
         """معالجة اختيار نوع التحويل"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
         await query.answer()
 
         if query.data == "admin_back_platforms":
-            # رجوع لاختيار المنصة
             keyboard = [
                 [
                     InlineKeyboardButton(
@@ -234,15 +215,13 @@ class AdminConversation:
 
         user_id = query.from_user.id
 
-        # استخراج البيانات
-        parts = query.data.split("_")  # admin_edit_playstation_normal
+        parts = query.data.split("_")
         if len(parts) >= 4:
             platform = parts[2]
             transfer_type = parts[3]
 
             print(f"⚡ [ADMIN] {user_id} editing {platform} {transfer_type}")
 
-            # جلب السعر الحالي
             current_price = PriceManagement.get_current_price(platform, transfer_type)
 
             if current_price is None:
@@ -252,10 +231,11 @@ class AdminConversation:
                 )
                 return ConversationHandler.END
 
-            # حفظ البيانات في context
-            context.user_data["admin_platform"] = platform
-            context.user_data["admin_type"] = transfer_type
-            context.user_data["admin_current_price"] = current_price
+            # 🔥 استخدام bucket بدلاً من context.user_data
+            admin_bucket = bucket(context, "admin")
+            admin_bucket["platform"] = platform
+            admin_bucket["type"] = transfer_type
+            admin_bucket["current_price"] = current_price
 
             AdminOperations.log_admin_action(
                 user_id,
@@ -288,7 +268,6 @@ class AdminConversation:
     @staticmethod
     async def handle_price_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة إدخال السعر"""
-        # 🏷️ وسم الرسالة - الأهم!
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -296,7 +275,6 @@ class AdminConversation:
 
         print(f"💰 [ADMIN] Price input from {user_id}: {price_text}")
 
-        # التحقق من الصيغة
         if not price_text.isdigit():
             print(f"   ❌ [ADMIN] Invalid format")
             await update.message.reply_text("❌ صيغة غير صحيحة! أدخل أرقاماً فقط")
@@ -304,7 +282,6 @@ class AdminConversation:
 
         new_price = int(price_text)
 
-        # التحقق من الحدود
         if new_price < 1000:
             print(f"   ❌ [ADMIN] Price too low: {new_price}")
             await update.message.reply_text(
@@ -319,16 +296,16 @@ class AdminConversation:
             )
             return ADMIN_PRICE_INPUT
 
-        # جلب البيانات
-        platform = context.user_data.get("admin_platform")
-        transfer_type = context.user_data.get("admin_type")
-        old_price = context.user_data.get("admin_current_price")
+        # 🔥 استخدام bucket
+        admin_bucket = bucket(context, "admin")
+        platform = admin_bucket.get("platform")
+        transfer_type = admin_bucket.get("type")
+        old_price = admin_bucket.get("current_price")
 
         print(
             f"🔄 [ADMIN] Updating {platform} {transfer_type}: {old_price} → {new_price}"
         )
 
-        # تحديث السعر
         success = await PriceManagement.update_price(
             platform, transfer_type, new_price, user_id
         )
@@ -355,20 +332,15 @@ class AdminConversation:
             parse_mode="HTML",
         )
 
-        # مسح البيانات
-        context.user_data.clear()
+        # 🔥 مسح bucket فقط
+        clear_bucket(context, "admin")
         print(f"✅ [ADMIN] Price updated successfully")
 
         return ConversationHandler.END
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # FALLBACKS
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء العملية"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -378,18 +350,15 @@ class AdminConversation:
             "❌ تم إلغاء العملية\n\n🔹 /admin للرجوع للوحة التحكم"
         )
 
-        context.user_data.clear()
+        # 🔥 مسح bucket فقط
+        clear_bucket(context, "admin")
         AdminOperations.log_admin_action(user_id, "CANCELLED_OPERATION")
 
         return ConversationHandler.END
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # CONVERSATION HANDLER - 🔥 WITH block=True INSIDE 🔥
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     def get_conversation_handler():
-        """إنشاء ConversationHandler للخدمة - مع block=True بالداخل"""
+        """إنشاء ConversationHandler للخدمة"""
         return ConversationHandler(
             entry_points=[CommandHandler("admin", AdminConversation.start_admin)],
             states={
@@ -418,6 +387,6 @@ class AdminConversation:
             },
             fallbacks=[CommandHandler("cancel", AdminConversation.cancel)],
             name="admin_conversation",
-            persistent=False,
-            block=True,  # 🔥 المكان الصحيح!
+            persistent=True,  # 🔥 تفعيل Persistence
+            block=True,
         )

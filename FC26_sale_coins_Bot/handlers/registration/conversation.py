@@ -1,35 +1,29 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║        🎯 REGISTRATION CONVERSATION - محادثة التسجيل                    ║
+# ║              📝 REGISTRATION CONVERSATION                                ║
+# ║                  محادثة التسجيل - ConversationHandler                  ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-"""إعداد ConversationHandler للتسجيل"""
+"""
+محادثة التسجيل الكاملة
+- مع Persistence
+- مع Message Tagging
+- مع Session Buckets
+"""
 
 from telegram.ext import (
-    CommandHandler,
     CallbackQueryHandler,
+    CommandHandler,
     ConversationHandler,
     MessageHandler,
     filters,
 )
 
-from .states import REG_PLATFORM, REG_WHATSAPP, REG_PAYMENT, REG_INTERRUPTED
 from .handlers import RegistrationHandlers
+from .states import REG_INTERRUPTED, REG_PAYMENT, REG_PLATFORM, REG_WHATSAPP
 
 
-def get_registration_handler() -> ConversationHandler:
-    """
-    🎯 إنشاء ConversationHandler للتسجيل
-
-    Features:
-    - Smart interruption handling
-    - Anti-silence nudge handlers
-    - Message tagging for zero duplicates
-    - Flexible reentry (allow_reentry=True)
-    - Per-user isolation (per_user=True)
-
-    Returns:
-        ConversationHandler: معالج محادثة التسجيل جاهز
-    """
+def get_registration_handler():
+    """إنشاء ConversationHandler للتسجيل"""
 
     return ConversationHandler(
         entry_points=[
@@ -42,10 +36,12 @@ def get_registration_handler() -> ConversationHandler:
         states={
             REG_PLATFORM: [
                 CallbackQueryHandler(
-                    RegistrationHandlers.handle_platform_callback, pattern="^platform_"
+                    RegistrationHandlers.handle_platform_callback,
+                    pattern="^platform_",
                 ),
                 MessageHandler(
-                    filters.TEXT & ~filters.COMMAND, RegistrationHandlers.nudge_platform
+                    filters.TEXT & ~filters.COMMAND,
+                    RegistrationHandlers.nudge_platform,
                 ),
             ],
             REG_WHATSAPP: [
@@ -56,7 +52,8 @@ def get_registration_handler() -> ConversationHandler:
             ],
             REG_PAYMENT: [
                 CallbackQueryHandler(
-                    RegistrationHandlers.handle_payment_callback, pattern="^payment_"
+                    RegistrationHandlers.handle_payment_callback,
+                    pattern="^payment_",
                 ),
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
@@ -76,7 +73,7 @@ def get_registration_handler() -> ConversationHandler:
         },
         fallbacks=[CommandHandler("cancel", RegistrationHandlers.cancel_registration)],
         name="registration",
-        persistent=False,
+        persistent=True,  # 🔥 تفعيل Persistence
         per_user=True,
         allow_reentry=True,
         block=True,

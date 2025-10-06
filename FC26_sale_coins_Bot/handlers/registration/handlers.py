@@ -1,34 +1,37 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║              🎮 REGISTRATION HANDLERS - معالجات التسجيل                 ║
+# ║              📝 REGISTRATION HANDLERS                                    ║
+# ║                  معالجات التسجيل - مع نظام الوسم والعزل                ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-"""جميع معالجات التسجيل مع نظام الوسم"""
+"""
+معالجات خدمة التسجيل
+- مع نظام وسم الرسائل (MessageTagger)
+- مع نظام عزل البيانات (Session Buckets)
+"""
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
-from .states import REG_PLATFORM, REG_WHATSAPP, REG_PAYMENT, REG_INTERRUPTED
-from .helpers import show_main_menu
-from utils.message_tagger import MessageTagger
+from database.operations import StatisticsOperations, UserOperations
+from keyboards.payment_keyboard import PaymentKeyboard
+from keyboards.platform_keyboard import PlatformKeyboard
+from messages.confirmation_msgs import ConfirmationMessages
+from messages.error_messages import ErrorMessages
+from messages.welcome_messages import WelcomeMessages
 from utils.locks import is_rate_limited
 from utils.logger import log_user_action
-from database.operations import UserOperations, StatisticsOperations
-from keyboards.platform_keyboard import PlatformKeyboard
-from keyboards.payment_keyboard import PaymentKeyboard
-from messages.welcome_messages import WelcomeMessages
-from messages.error_messages import ErrorMessages
-from messages.confirmation_msgs import ConfirmationMessages
-from validators.phone_validator import PhoneValidator
+from utils.message_tagger import MessageTagger
+from utils.session_bucket import bucket, clear_bucket
 from validators.payment_validator import PaymentValidator
+from validators.phone_validator import PhoneValidator
 
 
 class RegistrationHandlers:
-    """معالجات خدمة التسجيل"""
+    """معالجات التسجيل مع نظام الوسم والعزل"""
 
     @staticmethod
     async def start_registration(update, context):
         """الموجه الذكي - Smart Router"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -47,8 +50,9 @@ class RegistrationHandlers:
 
         print(f"🔍 [SMART-ROUTER] Checking for interrupted registration...")
 
-        has_memory_data = bool(context.user_data.get("platform")) or bool(
-            context.user_data.get("interrupted_platform")
+        reg_bucket = bucket(context, "reg")
+        has_memory_data = bool(reg_bucket.get("platform")) or bool(
+            reg_bucket.get("interrupted_platform")
         )
         print(f"   📝 Memory check: {has_memory_data}")
 
@@ -63,7 +67,7 @@ class RegistrationHandlers:
 
         if current_step == "completed":
             print(f"✅ [SMART-ROUTER] User completed - showing menu")
-            await show_main_menu(update, user_data)
+            await RegistrationHandlers._show_main_menu(update, user_data)
             return ConversationHandler.END
 
         elif current_step in [
@@ -78,22 +82,20 @@ class RegistrationHandlers:
         elif has_memory_data:
             print(f"⚠️ [SMART-ROUTER] Interrupted in MEMORY")
             is_interrupted = True
-            interrupted_data = context.user_data
+            interrupted_data = reg_bucket
 
         if is_interrupted:
             print(f"🤔 [SMART-ROUTER] Asking user for decision...")
 
-            context.user_data["interrupted_platform"] = interrupted_data.get(
+            reg_bucket["interrupted_platform"] = interrupted_data.get(
                 "platform", "غير محدد"
             )
-            context.user_data["interrupted_whatsapp"] = interrupted_data.get("whatsapp")
-            context.user_data["interrupted_payment"] = interrupted_data.get(
-                "payment_method"
-            )
-            context.user_data["interrupted_step"] = current_step
+            reg_bucket["interrupted_whatsapp"] = interrupted_data.get("whatsapp")
+            reg_bucket["interrupted_payment"] = interrupted_data.get("payment_method")
+            reg_bucket["interrupted_step"] = current_step
 
-            platform = context.user_data["interrupted_platform"]
-            whatsapp = context.user_data["interrupted_whatsapp"] or "لم يُدخل بعد"
+            platform = reg_bucket["interrupted_platform"]
+            whatsapp = reg_bucket["interrupted_whatsapp"] or "لم يُدخل بعد"
 
             question_text = f"""🤔 <b>لاحظت أنك لم تكمل تسجيلك!</b>
 
@@ -120,10 +122,12 @@ class RegistrationHandlers:
 
             print(f"➡️ [SMART-ROUTER] → REG_INTERRUPTED state")
             print(f"{'='*80}\n")
+            from .states import REG_INTERRUPTED
+
             return REG_INTERRUPTED
 
         print(f"🆕 [SMART-ROUTER] Fresh start")
-        context.user_data.clear()
+        clear_bucket(context, "reg")
 
         keyboard = PlatformKeyboard.create_platform_selection_keyboard()
         await update.message.reply_text(
@@ -134,12 +138,13 @@ class RegistrationHandlers:
 
         print(f"➡️ [SMART-ROUTER] → REG_PLATFORM state")
         print(f"{'='*80}\n")
+        from .states import REG_PLATFORM
+
         return REG_PLATFORM
 
     @staticmethod
     async def handle_interrupted_choice(update, context):
         """معالج قرار المستخدم"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
@@ -152,10 +157,12 @@ class RegistrationHandlers:
         print(f"🎯 [INTERRUPTED-CHOICE] User {user_id}: {choice}")
         print(f"{'='*80}")
 
+        reg_bucket = bucket(context, "reg")
+
         if choice == "reg_restart":
             print(f"🔄 [INTERRUPTED-CHOICE] RESTART chosen")
 
-            context.user_data.clear()
+            clear_bucket(context, "reg")
 
             keyboard = PlatformKeyboard.create_platform_selection_keyboard()
             await query.edit_message_text(
@@ -167,14 +174,16 @@ class RegistrationHandlers:
 
             print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM")
             print(f"{'='*80}\n")
+            from .states import REG_PLATFORM
+
             return REG_PLATFORM
 
         elif choice == "reg_continue":
             print(f"✅ [INTERRUPTED-CHOICE] CONTINUE chosen")
 
-            interrupted_step = context.user_data.get("interrupted_step")
-            platform = context.user_data.get("interrupted_platform")
-            whatsapp = context.user_data.get("interrupted_whatsapp")
+            interrupted_step = reg_bucket.get("interrupted_step")
+            platform = reg_bucket.get("interrupted_platform")
+            whatsapp = reg_bucket.get("interrupted_whatsapp")
 
             print(f"   📍 Step: {interrupted_step}")
             print(f"   📝 Data: platform={platform}, whatsapp={whatsapp}")
@@ -187,7 +196,7 @@ class RegistrationHandlers:
                     parse_mode="HTML",
                 )
 
-                context.user_data.clear()
+                clear_bucket(context, "reg")
 
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
                 await query.message.reply_text(
@@ -198,6 +207,8 @@ class RegistrationHandlers:
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM (data loss)")
                 print(f"{'='*80}\n")
+                from .states import REG_PLATFORM
+
                 return REG_PLATFORM
 
             if interrupted_step == "entering_whatsapp" or not whatsapp:
@@ -214,6 +225,8 @@ class RegistrationHandlers:
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_WHATSAPP")
                 print(f"{'='*80}\n")
+                from .states import REG_WHATSAPP
+
                 return REG_WHATSAPP
 
             elif interrupted_step in ["choosing_payment", "entering_payment_details"]:
@@ -230,12 +243,14 @@ class RegistrationHandlers:
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PAYMENT")
                 print(f"{'='*80}\n")
+                from .states import REG_PAYMENT
+
                 return REG_PAYMENT
 
             else:
                 print(f"   ⚠️ [EDGE-CASE] Unexpected step - auto restart")
 
-                context.user_data.clear()
+                clear_bucket(context, "reg")
 
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
                 await query.edit_message_text(
@@ -246,12 +261,13 @@ class RegistrationHandlers:
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM (unexpected)")
                 print(f"{'='*80}\n")
+                from .states import REG_PLATFORM
+
                 return REG_PLATFORM
 
     @staticmethod
     async def nudge_platform(update, context):
         """معالج التنبيه - حالة اختيار المنصة"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -273,12 +289,13 @@ class RegistrationHandlers:
         print(f"   ✅ Nudge sent - staying in REG_PLATFORM")
         print(f"{'='*80}\n")
 
+        from .states import REG_PLATFORM
+
         return REG_PLATFORM
 
     @staticmethod
     async def nudge_interrupted(update, context):
         """معالج التنبيه - حالة المقاطعة"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -288,8 +305,9 @@ class RegistrationHandlers:
         print(f"🔔 [NUDGE-INTERRUPTED] User {user_id} typed: '{text}'")
         print(f"{'='*80}")
 
-        platform = context.user_data.get("interrupted_platform", "غير محدد")
-        whatsapp = context.user_data.get("interrupted_whatsapp", "لم يُدخل بعد")
+        reg_bucket = bucket(context, "reg")
+        platform = reg_bucket.get("interrupted_platform", "غير محدد")
+        whatsapp = reg_bucket.get("interrupted_whatsapp", "لم يُدخل بعد")
 
         question_text = f"""🤔 <b>من فضلك اختر من الأزرار أدناه:</b>
 
@@ -318,12 +336,13 @@ class RegistrationHandlers:
         print(f"   ✅ Nudge sent - staying in REG_INTERRUPTED")
         print(f"{'='*80}\n")
 
+        from .states import REG_INTERRUPTED
+
         return REG_INTERRUPTED
 
     @staticmethod
     async def handle_platform_callback(update, context):
         """معالج اختيار المنصة"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
@@ -336,7 +355,7 @@ class RegistrationHandlers:
         print(f"🎮 [PLATFORM] User {user_id}: {platform}")
         print(f"{'='*80}")
 
-        context.user_data["platform"] = platform
+        bucket(context, "reg")["platform"] = platform
 
         UserOperations.save_user_step(
             user_id, "entering_whatsapp", {"platform": platform}
@@ -352,12 +371,13 @@ class RegistrationHandlers:
 
         print(f"➡️ [PLATFORM] → REG_WHATSAPP")
         print(f"{'='*80}\n")
+        from .states import REG_WHATSAPP
+
         return REG_WHATSAPP
 
     @staticmethod
     async def handle_whatsapp(update, context):
         """معالج إدخال الواتساب"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -377,15 +397,17 @@ class RegistrationHandlers:
             )
             print(f"   ⏸️ Staying in REG_WHATSAPP")
             print(f"{'='*80}\n")
+            from .states import REG_WHATSAPP
+
             return REG_WHATSAPP
 
         print(f"   ✅ Validation OK")
 
-        context.user_data["whatsapp"] = validation["cleaned"]
+        bucket(context, "reg")["whatsapp"] = validation["cleaned"]
 
-        platform = context.user_data.get("platform") or UserOperations.get_user_data(
-            user_id
-        ).get("platform")
+        platform = bucket(context, "reg").get(
+            "platform"
+        ) or UserOperations.get_user_data(user_id).get("platform")
         UserOperations.save_user_step(
             user_id,
             "choosing_payment",
@@ -403,12 +425,13 @@ class RegistrationHandlers:
 
         print(f"➡️ [WHATSAPP] → REG_PAYMENT")
         print(f"{'='*80}\n")
+        from .states import REG_PAYMENT
+
         return REG_PAYMENT
 
     @staticmethod
     async def handle_payment_callback(update, context):
         """معالج اختيار طريقة الدفع"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
@@ -422,7 +445,7 @@ class RegistrationHandlers:
         print(f"💳 [PAYMENT-CB] User {user_id}: {payment_name}")
         print(f"{'='*80}")
 
-        context.user_data["payment_method"] = payment_key
+        bucket(context, "reg")["payment_method"] = payment_key
 
         user_data = UserOperations.get_user_data(user_id)
         UserOperations.save_user_step(
@@ -447,12 +470,13 @@ class RegistrationHandlers:
 
         print(f"   ⏸️ Staying in REG_PAYMENT (waiting for details)")
         print(f"{'='*80}\n")
+        from .states import REG_PAYMENT
+
         return REG_PAYMENT
 
     @staticmethod
     async def handle_payment_details(update, context):
         """معالج إدخال تفاصيل الدفع"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -462,7 +486,7 @@ class RegistrationHandlers:
         print(f"💰 [PAYMENT-TXT] User {user_id} entered details")
         print(f"{'='*80}")
 
-        payment_method = context.user_data.get("payment_method")
+        payment_method = bucket(context, "reg").get("payment_method")
         if not payment_method:
             print(f"   ⚠️ [PROTECTION] No payment method selected yet!")
 
@@ -476,6 +500,8 @@ class RegistrationHandlers:
 
             print(f"   ⏸️ Staying in REG_PAYMENT")
             print(f"{'='*80}\n")
+            from .states import REG_PAYMENT
+
             return REG_PAYMENT
 
         user_data = UserOperations.get_user_data(user_id)
@@ -493,6 +519,8 @@ class RegistrationHandlers:
             )
             print(f"   ⏸️ Staying in REG_PAYMENT")
             print(f"{'='*80}\n")
+            from .states import REG_PAYMENT
+
             return REG_PAYMENT
 
         print(f"   ✅ Validation OK - completing registration")
@@ -508,7 +536,7 @@ class RegistrationHandlers:
             },
         )
 
-        context.user_data.clear()
+        clear_bucket(context, "reg")
 
         payment_name = PaymentKeyboard.get_payment_display_name(
             user_data["payment_method"]
@@ -540,7 +568,6 @@ class RegistrationHandlers:
     @staticmethod
     async def cancel_registration(update, context):
         """إلغاء التسجيل"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -549,9 +576,40 @@ class RegistrationHandlers:
         print(f"❌ [CANCEL] User {user_id}")
         print(f"{'='*80}\n")
 
-        context.user_data.clear()
+        clear_bucket(context, "reg")
 
         await update.message.reply_text(
             "❌ تم إلغاء التسجيل\n\n🔹 /start للبدء من جديد"
         )
         return ConversationHandler.END
+
+    @staticmethod
+    async def _show_main_menu(update, user_data):
+        """عرض القائمة الرئيسية"""
+        user_id = update.effective_user.id
+        username = update.effective_user.username or "Unknown"
+        platform = user_data.get("platform", "غير محدد")
+        whatsapp = user_data.get("whatsapp", "غير محدد")
+
+        main_menu_text = f"""✅ <b>أهلاً وسهلاً بعودتك!</b>
+
+👤 <b>المستخدم:</b> @{username}
+🎮 <b>المنصة:</b> {platform}
+📱 <b>الواتساب:</b> <code>{whatsapp}</code>
+
+<b>🏠 القائمة الرئيسية:</b>
+
+🔹 <code>/sell</code> - بيع الكوينز
+🔹 <code>/profile</code> - عرض الملف الشخصي
+🔹 <code>/help</code> - المساعدة والدعم
+
+<b>🎯 خدماتنا:</b>
+• شراء وبيع العملات
+• تجارة اللاعبين
+• خدمات التطوير
+• دعم فني متخصص
+
+💬 <b>للحصول على الخدمات تواصل مع الإدارة</b>"""
+
+        await update.message.reply_text(main_menu_text, parse_mode="HTML")
+        log_user_action(user_id, "Main menu", f"Platform: {platform}")

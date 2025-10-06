@@ -1,15 +1,13 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║              💰 SELL COINS - CONVERSATION HANDLER                        ║
-# ║                   خدمة بيع الكوينز - ConversationHandler                ║
-# ║                  🔥 WITH MESSAGE TAGGING SYSTEM 🔥                       ║
+# ║                   خدمة بيع الكوينز - مع bucket و persistence            ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 """
 خدمة بيع الكوينز باستخدام ConversationHandler
-- معزولة تماماً عن باقي الخدمات
-- بدون تضارب نهائياً
-- 🏷️ نظام وسم الرسائل لمنع الردود المزدوجة
-- 🔥 EXCLUSIVE CONSUMPTION MODE (block=True INSIDE)
+- مع نظام وسم الرسائل (MessageTagger)
+- مع نظام عزل البيانات (Session Buckets)
+- مع Persistence
 """
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -24,7 +22,8 @@ from telegram.ext import (
 
 from database.operations import UserOperations
 from utils.logger import log_user_action
-from utils.message_tagger import MessageTagger  # 🔥 النظام الجديد
+from utils.message_tagger import MessageTagger
+from utils.session_bucket import bucket, clear_bucket
 
 from .sell_pricing import CoinSellPricing
 
@@ -36,16 +35,11 @@ SELL_PLATFORM, SELL_TYPE, SELL_AMOUNT = range(3)
 
 
 class SellCoinsConversation:
-    """معالج بيع الكوينز - ConversationHandler مع نظام الوسم"""
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # ENTRY POINT
-    # ═══════════════════════════════════════════════════════════════════════
+    """معالج بيع الكوينز - مع bucket"""
 
     @staticmethod
     async def start_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """بدء عملية البيع - /sell"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -82,14 +76,9 @@ class SellCoinsConversation:
 
         return SELL_PLATFORM
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # STATE HANDLERS
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     async def choose_platform(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار المنصة"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
@@ -104,8 +93,8 @@ class SellCoinsConversation:
 
         print(f"🎮 [SELL] User {user_id} selected platform: {platform}")
 
-        # حفظ المنصة
-        context.user_data["sell_platform"] = platform
+        # 🔥 استخدام bucket بدلاً من context.user_data
+        bucket(context, "sell")["platform"] = platform
         log_user_action(user_id, f"Selected platform: {platform}")
 
         # عرض أنواع التحويل مع الأسعار
@@ -145,14 +134,12 @@ class SellCoinsConversation:
     @staticmethod
     async def choose_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """اختيار نوع التحويل"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         query = update.callback_query
         await query.answer()
 
         if query.data == "sell_back":
-            # رجوع لاختيار المنصة
             keyboard = [
                 [
                     InlineKeyboardButton(
@@ -173,17 +160,19 @@ class SellCoinsConversation:
 
         user_id = query.from_user.id
         transfer_type = query.data.replace("sell_type_", "")
-        platform = context.user_data.get("sell_platform", "unknown")
+
+        # 🔥 استخدام bucket
+        sell_bucket = bucket(context, "sell")
+        platform = sell_bucket.get("platform", "unknown")
 
         print(f"⚡ [SELL] User {user_id} selected type: {transfer_type}")
 
-        # حفظ النوع
-        context.user_data["sell_type"] = transfer_type
+        # 🔥 حفظ في bucket
+        sell_bucket["type"] = transfer_type
         log_user_action(
             user_id, f"Selected transfer type: {transfer_type} for {platform}"
         )
 
-        # طلب إدخال الكمية
         platform_name = {
             "playstation": "🎮 PlayStation",
             "xbox": "🎮 Xbox",
@@ -210,7 +199,6 @@ class SellCoinsConversation:
     @staticmethod
     async def enter_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إدخال الكمية"""
-        # 🏷️ وسم الرسالة - الأهم!
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -255,15 +243,15 @@ class SellCoinsConversation:
             )
             return SELL_AMOUNT
 
-        # حساب السعر
-        platform = context.user_data.get("sell_platform", "playstation")
-        transfer_type = context.user_data.get("sell_type", "normal")
+        # 🔥 استخدام bucket
+        sell_bucket = bucket(context, "sell")
+        platform = sell_bucket.get("platform", "playstation")
+        transfer_type = sell_bucket.get("type", "normal")
 
         price = SellCoinsConversation.calculate_price(amount, transfer_type)
 
         print(f"✅ [SELL] Valid amount: {amount}, calculated price: {price}")
 
-        # رسالة التأكيد
         platform_name = {
             "playstation": "🎮 PlayStation",
             "xbox": "🎮 Xbox",
@@ -272,7 +260,6 @@ class SellCoinsConversation:
 
         transfer_name = "⚡ فوري" if transfer_type == "instant" else "📅 عادي"
 
-        # جلب سعر المليون كمرجع
         million_price = CoinSellPricing.get_price(platform, 1000000, transfer_type)
         if million_price is None:
             default_prices = {
@@ -305,20 +292,15 @@ class SellCoinsConversation:
             f"Completed sell order: {amount} coins, {transfer_type}, {price} EGP",
         )
 
-        # مسح البيانات
-        context.user_data.clear()
+        # 🔥 مسح bucket فقط
+        clear_bucket(context, "sell")
         print(f"🧹 [SELL] Session cleared for user {user_id}")
 
         return ConversationHandler.END
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # FALLBACKS
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """إلغاء العملية"""
-        # 🏷️ وسم الرسالة
         MessageTagger.mark_as_handled(context)
 
         user_id = update.effective_user.id
@@ -328,36 +310,26 @@ class SellCoinsConversation:
             "❌ تم إلغاء عملية البيع\n\n🔹 /sell للبدء من جديد"
         )
 
-        context.user_data.clear()
+        # 🔥 مسح bucket فقط
+        clear_bucket(context, "sell")
         log_user_action(user_id, "Cancelled coin selling")
 
         return ConversationHandler.END
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HELPERS
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     def calculate_price(amount: int, transfer_type: str = "normal") -> int:
         """حساب السعر حسب الكمية ونوع التحويل"""
-        base_price_per_1000 = 5  # 5 جنيه لكل 1000 كوين
-
-        # حساب السعر الأساسي
+        base_price_per_1000 = 5
         base_price = (amount / 1000) * base_price_per_1000
 
-        # إضافة رسوم حسب نوع التحويل
         if transfer_type == "instant":
-            base_price *= 1.2  # زيادة 20% للتحويل الفوري
+            base_price *= 1.2
 
         return int(base_price)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # CONVERSATION HANDLER - 🔥 WITH block=True INSIDE 🔥
-    # ═══════════════════════════════════════════════════════════════════════
-
     @staticmethod
     def get_conversation_handler():
-        """إنشاء ConversationHandler للخدمة - مع block=True بالداخل"""
+        """إنشاء ConversationHandler للخدمة"""
         return ConversationHandler(
             entry_points=[CommandHandler("sell", SellCoinsConversation.start_sell)],
             states={
@@ -382,6 +354,6 @@ class SellCoinsConversation:
             },
             fallbacks=[CommandHandler("cancel", SellCoinsConversation.cancel)],
             name="sell_coins_conversation",
-            persistent=False,
-            block=True,  # 🔥 المكان الصحيح!
+            persistent=True,  # 🔥 تفعيل Persistence
+            block=True,
         )

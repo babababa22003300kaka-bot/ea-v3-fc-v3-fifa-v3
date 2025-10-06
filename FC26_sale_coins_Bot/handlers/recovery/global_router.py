@@ -1,8 +1,14 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║           🛡️ GLOBAL RECOVERY ROUTER - موجه الاسترداد العام              ║
+# ║              🛡️ GLOBAL RECOVERY ROUTER                                  ║
+# ║              الموجه العالمي للاسترداد                                   ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-"""الموجه العالمي لاسترداد المستخدمين الضائعين"""
+"""
+الموجه العالمي للاسترداد
+- يلتقط الرسائل التي لم تُعالج
+- يتحقق من الوسم أولاً
+- يساعد المستخدمين الضائعين
+"""
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import MessageHandler, filters
@@ -11,106 +17,89 @@ from database.operations import UserOperations
 from utils.message_tagger import MessageTagger
 
 
-class GlobalRecoveryRouter:
-    """موجه الاسترداد العام"""
+async def global_recovery_router(update, context):
+    """
+    الموجه العالمي للاسترداد - مع فحص الوسم
+    """
+    user_id = update.effective_user.id
 
-    @staticmethod
-    async def handle_lost_message(update, context):
-        """
-        معالج الرسائل الضائعة - مع فحص الوسم
+    print(f"\n{'='*80}")
+    print(f"🛡️ [GLOBAL-RECOVERY] Triggered by user {user_id}")
+    print(f"{'='*80}")
 
-        🛡️ يتحقق أولاً من وجود وسم "_update_handled"
-        إذا وُجد، يعني أن ConversationHandler عالج الرسالة بالفعل
-        """
-        user_id = update.effective_user.id
+    # ═══════════════════════════════════════════════════════════════════════
+    # 🔥 STEP 1: CHECK FOR HANDLED TAG (CRITICAL!)
+    # ═══════════════════════════════════════════════════════════════════════
 
-        print(f"\n{'='*80}")
-        print(f"🛡️ [GLOBAL-RECOVERY] Triggered by user {user_id}")
-        print(f"{'='*80}")
+    if MessageTagger.check_and_clear(context):
+        print(f"   🏷️ Message already handled by ConversationHandler")
+        print(f"{'='*80}\n")
+        return
 
-        # ═══════════════════════════════════════════════════════════════════
-        # 🔥 STEP 1: CHECK FOR HANDLED TAG (CRITICAL!)
-        # ═══════════════════════════════════════════════════════════════════
+    print(f"   ✅ [TAG-CHECK] No tag found - checking status...")
 
-        if MessageTagger.check_and_clear(context):
-            # الرسالة تمت معالجتها بالفعل - تجاهلها
-            print(f"   🏷️ Message already handled by ConversationHandler")
-            print(f"{'='*80}\n")
-            return  # ✅ توقف هنا - لا تفعل أي شيء
+    # ═══════════════════════════════════════════════════════════════════════
+    # STEP 2: NORMAL RECOVERY LOGIC
+    # ═══════════════════════════════════════════════════════════════════════
 
-        # إذا وصلنا هنا، معناه الرسالة لم تُعالج من ConversationHandler
-        print(f"   ✅ [TAG-CHECK] No tag found - message not handled yet")
-        print(f"   🔍 [TAG-CHECK] Proceeding with recovery checks...")
+    text = update.message.text
 
-        # ═══════════════════════════════════════════════════════════════════
-        # STEP 2: NORMAL RECOVERY LOGIC
-        # ═══════════════════════════════════════════════════════════════════
+    if text.startswith("/"):
+        print(f"   ⏭️ Skipping: Is a command")
+        print(f"{'='*80}\n")
+        return
 
-        text = update.message.text
+    if context.user_data.get("_buckets"):
+        print(f"   ⏭️ Skipping: Active conversation exists")
+        print(f"   📝 Buckets: {list(context.user_data['_buckets'].keys())}")
+        print(f"{'='*80}\n")
+        return
 
-        if text.startswith("/"):
-            print(f"   ⏭️ Skipping: Is a command")
-            print(f"{'='*80}\n")
-            return
+    print(f"   🔍 No active conversation - checking database...")
 
-        if context.user_data:
-            print(f"   ⏭️ Skipping: Active conversation exists")
-            print(f"   📝 Context data: {list(context.user_data.keys())}")
-            print(f"{'='*80}\n")
-            return
+    user_data = UserOperations.get_user_data(user_id)
 
-        print(f"   🔍 No active conversation - checking database...")
+    if not user_data:
+        print(f"   🆕 New user detected")
 
-        user_data = UserOperations.get_user_data(user_id)
+        await update.message.reply_text(
+            "👋 <b>مرحباً!</b>\n\n"
+            "يبدو أنك جديد هنا.\n\n"
+            "🚀 اكتب <code>/start</code> لبدء التسجيل\n"
+            "❓ اكتب <code>/help</code> للمساعدة",
+            parse_mode="HTML",
+        )
 
-        if not user_data:
-            print(f"   🆕 New user detected")
+        print(f"   ✅ New user message sent")
+        print(f"{'='*80}\n")
+        return
 
-            await update.message.reply_text(
-                "👋 <b>مرحباً!</b>\n\n"
-                "يبدو أنك جديد هنا.\n\n"
-                "🚀 اكتب <code>/start</code> لبدء التسجيل\n"
-                "❓ اكتب <code>/help</code> للمساعدة",
-                parse_mode="HTML",
-            )
+    current_step = user_data.get("registration_step", "unknown")
 
-            print(f"   ✅ New user message sent")
-            print(f"{'='*80}\n")
-            return
+    if current_step == "completed":
+        print(f"   ✅ Completed registration detected")
 
-        current_step = user_data.get("registration_step", "unknown")
+        await update.message.reply_text(
+            "✅ <b>أنت مسجل بالفعل!</b>\n\n"
+            "📋 <b>الأوامر المتاحة:</b>\n"
+            "🔹 <code>/profile</code> - ملفك الشخصي\n"
+            "🔹 <code>/sell</code> - بيع الكوينز\n"
+            "🔹 <code>/help</code> - المساعدة\n"
+            "🔹 <code>/start</code> - القائمة الرئيسية",
+            parse_mode="HTML",
+        )
 
-        if current_step == "completed":
-            print(f"   ✅ Completed registration detected")
+        print(f"   ✅ Completed user message sent")
+        print(f"{'='*80}\n")
+        return
 
-            await update.message.reply_text(
-                "✅ <b>أنت مسجل بالفعل!</b>\n\n"
-                "📋 <b>الأوامر المتاحة:</b>\n"
-                "🔹 <code>/profile</code> - ملفك الشخصي\n"
-                "🔹 <code>/sell</code> - بيع الكوينز\n"
-                "🔹 <code>/help</code> - المساعدة\n"
-                "🔹 <code>/start</code> - القائمة الرئيسية",
-                parse_mode="HTML",
-            )
+    else:
+        print(f"   ⚠️ Interrupted registration detected: {current_step}")
 
-            print(f"   ✅ Completed user message sent")
-            print(f"{'='*80}\n")
-            return
+        platform = user_data.get("platform", "غير محدد")
+        whatsapp = user_data.get("whatsapp", "لم يُدخل بعد")
 
-        else:
-            print(f"   ⚠️ Interrupted registration detected: {current_step}")
-
-            context.user_data["interrupted_platform"] = user_data.get(
-                "platform", "غير محدد"
-            )
-            context.user_data["interrupted_whatsapp"] = user_data.get("whatsapp")
-            context.user_data["interrupted_payment"] = user_data.get("payment_method")
-            context.user_data["interrupted_step"] = current_step
-
-            platform = context.user_data["interrupted_platform"]
-            whatsapp = context.user_data["interrupted_whatsapp"] or "لم يُدخل بعد"
-
-            question_text = f"""🔄 <b>لاحظت أن تسجيلك لم يكتمل!</b>
+        question_text = f"""🔄 <b>لاحظت أن تسجيلك لم يكتمل!</b>
 
 📋 <b>بياناتك:</b>
 • 🎮 المنصة: {platform}
@@ -118,30 +107,22 @@ class GlobalRecoveryRouter:
 
 <b>❓ تحب تكمل ولا تبدأ من جديد؟</b>"""
 
-            keyboard = [
-                [InlineKeyboardButton("✅ متابعة", callback_data="reg_continue")],
-                [InlineKeyboardButton("🔄 بدء من جديد", callback_data="reg_restart")],
-            ]
+        keyboard = [
+            [InlineKeyboardButton("✅ متابعة", callback_data="reg_continue")],
+            [InlineKeyboardButton("🔄 بدء من جديد", callback_data="reg_restart")],
+        ]
 
-            await update.message.reply_text(
-                question_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
-            )
+        await update.message.reply_text(
+            question_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML",
+        )
 
-            print(f"   ✅ Recovery question sent")
-            print(f"{'='*80}\n")
-            return
+        print(f"   ✅ Recovery question sent")
+        print(f"{'='*80}\n")
+        return
 
 
 def get_recovery_handler():
-    """
-    🎯 الحصول على معالج الاسترداد العام
-
-    Returns:
-        MessageHandler: معالج الرسائل للاسترداد
-    """
-
-    return MessageHandler(
-        filters.TEXT & ~filters.COMMAND, GlobalRecoveryRouter.handle_lost_message
-    )
+    """إنشاء handler الاسترداد العالمي"""
+    return MessageHandler(filters.TEXT & ~filters.COMMAND, global_recovery_router)

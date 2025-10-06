@@ -1,30 +1,64 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║                    🧠 FC26 BOT APPLICATION                               ║
-# ║                      تطبيق البوت الأساسي                               ║
+# ║              🤖 BOT APPLICATION FACTORY                                  ║
+# ║              مصنع تطبيق البوت - مع Persistence                          ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-from telegram.ext import Application
+"""
+مصنع تطبيق البوت
+- تفعيل PicklePersistence
+- إدارة الجلسات الدائمة
+"""
+
+from pathlib import Path
+
+from telegram.ext import Application, PicklePersistence
+
 from config import BOT_TOKEN
-from utils.logger import fc26_logger
 
 
 class FC26BotApp:
-    """تطبيق البوت الأساسي"""
+    """مصنع تطبيق البوت"""
 
-    def __init__(self):
-        self.logger = fc26_logger.get_logger()
-
-    def create_application(self) -> Application:
+    def create_application(self):
         """
-        إنشاء تطبيق Telegram Bot
+        إنشاء تطبيق البوت مع تفعيل Persistence
 
         Returns:
-            Application: تطبيق البوت جاهز للاستخدام
+            Application: تطبيق البوت جاهز
         """
-        self.logger.info("🤖 Creating bot application...")
+        print("\n🤖 [BOT-APP] Creating application with persistence...")
 
-        app = Application.builder().token(BOT_TOKEN).build()
+        # ═══════════════════════════════════════════════════════════════════
+        # 1️⃣ إنشاء مجلد data/ إذا لم يكن موجوداً
+        # ═══════════════════════════════════════════════════════════════════
+        data_dir = Path("data")
+        data_dir.mkdir(parents=True, exist_ok=True)
+        print(f"   📁 Data directory ready: {data_dir}")
 
-        self.logger.info("✅ Bot application created successfully")
+        # ═══════════════════════════════════════════════════════════════════
+        # 2️⃣ إنشاء كائن PicklePersistence
+        # ═══════════════════════════════════════════════════════════════════
+        session_file = data_dir / "sessions.pkl"
+
+        persistence = PicklePersistence(
+            filepath=str(session_file),
+            update_interval=60,  # حفظ كل 60 ثانية
+        )
+        print(f"   💾 Persistence configured: {session_file}")
+        print(f"   ⏱️ Update interval: 60 seconds")
+
+        # ═══════════════════════════════════════════════════════════════════
+        # 3️⃣ بناء التطبيق مع Persistence
+        # ═══════════════════════════════════════════════════════════════════
+        app = (
+            Application.builder()
+            .token(BOT_TOKEN)
+            .persistence(persistence)  # 🔥 تفعيل Persistence
+            .build()
+        )
+
+        print(f"   ✅ Application created successfully")
+        print(f"   🔥 Persistence ENABLED")
+        print()
 
         return app
