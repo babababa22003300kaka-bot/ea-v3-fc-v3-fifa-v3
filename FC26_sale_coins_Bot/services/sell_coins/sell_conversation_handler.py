@@ -201,12 +201,15 @@ class SellCoinsConversation:
         # التحقق من الصيغة
         if not text.isdigit():
             print(f"   ❌ [SELL] Invalid format: {text}")
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 "❌ **صيغة غير صحيحة!**\n\n"
                 "✅ **المطلوب:** أرقام فقط\n"
                 "🚫 **ممنوع:** حروف، رموز، k، m\n\n"
                 "يرجى إدخال الكمية بالأرقام:",
                 parse_mode="Markdown",
+                user_message_id=update.message.message_id,
             )
             return SELL_AMOUNT
 
@@ -215,23 +218,29 @@ class SellCoinsConversation:
         # التحقق من الحدود
         if amount < 50:
             print(f"   ❌ [SELL] Amount too low: {amount}")
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 f"❌ **الكمية قليلة جداً!**\n\n"
                 f"📍 **الحد الأدنى:** 50 كوين\n"
                 f"أنت أدخلت: {amount} كوين\n\n"
                 f"يرجى إدخال كمية أكبر:",
                 parse_mode="Markdown",
+                user_message_id=update.message.message_id,
             )
             return SELL_AMOUNT
 
         if amount > 20000:
             print(f"   ❌ [SELL] Amount too high: {amount}")
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 f"❌ **الكمية كبيرة جداً!**\n\n"
                 f"📍 **الحد الأقصى:** 20,000 كوين\n"
                 f"أنت أدخلت: {amount:,} كوين\n\n"
                 f"لبيع كميات أكبر، يرجى التواصل مع الدعم.",
                 parse_mode="Markdown",
+                user_message_id=update.message.message_id,
             )
             return SELL_AMOUNT
 
@@ -260,7 +269,9 @@ class SellCoinsConversation:
             }
             million_price = default_prices.get(transfer_type, {}).get(platform, 5600)
 
-        await update.message.reply_text(
+        await send_or_edit(
+            context,
+            update.effective_chat.id,
             f"🎉 **تم تأكيد طلب البيع بنجاح!**\n\n"
             f"📊 **تفاصيل الطلب:**\n"
             f"🎮 المنصة: {platform_name}\n"
@@ -277,6 +288,7 @@ class SellCoinsConversation:
             f"💬 **للاستفسار:** /sell\n"
             f"🏠 **القائمة الرئيسية:** /start",
             parse_mode="Markdown",
+            user_message_id=update.message.message_id,
         )
 
         log_user_action(
