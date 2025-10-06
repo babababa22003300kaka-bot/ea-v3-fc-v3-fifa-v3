@@ -25,6 +25,9 @@ from utils.session_bucket import bucket, clear_bucket
 from validators.payment_validator import PaymentValidator
 from validators.phone_validator import PhoneValidator
 
+# 🔥 نظام الرسائل النشطة - Active Message System
+from utils.active_message_helper import send_or_edit, clear_active_message
+
 
 class RegistrationHandlers:
     """معالجات التسجيل مع نظام الوسم والعزل"""
@@ -43,7 +46,11 @@ class RegistrationHandlers:
 
         if is_rate_limited(user_id):
             print(f"🚫 [SMART-ROUTER] Rate limited")
-            await update.message.reply_text(ErrorMessages.get_rate_limit_error())
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
+                ErrorMessages.get_rate_limit_error(
+            ))
             return ConversationHandler.END
 
         log_user_action(user_id, "Started bot", f"@{username}")
@@ -114,10 +121,11 @@ class RegistrationHandlers:
                 [InlineKeyboardButton("🔄 البدء من جديد", callback_data="reg_restart")],
             ]
 
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 question_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
+                InlineKeyboardMarkup(keyboard)
             )
 
             print(f"➡️ [SMART-ROUTER] → REG_INTERRUPTED state")
@@ -130,11 +138,12 @@ class RegistrationHandlers:
         clear_bucket(context, "reg")
 
         keyboard = PlatformKeyboard.create_platform_selection_keyboard()
-        await update.message.reply_text(
-            WelcomeMessages.get_start_message(),
-            reply_markup=keyboard,
-            parse_mode="HTML",
-        )
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                WelcomeMessages.get_start_message(),
+                keyboard
+            )
 
         print(f"➡️ [SMART-ROUTER] → REG_PLATFORM state")
         print(f"{'='*80}\n")
@@ -165,11 +174,12 @@ class RegistrationHandlers:
             clear_bucket(context, "reg")
 
             keyboard = PlatformKeyboard.create_platform_selection_keyboard()
-            await query.edit_message_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 "🔄 <b>حسناً، لنبدأ من جديد!</b>\n\n"
                 + WelcomeMessages.get_start_message(),
-                reply_markup=keyboard,
-                parse_mode="HTML",
+                keyboard
             )
 
             print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM")
@@ -191,19 +201,21 @@ class RegistrationHandlers:
             if not platform:
                 print(f"   ⚠️ [EDGE-CASE] Data lost - auto restart")
 
-                await query.edit_message_text(
-                    "😔 <b>عذراً، حدث خطأ في استرجاع بياناتك.</b>\n\n🔄 لنبدأ من جديد...",
-                    parse_mode="HTML",
-                )
+                await send_or_edit(
+                context,
+                update.effective_chat.id,
+                "😔 <b>عذراً، حدث خطأ في استرجاع بياناتك.</b>\n\n🔄 لنبدأ من جديد..."
+            )
 
                 clear_bucket(context, "reg")
 
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
-                await query.message.reply_text(
-                    WelcomeMessages.get_start_message(),
-                    reply_markup=keyboard,
-                    parse_mode="HTML",
-                )
+                await send_or_edit(
+                context,
+                update.effective_chat.id,
+                WelcomeMessages.get_start_message(),
+                keyboard
+            )
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM (data loss)")
                 print(f"{'='*80}\n")
@@ -215,13 +227,14 @@ class RegistrationHandlers:
                 print(f"   ➡️ Continuing at: WHATSAPP")
 
                 platform_name = PlatformKeyboard.get_platform_name(platform)
-                await query.edit_message_text(
-                    f"✅ <b>رائع! لنكمل من حيث توقفنا</b>\n\n"
+                await send_or_edit(
+                context,
+                update.effective_chat.id,
+                f"✅ <b>رائع! لنكمل من حيث توقفنا</b>\n\n"
                     f"🎮 المنصة: {platform_name}\n\n"
                     f"📱 أدخل رقم الواتساب:\n"
-                    f"📝 مثال: 01012345678",
-                    parse_mode="HTML",
-                )
+                    f"📝 مثال: 01012345678"
+            )
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_WHATSAPP")
                 print(f"{'='*80}\n")
@@ -233,13 +246,14 @@ class RegistrationHandlers:
                 print(f"   ➡️ Continuing at: PAYMENT")
 
                 keyboard = PaymentKeyboard.create_payment_selection_keyboard()
-                await query.edit_message_text(
-                    f"✅ <b>رائع! لنكمل من حيث توقفنا</b>\n\n"
+                await send_or_edit(
+                context,
+                update.effective_chat.id,
+                f"✅ <b>رائع! لنكمل من حيث توقفنا</b>\n\n"
                     f"📱 الواتساب: {whatsapp}\n\n"
                     f"💳 اختر طريقة الدفع:",
-                    reply_markup=keyboard,
-                    parse_mode="HTML",
-                )
+                keyboard
+            )
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PAYMENT")
                 print(f"{'='*80}\n")
@@ -253,11 +267,12 @@ class RegistrationHandlers:
                 clear_bucket(context, "reg")
 
                 keyboard = PlatformKeyboard.create_platform_selection_keyboard()
-                await query.edit_message_text(
-                    "🔄 <b>لنبدأ من جديد للتأكد من صحة البيانات</b>",
-                    reply_markup=keyboard,
-                    parse_mode="HTML",
-                )
+                await send_or_edit(
+                context,
+                update.effective_chat.id,
+                "🔄 <b>لنبدأ من جديد للتأكد من صحة البيانات</b>",
+                keyboard
+            )
 
                 print(f"➡️ [INTERRUPTED-CHOICE] → REG_PLATFORM (unexpected)")
                 print(f"{'='*80}\n")
@@ -279,12 +294,13 @@ class RegistrationHandlers:
 
         keyboard = PlatformKeyboard.create_platform_selection_keyboard()
 
-        await update.message.reply_text(
-            "🎮 <b>من فضلك اختر منصتك من الأزرار أدناه</b>\n\n"
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                "🎮 <b>من فضلك اختر منصتك من الأزرار أدناه</b>\n\n"
             "⬇️ اضغط على أحد الأزرار:",
-            reply_markup=keyboard,
-            parse_mode="HTML",
-        )
+                keyboard
+            )
 
         print(f"   ✅ Nudge sent - staying in REG_PLATFORM")
         print(f"{'='*80}\n")
@@ -327,11 +343,12 @@ class RegistrationHandlers:
             [InlineKeyboardButton("🔄 البدء من جديد", callback_data="reg_restart")],
         ]
 
-        await update.message.reply_text(
-            question_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                question_text,
+                InlineKeyboardMarkup(keyboard)
+            )
 
         print(f"   ✅ Nudge sent - staying in REG_INTERRUPTED")
         print(f"{'='*80}\n")
@@ -362,8 +379,12 @@ class RegistrationHandlers:
         )
 
         platform_name = PlatformKeyboard.get_platform_name(platform)
-        await query.edit_message_text(
-            WelcomeMessages.get_platform_selected_message(platform_name),
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                
+            WelcomeMessages.get_platform_selected_message(platform_name
+            ),
             parse_mode="HTML",
         )
 
@@ -391,8 +412,12 @@ class RegistrationHandlers:
 
         if not validation["valid"]:
             print(f"   ❌ Validation failed: {validation['error']}")
-            await update.message.reply_text(
-                ErrorMessages.get_phone_validation_error(validation["error"]),
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
+                
+                ErrorMessages.get_phone_validation_error(validation["error"]
+            ),
                 parse_mode="HTML",
             )
             print(f"   ⏸️ Staying in REG_WHATSAPP")
@@ -415,11 +440,12 @@ class RegistrationHandlers:
         )
 
         keyboard = PaymentKeyboard.create_payment_selection_keyboard()
-        await update.message.reply_text(
-            WelcomeMessages.get_whatsapp_confirmed_message(validation["display"]),
-            reply_markup=keyboard,
-            parse_mode="HTML",
-        )
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                WelcomeMessages.get_whatsapp_confirmed_message(validation["display"]),
+                keyboard
+            )
 
         log_user_action(user_id, f"WhatsApp: {validation['display']}")
 
@@ -459,9 +485,13 @@ class RegistrationHandlers:
         )
 
         instruction = PaymentValidator.get_payment_instructions(payment_key)
-        await query.edit_message_text(
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                
             WelcomeMessages.get_payment_method_selected_message(
                 payment_name, instruction
+            
             ),
             parse_mode="HTML",
         )
@@ -491,11 +521,12 @@ class RegistrationHandlers:
             print(f"   ⚠️ [PROTECTION] No payment method selected yet!")
 
             keyboard = PaymentKeyboard.create_payment_selection_keyboard()
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
                 "⚠️ <b>يجب اختيار طريقة الدفع أولاً!</b>\n\n"
                 "💳 اختر طريقة الدفع من الأزرار:",
-                reply_markup=keyboard,
-                parse_mode="HTML",
+                keyboard
             )
 
             print(f"   ⏸️ Staying in REG_PAYMENT")
@@ -511,10 +542,14 @@ class RegistrationHandlers:
 
         if not validation["valid"]:
             print(f"   ❌ Validation failed: {validation['error']}")
-            await update.message.reply_text(
+            await send_or_edit(
+                context,
+                update.effective_chat.id,
+                
                 ErrorMessages.get_payment_validation_error(
                     user_data["payment_method"], validation["error"]
-                ),
+                
+            ),
                 parse_mode="HTML",
             )
             print(f"   ⏸️ Staying in REG_PAYMENT")
@@ -545,7 +580,11 @@ class RegistrationHandlers:
         confirmation = ConfirmationMessages.create_payment_confirmation(
             user_data["payment_method"], validation, payment_name
         )
-        await update.message.reply_text(confirmation)
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                confirmation
+            )
 
         user_info = {
             "id": user_id,
@@ -555,7 +594,11 @@ class RegistrationHandlers:
         final_summary = ConfirmationMessages.create_final_summary(
             user_data, payment_name, validation, user_info
         )
-        await update.message.reply_text(final_summary, parse_mode="HTML")
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                final_summary
+            )
 
         StatisticsOperations.update_daily_metric("completed_registrations")
         log_user_action(user_id, "Registration completed")
@@ -563,6 +606,9 @@ class RegistrationHandlers:
         print(f"🎉 [PAYMENT-TXT] Registration completed!")
         print(f"➡️ [PAYMENT-TXT] Ending conversation")
         print(f"{'='*80}\n")
+        
+        # 🔥 مسح الرسالة النشطة عند انتهاء المحادثة
+        clear_active_message(context)
         return ConversationHandler.END
 
     @staticmethod
@@ -578,9 +624,13 @@ class RegistrationHandlers:
 
         clear_bucket(context, "reg")
 
-        await update.message.reply_text(
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                
             "❌ تم إلغاء التسجيل\n\n🔹 /start للبدء من جديد"
-        )
+        
+            )
         return ConversationHandler.END
 
     @staticmethod
@@ -611,5 +661,9 @@ class RegistrationHandlers:
 
 💬 <b>للحصول على الخدمات تواصل مع الإدارة</b>"""
 
-        await update.message.reply_text(main_menu_text, parse_mode="HTML")
+        await send_or_edit(
+                context,
+                update.effective_chat.id,
+                main_menu_text
+            )
         log_user_action(user_id, "Main menu", f"Platform: {platform}")

@@ -25,6 +25,9 @@ from utils.logger import log_user_action
 from utils.message_tagger import MessageTagger
 from utils.session_bucket import bucket, clear_bucket
 
+# 🔥 نظام الرسائل النشطة - Active Message System
+from utils.active_message_helper import send_or_edit, clear_active_message
+
 from .sell_pricing import CoinSellPricing
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -50,10 +53,7 @@ class SellCoinsConversation:
         # التحقق من التسجيل
         user_data = UserOperations.get_user_data(user_id)
         if not user_data or user_data.get("registration_step") != "completed":
-            await update.message.reply_text(
-                "❌ <b>يجب إكمال التسجيل أولاً!</b>\n\n🚀 /start للتسجيل",
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "❌ <b>يجب إكمال التسجيل أولاً!</b>\n\n🚀 /start للتسجيل")
             return ConversationHandler.END
 
         # عرض اختيار المنصة
@@ -68,11 +68,7 @@ class SellCoinsConversation:
             [InlineKeyboardButton("❌ إلغاء", callback_data="sell_cancel")],
         ]
 
-        await update.message.reply_text(
-            "💰 <b>بيع الكوينز</b>\n\n🎮 اختر منصتك:",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+        await send_or_edit(context, update.effective_chat.id, "💰 <b>بيع الكوينز</b>\n\n🎮 اختر منصتك:", InlineKeyboardMarkup(keyboard))
 
         return SELL_PLATFORM
 
@@ -151,11 +147,7 @@ class SellCoinsConversation:
                 [InlineKeyboardButton("❌ إلغاء", callback_data="sell_cancel")],
             ]
 
-            await query.edit_message_text(
-                "💰 <b>بيع الكوينز</b>\n\n🎮 اختر منصتك:",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "💰 <b>بيع الكوينز</b>\n\n🎮 اختر منصتك:", InlineKeyboardMarkup(keyboard))
             return SELL_PLATFORM
 
         user_id = query.from_user.id
