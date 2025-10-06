@@ -24,6 +24,9 @@ from database.admin_operations import AdminOperations
 from utils.message_tagger import MessageTagger
 from utils.session_bucket import bucket, clear_bucket
 
+# 🔥 نظام الرسائل النشطة - Active Message System
+from utils.active_message_helper import send_or_edit, clear_active_message
+
 from .price_management import PriceManagement
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -50,7 +53,7 @@ class AdminConversation:
 
         if user_id != AdminConversation.ADMIN_ID:
             print(f"❌ [ADMIN] Unauthorized access by {user_id}")
-            await update.message.reply_text("❌ غير مصرح لك بالوصول لهذه الخدمة!")
+            await send_or_edit(context, update.effective_chat.id, "❌ غير مصرح لك بالوصول لهذه الخدمة!")
             return ConversationHandler.END
 
         AdminOperations.log_admin_action(user_id, "ADMIN_LOGIN", "Accessed via /admin")
@@ -62,11 +65,7 @@ class AdminConversation:
             [InlineKeyboardButton("❌ خروج", callback_data="admin_exit")],
         ]
 
-        await update.message.reply_text(
-            f"👑 <b>لوحة الأدمن</b>\n\n" f"مرحباً @{username}\n\n" f"اختر الخدمة:",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+        await send_or_edit(context, update.effective_chat.id, f"👑 <b>لوحة الأدمن</b>\n\n" f"مرحباً @{username}\n\n" f"اختر الخدمة:", InlineKeyboardMarkup(keyboard))
 
         return ADMIN_MAIN
 
@@ -81,7 +80,7 @@ class AdminConversation:
         user_id = query.from_user.id
 
         if query.data == "admin_exit":
-            await query.edit_message_text("👋 تم الخروج من لوحة الأدمن")
+            await send_or_edit(context, update.effective_chat.id, "👋 تم الخروج من لوحة الأدمن")
             return ConversationHandler.END
 
         if query.data == "admin_prices":
@@ -99,19 +98,12 @@ class AdminConversation:
                 [InlineKeyboardButton("🔙 رجوع", callback_data="admin_back_main")],
             ]
 
-            await query.edit_message_text(
-                "💰 <b>إدارة الأسعار</b>\n\n🎮 اختر المنصة:",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "💰 <b>إدارة الأسعار</b>\n\n🎮 اختر المنصة:", InlineKeyboardMarkup(keyboard))
 
             return ADMIN_PLATFORM
 
         if query.data == "admin_stats":
-            await query.edit_message_text(
-                "📊 <b>الإحصائيات</b>\n\nقريباً...",
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "📊 <b>الإحصائيات</b>\n\nقريباً...")
             return ConversationHandler.END
 
         return ADMIN_MAIN
@@ -137,11 +129,7 @@ class AdminConversation:
                 [InlineKeyboardButton("❌ خروج", callback_data="admin_exit")],
             ]
 
-            await query.edit_message_text(
-                "👑 <b>لوحة الأدمن</b>\n\nاختر الخدمة:",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "👑 <b>لوحة الأدمن</b>\n\nاختر الخدمة:", InlineKeyboardMarkup(keyboard))
 
             return ADMIN_MAIN
 
@@ -175,11 +163,7 @@ class AdminConversation:
             [InlineKeyboardButton("🔙 رجوع", callback_data="admin_back_platforms")],
         ]
 
-        await query.edit_message_text(
-            f"💰 <b>أسعار {platform_name}</b>\n\nاختر نوع التحويل:",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+        await send_or_edit(context, update.effective_chat.id, f"💰 <b>أسعار {platform_name}</b>\n\nاختر نوع التحويل:", InlineKeyboardMarkup(keyboard))
 
         return ADMIN_PLATFORM
 
@@ -205,11 +189,7 @@ class AdminConversation:
                 [InlineKeyboardButton("🔙 رجوع", callback_data="admin_back_main")],
             ]
 
-            await query.edit_message_text(
-                "💰 <b>إدارة الأسعار</b>\n\n🎮 اختر المنصة:",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML",
-            )
+            await send_or_edit(context, update.effective_chat.id, "💰 <b>إدارة الأسعار</b>\n\n🎮 اختر المنصة:", InlineKeyboardMarkup(keyboard))
 
             return ADMIN_PLATFORM
 
@@ -225,10 +205,7 @@ class AdminConversation:
             current_price = PriceManagement.get_current_price(platform, transfer_type)
 
             if current_price is None:
-                await query.edit_message_text(
-                    "❌ خطأ في جلب السعر الحالي",
-                    parse_mode="HTML",
-                )
+                await send_or_edit(context, update.effective_chat.id, "❌ خطأ في جلب السعر الحالي")
                 return ConversationHandler.END
 
             # 🔥 استخدام bucket بدلاً من context.user_data
@@ -251,15 +228,12 @@ class AdminConversation:
 
             transfer_name = "فوري" if transfer_type == "instant" else "عادي"
 
-            await query.edit_message_text(
-                f"💰 <b>تعديل سعر {platform_name} - {transfer_name}</b>\n\n"
+            await send_or_edit(context, update.effective_chat.id, f"💰 <b>تعديل سعر {platform_name} - {transfer_name}</b>\n\n"
                 f"💵 السعر الحالي: {current_price:,} ج.م\n\n"
                 f"📝 أدخل السعر الجديد:\n"
                 f"• الحد الأدنى: 1,000 ج.م\n"
                 f"• الحد الأقصى: 50,000 ج.م\n\n"
-                f"❌ للإلغاء: /cancel",
-                parse_mode="HTML",
-            )
+                f"❌ للإلغاء: /cancel")
 
             return ADMIN_PRICE_INPUT
 
@@ -277,21 +251,21 @@ class AdminConversation:
 
         if not price_text.isdigit():
             print(f"   ❌ [ADMIN] Invalid format")
-            await update.message.reply_text("❌ صيغة غير صحيحة! أدخل أرقاماً فقط")
+            await send_or_edit(context, update.effective_chat.id, "❌ صيغة غير صحيحة! أدخل أرقاماً فقط")
             return ADMIN_PRICE_INPUT
 
         new_price = int(price_text)
 
         if new_price < 1000:
             print(f"   ❌ [ADMIN] Price too low: {new_price}")
-            await update.message.reply_text(
+            await send_or_edit(context, update.effective_chat.id, 
                 f"❌ السعر قليل جداً! الحد الأدنى: 1,000 ج.م"
             )
             return ADMIN_PRICE_INPUT
 
         if new_price > 50000:
             print(f"   ❌ [ADMIN] Price too high: {new_price}")
-            await update.message.reply_text(
+            await send_or_edit(context, update.effective_chat.id, 
                 f"❌ السعر عالي جداً! الحد الأقصى: 50,000 ج.م"
             )
             return ADMIN_PRICE_INPUT
@@ -311,7 +285,7 @@ class AdminConversation:
         )
 
         if not success:
-            await update.message.reply_text("❌ حدث خطأ في تحديث السعر")
+            await send_or_edit(context, update.effective_chat.id, "❌ حدث خطأ في تحديث السعر")
             return ConversationHandler.END
 
         platform_name = {
@@ -322,15 +296,12 @@ class AdminConversation:
 
         transfer_name = "فوري" if transfer_type == "instant" else "عادي"
 
-        await update.message.reply_text(
-            f"✅ <b>تم تحديث السعر بنجاح!</b>\n\n"
+        await send_or_edit(context, update.effective_chat.id, f"✅ <b>تم تحديث السعر بنجاح!</b>\n\n"
             f"🎮 المنصة: {platform_name}\n"
             f"⚡ النوع: {transfer_name}\n"
             f"💰 السعر القديم: {old_price:,} ج.م\n"
             f"💵 السعر الجديد: {new_price:,} ج.م\n\n"
-            f"🔹 /admin للرجوع للوحة التحكم",
-            parse_mode="HTML",
-        )
+            f"🔹 /admin للرجوع للوحة التحكم")
 
         # 🔥 مسح bucket فقط
         clear_bucket(context, "admin")
@@ -346,7 +317,7 @@ class AdminConversation:
         user_id = update.effective_user.id
         print(f"❌ [ADMIN] {user_id} cancelled operation")
 
-        await update.message.reply_text(
+        await send_or_edit(context, update.effective_chat.id, 
             "❌ تم إلغاء العملية\n\n🔹 /admin للرجوع للوحة التحكم"
         )
 
