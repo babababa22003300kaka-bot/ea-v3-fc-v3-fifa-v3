@@ -1,0 +1,19 @@
+{
+  "telegram": {
+    "bot_token": "8438903910:AAGq32A7b4aifWESfGB2OxHWTtgwH6HeiU8",
+    "admin_ids": []
+  },
+  "website": {
+    "urls": {
+      "base": "https://your-website.com"
+    },
+    "cookies": {
+      "XSRF-TOKEN": "your-token",
+      "laravel_session": "your-session"
+    },
+    "defaults": {
+      "group_name": "Default",
+      "account_lock": "0"
+    }
+  }
+}
