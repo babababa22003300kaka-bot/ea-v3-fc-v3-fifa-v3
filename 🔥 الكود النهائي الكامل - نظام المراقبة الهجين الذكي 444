@@ -1,0 +1,1071 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+🚀 Smart Telegram Sender Bot - Adaptive Hybrid Monitoring
+Bot: @snipe12_bot
+
+الاستراتيجية النهائية:
+- Smart Cache: جلب مركزي + مراقبة محلية
+- Strict ID Validation: التحقق بالـ account_id
+- Temporary Burst Mode: تحديث سريع (60 ثانية) للحسابات الجديدة
+- Smart TTL: فترة تحديث متكيفة
+- Fallback Mechanism: استمرارية في حالة الفشل
+"""
+
+import asyncio
+import json
+import logging
+import random
+import re
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+import aiohttp
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+# ═══════════════════════════════════════════════════════════════
+# 📝 إعداد السجلات
+# ═══════════════════════════════════════════════════════════════
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
+
+# ═══════════════════════════════════════════════════════════════
+# ⚙️ تحميل الإعدادات
+# ═══════════════════════════════════════════════════════════════
+
+with open("config.json", "r", encoding="utf-8") as f:
+    CONFIG = json.load(f)
+
+# ═══════════════════════════════════════════════════════════════
+# 🔧 الإعدادات الأساسية
+# ═══════════════════════════════════════════════════════════════
+
+CSRF_TOKEN_TTL = 1200
+
+# الحالات الانتقالية والنهائية
+TRANSITIONAL_STATUSES = {
+    "LOGGING", "LOGGED", "LOGGED IN", "CODE SENT", "WAITING"
+}
+
+FINAL_STATUSES = {
+    "AVAILABLE", "ACTIVE", "WRONG DETAILS", "BACKUP CODE WRONG",
+    "NEW ACCOUNT", "DISABLED", "NO TRANSFER ACCESS", "TRANSFER LIST IS FULL",
+    "NO CLUB", "GENERAL LOGIN ERROR", "ERROR", "BLOCKED", "AMOUNT TAKEN"
+}
+
+# إعدادات الـ Cache الذكي
+DEFAULT_CACHE_TTL = 300  # 5 دقائق
+MIN_CACHE_TTL = 120      # دقيقتين (عند نشاط مرتفع)
+MAX_CACHE_TTL = 600      # 10 دقائق (عند هدوء)
+BURST_MODE_DURATION = 60 # مدة وضع الـ Burst (ثانية)
+BURST_INTERVAL = (2, 3)  # فترة التحديث في وضع الـ Burst
+
+# ملفات قاعدة البيانات
+MONITORED_FILE = "monitored_accounts.json"
+STATS_FILE = "stats.json"
+
+telegram_app = None
+
+# ═══════════════════════════════════════════════════════════════
+# 📊 الإحصائيات
+# ═══════════════════════════════════════════════════════════════
+
+@dataclass
+class Stats:
+    """إحصائيات النظام"""
+    total_requests: int = 0
+    csrf_refreshes: int = 0
+    batch_fetches: int = 0
+    cache_hits: int = 0
+    errors: int = 0
+    changes_detected: int = 0
+    burst_activations: int = 0
+    fast_detections: int = 0
+    fallback_uses: int = 0
+    last_reset: str = datetime.now().isoformat()
+
+    def save(self):
+        try:
+            with open(STATS_FILE, "w") as f:
+                json.dump(asdict(self), f, indent=2)
+        except Exception as e:
+            logger.error(f"❌ خطأ حفظ: {e}")
+
+    @classmethod
+    def load(cls):
+        if Path(STATS_FILE).exists():
+            try:
+                with open(STATS_FILE, "r") as f:
+                    return cls(**json.load(f))
+            except:
+                pass
+        return cls()
+
+stats = Stats.load()
+
+# ═══════════════════════════════════════════════════════════════
+# 🗄️ قاعدة البيانات المحلية
+# ═══════════════════════════════════════════════════════════════
+
+class MonitorDB:
+    """قاعدة بيانات الحسابات المراقبة مع ID Validation"""
+    
+    def __init__(self):
+        self.data = self._load()
+    
+    def _load(self) -> Dict:
+        if Path(MONITORED_FILE).exists():
+            try:
+                with open(MONITORED_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
+    
+    def _save(self):
+        try:
+            with open(MONITORED_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"❌ خطأ حفظ: {e}")
+    
+    def add(self, email: str, account_id: str, status: str, chat_id: int):
+        """إضافة حساب مع account_id الموثوق"""
+        self.data[email.lower()] = {
+            "account_id": account_id,  # ✅ الهوية الموثوقة
+            "status": status,
+            "chat_id": chat_id,
+            "added_at": datetime.now().isoformat(),
+            "last_check": datetime.now().isoformat(),
+            "check_count": 0
+        }
+        self._save()
+        logger.info(f"✅ تمت إضافة {email} (ID: {account_id})")
+    
+    def update_status(self, email: str, new_status: str):
+        """تحديث الحالة"""
+        email = email.lower()
+        if email in self.data:
+            self.data[email]["status"] = new_status
+            self.data[email]["last_check"] = datetime.now().isoformat()
+            self.data[email]["check_count"] += 1
+            self._save()
+    
+    def get(self, email: str) -> Optional[Dict]:
+        """الحصول على بيانات الحساب"""
+        return self.data.get(email.lower())
+    
+    def get_all(self) -> Dict:
+        """الحصول على كل الحسابات"""
+        return self.data.copy()
+    
+    def remove(self, email: str):
+        """حذف حساب"""
+        email = email.lower()
+        if email in self.data:
+            del self.data[email]
+            self._save()
+
+db = MonitorDB()
+
+# ═══════════════════════════════════════════════════════════════
+# 🧠 Smart Cache Manager
+# ═══════════════════════════════════════════════════════════════
+
+class SmartCacheManager:
+    """
+    مدير الذاكرة المؤقتة الذكي
+    - فترة صلاحية متكيفة (Smart TTL)
+    - وضع Burst للحسابات الجديدة
+    - آلية Fallback
+    """
+    
+    def __init__(self):
+        self.cache: List[Dict] = []
+        self.cache_timestamp: Optional[datetime] = None
+        self.last_backup: List[Dict] = []  # نسخة احتياطية
+        
+        # Smart TTL
+        self.current_ttl = DEFAULT_CACHE_TTL
+        self.last_changes_count = 0
+        
+        # Burst Mode Tracking
+        self.burst_accounts: Dict[str, datetime] = {}  # email -> start_time
+    
+    def is_fresh(self) -> bool:
+        """هل الـ Cache لا يزال صالحاً؟"""
+        if not self.cache_timestamp:
+            return False
+        
+        age = (datetime.now() - self.cache_timestamp).total_seconds()
+        return age < self.current_ttl
+    
+    def should_burst_refresh(self) -> bool:
+        """هل يجب تحديث الـ Cache بسبب وضع Burst؟"""
+        if not self.burst_accounts:
+            return False
+        
+        # تنظيف الحسابات اللي انتهى وضع الـ Burst بتاعها
+        current_time = datetime.now()
+        expired = [
+            email for email, start_time in self.burst_accounts.items()
+            if (current_time - start_time).total_seconds() > BURST_MODE_DURATION
+        ]
+        
+        for email in expired:
+            del self.burst_accounts[email]
+            logger.info(f"⏱️ انتهى Burst Mode لـ {email}")
+        
+        return len(self.burst_accounts) > 0
+    
+    def activate_burst(self, email: str):
+        """تفعيل وضع Burst لحساب معين"""
+        self.burst_accounts[email.lower()] = datetime.now()
+        logger.info(f"🚀 تفعيل Burst Mode لـ {email} ({BURST_MODE_DURATION}s)")
+        
+        global stats
+        stats.burst_activations += 1
+        stats.save()
+    
+    def update(self, accounts: List[Dict], changes_count: int = 0):
+        """تحديث الـ Cache"""
+        self.cache = accounts
+        self.cache_timestamp = datetime.now()
+        
+        # حفظ نسخة احتياطية
+        if accounts:
+            self.last_backup = accounts.copy()
+        
+        # تعديل TTL بناءً على النشاط
+        self._adjust_ttl(changes_count)
+    
+    def _adjust_ttl(self, changes_count: int):
+        """
+        تعديل فترة الصلاحية بناءً على عدد التغييرات
+        - تغييرات كثيرة → TTL أقصر
+        - هدوء → TTL أطول
+        """
+        if changes_count > 5:
+            # نشاط مرتفع
+            self.current_ttl = max(MIN_CACHE_TTL, self.current_ttl - 30)
+            logger.info(f"📉 تقليل TTL إلى {self.current_ttl}s (نشاط مرتفع)")
+        elif changes_count == 0 and self.last_changes_count == 0:
+            # هدوء تام
+            self.current_ttl = min(MAX_CACHE_TTL, self.current_ttl + 30)
+            logger.info(f"📈 زيادة TTL إلى {self.current_ttl}s (هدوء)")
+        
+        self.last_changes_count = changes_count
+    
+    def get(self) -> List[Dict]:
+        """الحصول على الـ Cache (أو Fallback)"""
+        if self.cache:
+            return self.cache
+        
+        # Fallback: استخدام آخر نسخة احتياطية
+        if self.last_backup:
+            logger.warning("⚠️ استخدام Fallback Cache")
+            global stats
+            stats.fallback_uses += 1
+            stats.save()
+            return self.last_backup
+        
+        return []
+
+cache_manager = SmartCacheManager()
+
+# ═══════════════════════════════════════════════════════════════
+# 🌐 مدير API المحسّن
+# ═══════════════════════════════════════════════════════════════
+
+class HybridAPIManager:
+    """مدير API مع نظام الـ Cache الهجين"""
+    
+    def __init__(self):
+        self.base_url = CONFIG["website"]["urls"]["base"]
+        self.cookies = CONFIG["website"]["cookies"]
+        self.csrf_token = None
+        self.csrf_expires_at = None
+        self.session = None
+    
+    async def init(self):
+        """تهيئة الـ session"""
+        if self.session is None or self.session.closed:
+            connector = aiohttp.TCPConnector(limit=20, limit_per_host=10)
+            timeout = aiohttp.ClientTimeout(total=30)
+            self.session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=timeout,
+                cookies=self.cookies
+            )
+    
+    async def get_csrf(self) -> Optional[str]:
+        """الحصول على CSRF token"""
+        if self.csrf_token and self.csrf_expires_at:
+            if datetime.now() < self.csrf_expires_at:
+                return self.csrf_token
+        
+        await self.init()
+        
+        try:
+            async with self.session.get(f"{self.base_url}/senderPage") as resp:
+                if resp.status == 200:
+                    html = await resp.text()
+                    match = re.search(r'<meta name="csrf-token" content="([^"]+)"', html)
+                    if match:
+                        self.csrf_token = match.group(1)
+                        self.csrf_expires_at = datetime.now() + timedelta(seconds=CSRF_TOKEN_TTL)
+                        return self.csrf_token
+        except Exception as e:
+            logger.error(f"❌ خطأ CSRF: {e}")
+        
+        return None
+    
+    async def fetch_all_accounts(self) -> List[Dict]:
+        """جلب كل الحسابات من الموقع"""
+        global stats
+        
+        csrf = await self.get_csrf()
+        if not csrf:
+            return []
+        
+        await self.init()
+        
+        try:
+            payload = {"date": "0", "bigUpdate": "0", "csrf_token": csrf}
+            
+            async with self.session.post(
+                f"{self.base_url}/dataFunctions/updateSenderPage",
+                data=payload
+            ) as resp:
+                
+                stats.total_requests += 1
+                stats.batch_fetches += 1
+                
+                if resp.status == 200:
+                    data = await resp.json()
+                    
+                    if "data" in data:
+                        accounts = data["data"]
+                        
+                        INDEX_MAP = {
+                            "idAccount": 0, "image": 1, "Sender": 2,
+                            "Start": 3, "Last Update": 4, "Taken": 5,
+                            "Status": 6, "Available": 7, "password": 8,
+                            "backupCodes": 9, "Group": 10, "groupNameId": 11,
+                            "Take": 12, "Keep": 13
+                        }
+                        
+                        parsed = []
+                        for acc in accounts:
+                            if len(acc) > 2:
+                                account = {}
+                                for key, idx in INDEX_MAP.items():
+                                    account[key] = str(acc[idx]) if idx < len(acc) and acc[idx] else ""
+                                parsed.append(account)
+                        
+                        logger.info(f"✅ تم جلب {len(parsed)} حساب")
+                        return parsed
+                
+                elif resp.status in [403, 419]:
+                    self.csrf_token = None
+        
+        except Exception as e:
+            logger.error(f"❌ خطأ جلب: {e}")
+            stats.errors += 1
+        
+        return []
+    
+    async def search_in_cache(self, email: str, account_id: Optional[str] = None) -> Optional[Dict]:
+        """
+        البحث في الـ Cache المحلي مع ID Validation
+        - إذا كان account_id موجود، نتحقق بيه (أكثر دقة)
+        - إذا مش موجود، نبحث بالإيميل
+        """
+        email = email.lower().strip()
+        accounts = cache_manager.get()
+        
+        for acc in accounts:
+            acc_email = acc.get("Sender", "").lower()
+            acc_id = acc.get("idAccount", "")
+            
+            # ✅ التحقق الصارم بالـ ID (إذا متوفر)
+            if account_id:
+                if acc_id == account_id and acc_email == email:
+                    return acc
+            else:
+                # البحث العادي بالإيميل
+                if acc_email == email:
+                    return acc
+        
+        return None
+    
+    async def add_sender(
+        self, email: str, password: str, backup_codes: str = "",
+        amount_take: str = "", amount_keep: str = ""
+    ) -> Tuple[bool, str]:
+        """إضافة حساب"""
+        csrf = await self.get_csrf()
+        if not csrf:
+            return False, "No CSRF"
+        
+        await self.init()
+        
+        defaults = CONFIG["website"]["defaults"]
+        payload = {
+            "email": email,
+            "password": password,
+            "backupCodes": backup_codes,
+            "groupName": defaults["group_name"],
+            "accountLock": defaults["account_lock"],
+            "amountToTake": amount_take or defaults.get("amount_take", ""),
+            "amountToKeep": amount_keep or defaults.get("amount_keep", ""),
+            "priority": defaults.get("priority", ""),
+            "forceProxy": defaults.get("force_proxy", ""),
+            "userPrice": defaults.get("user_price", ""),
+            "csrf_token": csrf,
+        }
+        
+        try:
+            async with self.session.post(
+                f"{self.base_url}/dataFunctions/addAccount",
+                json=payload
+            ) as resp:
+                
+                if resp.status == 200:
+                    try:
+                        data = await resp.json()
+                        if "success" in data:
+                            return True, data.get("success", "Success")
+                        elif "error" in data:
+                            error = data.get("error", "")
+                            if "already" in error.lower():
+                                return True, "Exists"
+                            return False, error
+                    except:
+                        text = await resp.text()
+                        if "success" in text.lower():
+                            return True, "Success"
+                        return False, text[:100]
+                
+                elif resp.status in [403, 419]:
+                    self.csrf_token = None
+                    return False, "CSRF expired"
+                
+                return False, f"Status {resp.status}"
+        
+        except Exception as e:
+            return False, str(e)
+    
+    async def close(self):
+        """إغلاق الـ session"""
+        if self.session and not self.session.closed:
+            await self.session.close()
+
+api_manager = HybridAPIManager()
+
+# ═══════════════════════════════════════════════════════════════
+# 🔄 محدّث الـ Cache الذكي
+# ═══════════════════════════════════════════════════════════════
+
+async def smart_cache_updater():
+    """
+    مُحدّث الـ Cache في الخلفية
+    - يحدّث حسب الحاجة (Smart TTL)
+    - يدخل وضع Burst عند الحاجة
+    - يتتبع التغييرات
+    """
+    logger.info("🔄 بدء محدّث الـ Cache الذكي...")
+    
+    while True:
+        try:
+            should_update = False
+            interval = cache_manager.current_ttl
+            
+            # تحقق: هل في حسابات في وضع Burst؟
+            if cache_manager.should_burst_refresh():
+                should_update = True
+                interval = random.uniform(*BURST_INTERVAL)
+                logger.info(f"🚀 تحديث Burst (كل {interval:.1f}s)")
+            
+            # تحقق: هل الـ Cache قديم؟
+            elif not cache_manager.is_fresh():
+                should_update = True
+                logger.info(f"🔄 تحديث عادي (TTL={cache_manager.current_ttl}s)")
+            
+            # تحديث الـ Cache
+            if should_update:
+                accounts = await api_manager.fetch_all_accounts()
+                
+                if accounts:
+                    # حساب عدد التغييرات
+                    old_cache = cache_manager.get()
+                    changes = detect_changes(old_cache, accounts)
+                    
+                    # تحديث الـ Cache
+                    cache_manager.update(accounts, changes_count=len(changes))
+                    
+                    # إرسال إشعارات للتغييرات
+                    await notify_changes(changes)
+                
+                else:
+                    logger.warning("⚠️ فشل جلب الحسابات - استخدام Fallback")
+            
+            else:
+                # الـ Cache لا يزال صالح
+                global stats
+                stats.cache_hits += 1
+            
+            await asyncio.sleep(interval)
+        
+        except Exception as e:
+            logger.exception("❌ خطأ في محدّث الـ Cache")
+            await asyncio.sleep(30)
+
+def detect_changes(old: List[Dict], new: List[Dict]) -> List[Dict]:
+    """كشف التغييرات بين نسختين من الـ Cache"""
+    changes = []
+    
+    # إنشاء خريطة للوصول السريع
+    old_map = {
+        acc.get("idAccount"): acc
+        for acc in old
+        if acc.get("idAccount")
+    }
+    
+    for new_acc in new:
+        acc_id = new_acc.get("idAccount")
+        if not acc_id:
+            continue
+        
+        # هل الحساب موجود في النسخة القديمة؟
+        old_acc = old_map.get(acc_id)
+        
+        if old_acc:
+            # تحقق من تغيير الحالة
+            old_status = old_acc.get("Status", "").upper()
+            new_status = new_acc.get("Status", "").upper()
+            
+            if old_status != new_status:
+                changes.append({
+                    "account_id": acc_id,
+                    "email": new_acc.get("Sender", ""),
+                    "old_status": old_status,
+                    "new_status": new_status,
+                    "data": new_acc
+                })
+    
+    if changes:
+        logger.info(f"🔔 تم اكتشاف {len(changes)} تغيير")
+        
+        global stats
+        stats.changes_detected += len(changes)
+        stats.save()
+    
+    return changes
+
+async def notify_changes(changes: List[Dict]):
+    """إرسال إشعارات للتغييرات المكتشفة"""
+    for change in changes:
+        email = change["email"].lower()
+        account = db.get(email)
+        
+        if not account:
+            continue
+        
+        # التحقق من الـ ID
+        if account["account_id"] != change["account_id"]:
+            logger.warning(f"⚠️ ID mismatch لـ {email}")
+            continue
+        
+        # تحديث الحالة في القاعدة
+        db.update_status(email, change["new_status"])
+        
+        # إرسال الإشعار
+        await send_status_notification(
+            email,
+            change["account_id"],
+            change["old_status"],
+            change["new_status"],
+            account["chat_id"],
+            change["data"]
+        )
+
+async def send_status_notification(
+    email: str, account_id: str, old_status: str,
+    new_status: str, chat_id: int, account_data: Dict
+):
+    """إرسال إشعار تغيير الحالة"""
+    try:
+        old_emoji = get_status_emoji(old_status)
+        new_emoji = get_status_emoji(new_status)
+        old_desc = get_status_description_ar(old_status)
+        new_desc = get_status_description_ar(new_status)
+        
+        notification = (
+            f"🔔 *تنبيه تغيير!*\n\n"
+            f"📧 `{email}`\n"
+            f"🆔 ID: `{account_id}`\n\n"
+            f"📊 *السابقة:* `{old_status}`\n"
+            f"   {old_emoji} {old_desc}\n\n"
+            f"📊 *الجديدة:* `{new_status}`\n"
+            f"   {new_emoji} {new_desc}\n\n"
+            f"🕐 {datetime.now().strftime('%H:%M:%S')}\n"
+        )
+        
+        available = format_number(account_data.get("Available", "0"))
+        taken = format_number(account_data.get("Taken", "0"))
+        
+        if available != "0" or taken != "0":
+            notification += f"\n💵 متاح: {available}\n✅ مسحوب: {taken}"
+        
+        await telegram_app.bot.send_message(
+            chat_id=chat_id,
+            text=notification,
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ فشل إرسال إشعار: {e}")
+
+# ═══════════════════════════════════════════════════════════════
+# 🚀 مراقبة الحسابات الجديدة (Burst Mode)
+# ═══════════════════════════════════════════════════════════════
+
+async def monitor_new_account(email: str, message_obj, chat_id: int) -> Tuple[bool, Optional[Dict]]:
+    """
+    مراقبة حساب جديد مع Burst Mode
+    - يفعّل التحديث السريع (2-3 ثواني) لمدة 60 ثانية
+    - يستخدم ID Validation
+    - يكتشف الحالة النهائية بسرعة
+    """
+    
+    logger.info(f"🚀 بدء مراقبة {email} (Burst Mode)")
+    
+    # تفعيل Burst Mode في الـ Cache Manager
+    cache_manager.activate_burst(email)
+    
+    # إجبار تحديث فوري
+    accounts = await api_manager.fetch_all_accounts()
+    if accounts:
+        cache_manager.update(accounts)
+    
+    start_time = datetime.now()
+    last_status = None
+    account_id = None
+    stable_count = 0
+    max_attempts = 30
+    
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # البحث في الـ Cache (مع ID إذا متوفر)
+            account = await api_manager.search_in_cache(email, account_id)
+            
+            if not account:
+                await message_obj.edit_text(
+                    f"🔍 *بحث...*\n\n"
+                    f"📧 `{email}`\n"
+                    f"⏱️ المحاولة {attempt}/{max_attempts}",
+                    parse_mode="Markdown"
+                )
+                
+                await asyncio.sleep(2)
+                continue
+            
+            # حفظ الـ ID عند أول اكتشاف
+            if not account_id:
+                account_id = account.get("idAccount", "")
+                logger.info(f"✅ تم اكتشاف ID: {account_id}")
+            
+            status = account.get("Status", "").upper()
+            
+            # تتبع التغييرات
+            if status != last_status:
+                elapsed = (datetime.now() - start_time).total_seconds()
+                logger.info(f"📊 {email} → {status} ({elapsed:.1f}s)")
+                
+                last_status = status
+                stable_count = 0
+            else:
+                stable_count += 1
+            
+            # تحديد نوع الحالة
+            is_final = status in FINAL_STATUSES
+            status_desc = get_status_description_ar(status)
+            
+            await message_obj.edit_text(
+                f"🚀 *مراقبة سريعة*\n\n"
+                f"📧 `{email}`\n"
+                f"🆔 ID: `{account_id}`\n\n"
+                f"📊 `{status}`\n"
+                f"   {get_status_emoji(status)} {status_desc}\n\n"
+                f"🎯 {'نهائية ✅' if is_final else 'انتقالية ⏳'}\n"
+                f"⏱️ {int((datetime.now() - start_time).total_seconds())}s",
+                parse_mode="Markdown"
+            )
+            
+            # شروط التوقف
+            if is_final and stable_count >= 2:
+                # حالة نهائية ومستقرة
+                logger.info(f"✅ {email} مستقر عند {status}")
+                
+                # حفظ في القاعدة مع ID
+                db.add(email, account_id, status, chat_id)
+                
+                global stats
+                stats.fast_detections += 1
+                stats.save()
+                
+                return True, account
+            
+            # انتظار قصير
+            await asyncio.sleep(random.uniform(2, 3))
+        
+        except Exception as e:
+            logger.exception(f"❌ خطأ في المراقبة: {e}")
+            await asyncio.sleep(2)
+    
+    # انتهى الوقت
+    logger.warning(f"⏱️ {email}: timeout")
+    
+    if account_id and last_status:
+        db.add(email, account_id, last_status, chat_id)
+        return True, account
+    
+    return False, None
+
+# ═══════════════════════════════════════════════════════════════
+# 🛡️ دوال مساعدة
+# ═══════════════════════════════════════════════════════════════
+
+def format_number(value) -> str:
+    if not value or value == "null":
+        return "0"
+    try:
+        num = float(str(value))
+        if abs(num) < 1000:
+            return str(int(num))
+        return f"{int(num/1000)}k"
+    except:
+        return str(value)
+
+def get_status_emoji(status: str) -> str:
+    emojis = {
+        "LOGGING": "🔄", "LOGGED": "✅", "ACTIVE": "✅",
+        "AVAILABLE": "💰", "CODE SENT": "📧", "AMOUNT TAKEN": "💸",
+        "WRONG DETAILS": "⚠️", "DISABLED": "🔒", "WAITING": "⏳",
+        "BLOCKED": "🚫", "ERROR": "❌", "BACKUP CODE WRONG": "🔑",
+        "TRANSFER LIST IS FULL": "📦"
+    }
+    return emojis.get(status.upper(), "📊")
+
+def get_status_description_ar(status: str) -> str:
+    descriptions = {
+        "LOGGING": "جاري تسجيل الدخول",
+        "LOGGED": "تم تسجيل الدخول",
+        "ACTIVE": "نشط",
+        "AVAILABLE": "متاح - جاهز",
+        "CODE SENT": "تم إرسال الكود",
+        "AMOUNT TAKEN": "تم السحب",
+        "WRONG DETAILS": "بيانات خاطئة",
+        "DISABLED": "معطل",
+        "NO TRANSFER ACCESS": "الماركت مقفول",
+        "BACKUP CODE WRONG": "الأكواد غلط",
+        "TRANSFER LIST IS FULL": "القائمة مليانة",
+        "WAITING": "منتظر",
+        "BLOCKED": "محظور",
+        "ERROR": "خطأ"
+    }
+    return descriptions.get(status.upper(), status)
+
+def parse_sender_data(text: str) -> Dict:
+    lines = text.strip().split("\n")
+    data = {"email": "", "password": "", "codes": [], "amount_take": "", "amount_keep": ""}
+    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if re.match(email_pattern, line):
+            data["email"] = line.lower()
+        elif "اسحب" in line:
+            match = re.search(r"اسحب\s*(\d+)", line)
+            if match:
+                data["amount_take"] = match.group(1)
+        elif "يسيب" in line:
+            match = re.search(r"يسيب\s*(\d+)", line)
+            if match:
+                data["amount_keep"] = match.group(1)
+        elif re.match(r"^[\d.]+$", line):
+            clean_code = line.split(".")[-1] if "." in line else line
+            data["codes"].append(clean_code)
+        elif data["email"] and not data["password"]:
+            data["password"] = line
+    
+    data["codes"] = ",".join(data["codes"])
+    return data
+
+def is_admin(user_id: int) -> bool:
+    admin_ids = CONFIG["telegram"].get("admin_ids", [])
+    return not admin_ids or user_id in admin_ids
+
+# ═══════════════════════════════════════════════════════════════
+# 🎯 أوامر البوت
+# ═══════════════════════════════════════════════════════════════
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """أمر /start"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("❌ غير مصرّح")
+        return
+    
+    welcome = (
+        f"مرحباً {update.effective_user.first_name}! 👋\n\n"
+        "🧠 *نظام المراقبة الهجين الذكي*\n\n"
+        "✨ *المميزات المتقدمة:*\n"
+        "• 🧠 Smart Cache: جلب مركزي + مراقبة محلية\n"
+        "• 🔐 ID Validation: تحقق دقيق بالـ account_id\n"
+        "• 🚀 Burst Mode: تحديث سريع (60s) للحسابات الجديدة\n"
+        "• 📊 Smart TTL: فترة تحديث متكيفة\n"
+        "• 🛡️ Fallback: استمرارية في حالة الفشل\n\n"
+        "*📝 الأوامر:*\n"
+        "ابعت بيانات الحساب للإضافة\n"
+        "`/list` - الحسابات المراقبة\n"
+        "`/stats` - الإحصائيات\n"
+        "`/check email` - فحص فوري"
+    )
+    
+    await update.message.reply_text(welcome, parse_mode="Markdown")
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة إضافة حساب"""
+    
+    if not is_admin(update.effective_user.id):
+        return
+    
+    if update.message.text.startswith("/"):
+        return
+    
+    data = parse_sender_data(update.message.text)
+    
+    if not data["email"] or not data["password"]:
+        await update.message.reply_text("❌ بيانات ناقصة!")
+        return
+    
+    msg = await update.message.reply_text(
+        f"⏳ *جاري الإضافة...*\n📧 `{data['email']}`",
+        parse_mode="Markdown"
+    )
+    
+    try:
+        # إضافة للموقع
+        success, message = await api_manager.add_sender(
+            email=data["email"],
+            password=data["password"],
+            backup_codes=data["codes"],
+            amount_take=data["amount_take"],
+            amount_keep=data["amount_keep"],
+        )
+        
+        if not success:
+            await msg.edit_text(f"❌ فشل: {message}", parse_mode="Markdown")
+            return
+        
+        await msg.edit_text(
+            f"✅ *تمت الإضافة!*\n\n"
+            f"🚀 *تفعيل Burst Mode...*\n"
+            f"⏱️ مراقبة سريعة (60 ثانية)",
+            parse_mode="Markdown"
+        )
+        
+        # بدء المراقبة مع Burst Mode
+        success, account = await monitor_new_account(
+            data["email"],
+            msg,
+            update.effective_chat.id
+        )
+        
+        if account:
+            status = account.get("Status", "")
+            
+            result = (
+                f"✅ *اكتمل!*\n\n"
+                f"📧 `{data['email']}`\n"
+                f"🆔 ID: `{account.get('idAccount')}`\n\n"
+                f"📊 `{status}`\n"
+                f"   {get_status_emoji(status)} {get_status_description_ar(status)}\n\n"
+            )
+            
+            if status in FINAL_STATUSES:
+                result += "✅ *تمت الإضافة للمراقبة المستمرة!*\n"
+            
+            available = format_number(account.get("Available", "0"))
+            taken = format_number(account.get("Taken", "0"))
+            
+            if available != "0" or taken != "0":
+                result += f"\n💵 متاح: {available}\n✅ مسحوب: {taken}"
+            
+            await msg.edit_text(result, parse_mode="Markdown")
+    
+    except Exception as e:
+        logger.exception(f"❌ خطأ: {e}")
+        await msg.edit_text(f"❌ خطأ: {str(e)}")
+
+async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض الحسابات"""
+    
+    if not is_admin(update.effective_user.id):
+        return
+    
+    accounts = db.get_all()
+    
+    if not accounts:
+        await update.message.reply_text("📭 لا توجد حسابات")
+        return
+    
+    text = f"🔍 *الحسابات المراقبة ({len(accounts)})*\n\n"
+    
+    for email, data in accounts.items():
+        status = data["status"]
+        text += (
+            f"📧 `{email}`\n"
+            f"   🆔 `{data['account_id']}`\n"
+            f"   📊 {get_status_emoji(status)} {status}\n\n"
+        )
+    
+    text += f"🧠 Smart Cache | TTL: {cache_manager.current_ttl}s"
+    
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """الإحصائيات"""
+    
+    if not is_admin(update.effective_user.id):
+        return
+    
+    uptime = (datetime.now() - datetime.fromisoformat(stats.last_reset)).seconds
+    
+    text = (
+        "📊 *الإحصائيات*\n\n"
+        f"📈 إجمالي الطلبات: {stats.total_requests}\n"
+        f"🎯 Cache hits: {stats.cache_hits}\n"
+        f"📦 Batch fetches: {stats.batch_fetches}\n"
+        f"🔔 تغييرات مكتشفة: {stats.changes_detected}\n"
+        f"🚀 تفعيلات Burst: {stats.burst_activations}\n"
+        f"⚡ اكتشافات سريعة: {stats.fast_detections}\n"
+        f"🛡️ استخدامات Fallback: {stats.fallback_uses}\n"
+        f"❌ أخطاء: {stats.errors}\n\n"
+        f"🧠 Smart TTL: {cache_manager.current_ttl}s\n"
+        f"⏱️ وقت التشغيل: {uptime//3600}h {(uptime%3600)//60}m"
+    )
+    
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """فحص فوري"""
+    
+    if not is_admin(update.effective_user.id):
+        return
+    
+    if not context.args:
+        await update.message.reply_text("📝 `/check email@example.com`", parse_mode="Markdown")
+        return
+    
+    email = context.args[0].strip().lower()
+    account = db.get(email)
+    
+    # البحث مع ID إذا متوفر
+    account_id = account["account_id"] if account else None
+    
+    result = await api_manager.search_in_cache(email, account_id)
+    
+    if result:
+        status = result.get("Status", "")
+        
+        text = (
+            f"✅ *نتيجة الفحص*\n\n"
+            f"📧 `{email}`\n"
+            f"🆔 ID: `{result.get('idAccount')}`\n\n"
+            f"📊 `{status}`\n"
+            f"   {get_status_emoji(status)} {get_status_description_ar(status)}\n\n"
+            f"💵 متاح: {format_number(result.get('Available', '0'))}\n"
+            f"✅ مسحوب: {format_number(result.get('Taken', '0'))}"
+        )
+        
+        await update.message.reply_text(text, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ غير موجود: `{email}`", parse_mode="Markdown")
+
+# ═══════════════════════════════════════════════════════════════
+# 🚀 التشغيل الرئيسي
+# ═══════════════════════════════════════════════════════════════
+
+async def post_init(application: Application):
+    """التهيئة"""
+    global telegram_app
+    telegram_app = application
+    
+    await api_manager.init()
+    
+    # بدء محدّث الـ Cache
+    asyncio.create_task(smart_cache_updater())
+    
+    logger.info("✅ النظام جاهز!")
+
+def main():
+    """التشغيل"""
+    
+    print("\n" + "=" * 70)
+    print("🧠 ADAPTIVE HYBRID MONITORING SYSTEM")
+    print("=" * 70)
+    print("✨ التحسينات المتقدمة:")
+    print("   • 🧠 Smart Cache: جلب مركزي + مراقبة محلية")
+    print("   • 🔐 Strict ID Validation: تحقق بالـ account_id")
+    print("   • 🚀 Temporary Burst Mode: تحديث سريع (60s)")
+    print("   • 📊 Smart TTL: 2-10 دقائق (متكيف)")
+    print("   • 🛡️ Fallback Mechanism: استمرارية")
+    print("\n🔥 أذكى وأسرع نظام مراقبة!")
+    print("=" * 70 + "\n")
+    
+    app = Application.builder().token(
+        CONFIG["telegram"]["bot_token"]
+    ).post_init(post_init).build()
+    
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("list", list_command))
+    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("check", check_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    
+    print("✅ البوت يعمل!")
+    print("🧠 Smart Cache نشط")
+    print("⚡ Burst Mode جاهز للتفعيل\n")
+    
+    app.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n⚠️ إيقاف...")
+        stats.save()
+    except Exception as e:
+        logger.exception("❌ خطأ فادح")
+        stats.save()
