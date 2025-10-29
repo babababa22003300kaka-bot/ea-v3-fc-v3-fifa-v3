@@ -1,5 +1,4 @@
-# app.py - الإصدار النهائي v3.0 - مع لوحة تحكم تليجرام
-# يجمع بين Playwright و Flask Heartbeat وأوامر التحكم
+# app.py - الإصدار النهائي v4.0 - مع بحث مباشر وأوامر تحكم متقدمة
 
 import asyncio
 import json
@@ -7,7 +6,7 @@ import logging
 import os
 import threading
 from flask import Flask
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -17,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- 2. تحميل الإعدادات بذكاء (من متغيرات البيئة أو من ملف) ---
+# --- 2. تحميل الإعدادات بذكاء ---
 CONFIG = None
 config_json_str = os.environ.get('CONFIG_JSON')
 
@@ -51,32 +50,29 @@ if not all([TELEGRAM_BOT_TOKEN, ADMIN_IDS, WEBSITE_URL, COOKIES]):
     logger.critical("❌ الإعدادات ناقصة! تأكد من وجود bot_token, admin_ids, sender_page, و cookies.")
     exit()
 
-# --- 4. ذاكرة تخزين مؤقتة للحالة وتهيئة البوت ---
+# --- 4. متغيرات عالمية وذاكرة التخزين المؤقت ---
 accounts_state_cache = {}
 is_first_run = True
-# ✨✨ تعديل: سنقوم بإنشاء البوت داخل دالة main_bot_logic
 telegram_app = None
+# ✨✨ متغير جديد للاحتفاظ بصفحة المتصفح للبحث المباشر
+playwright_page_global: Page = None
 
-# --- 5. كود النبض (Heartbeat) لإبقاء الخدمة مستيقظة ---
+# --- 5. كود النبض (Heartbeat) ---
 app = Flask(__name__)
-
 @app.route('/')
 def heartbeat():
-    """نقطة النهاية التي يتم استدعاؤها للحفاظ على الخدمة نشطة."""
     active_accounts_count = len(accounts_state_cache)
     return f"Bot is alive and monitoring {active_accounts_count} accounts."
 
 def run_flask_app():
-    """دالة لتشغيل تطبيق فلاسك في 'ثريد' منفصل."""
     app.run(host='0.0.0.0', port=10000)
 
-# --- 6. دوال مساعدة (إرسال الإشعارات ومعالجة البيانات) ---
+# --- 6. دوال مساعدة ---
 async def send_telegram_notification(message, chat_id=None):
     """إرسال إشعار إلى مسؤول معين أو جميع المسؤولين."""
     target_ids = [chat_id] if chat_id else ADMIN_IDS
     for cid in target_ids:
         try:
-            # نستخدم telegram_app.bot لإرسال الرسائل
             await telegram_app.bot.send_message(
                 chat_id=cid, text=message, parse_mode="Markdown"
             )
@@ -94,7 +90,8 @@ async def on_data_update(data):
         return
 
     current_state = {
-        account[2]: {"status": account[6], "id": account[0]} for account in new_accounts_data if len(account) > 6 and account[2]
+        account[2]: {"status": account[6], "id": account[0], "available": account[7], "taken": account[5]}
+        for account in new_accounts_data if len(account) > 7 and account[2]
     }
 
     if is_first_run:
@@ -125,19 +122,19 @@ async def on_data_update(data):
 
     accounts_state_cache = current_state
 
-# --- 7. ✨✨ الأوامر الجديدة للتليجرام ✨✨ ---
+# --- 7. ✨✨ الأوامر الجديدة والمطورة للتليجرام ✨✨ ---
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """أمر /start: يعرض رسالة ترحيبية وقائمة الأوامر."""
     if update.effective_chat.id not in ADMIN_IDS: return
     
     welcome_message = (
-        "👋 *أهلاً بك في بوت المراقبة الفورية!*\n\n"
+        "👋 *أهلاً بك في بوت المراقبة الفورية (v4.0)!*\n\n"
         "هذا البوت يعمل الآن على السحابة ويقوم بمراقبة التغييرات في حالة الحسابات بشكل فوري.\n\n"
         "*الأوامر المتاحة:*\n"
-        "`/status` - عرض حالة النظام وعدد الحسابات المراقبة.\n"
+        "`/status` - عرض حالة النظام وعدد الحسابات.\n"
         "`/accounts` - عرض قائمة مختصرة بجميع الحسابات وحالاتها.\n"
-        "`/details [email]` - عرض تفاصيل كاملة لحساب معين."
+        "`/details [email]` - ✨*جديد:* بحث مباشر في الموقع عن حساب معين."
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
@@ -153,19 +150,19 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(status_message, parse_mode="Markdown")
 
 async def accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أمر /accounts: يعرض قائمة بجميع الحسابات وحالاتها."""
+    """أمر /accounts: يعرض قائمة بجميع الحسابات وحالاتها من الذاكرة."""
     if update.effective_chat.id not in ADMIN_IDS: return
 
     if not accounts_state_cache:
         await update.message.reply_text("⏳ الذاكرة فارغة حالياً، يرجى الانتظار لأول تحديث من الموقع.")
         return
 
-    report = [f"📋 *قائمة الحسابات الحالية ({len(accounts_state_cache)}):*\n"]
+    report_lines = [f"📋 *قائمة الحسابات الحالية ({len(accounts_state_cache)}):*\n"]
     for email, data in accounts_state_cache.items():
-        report.append(f"- `{email}`: *{data['status']}*")
+        report_lines.append(f"- `{email}`: *{data['status']}*")
     
+    full_report = "\n".join(report_lines)
     # تقسيم الرسالة إذا كانت طويلة جداً
-    full_report = "\n".join(report)
     if len(full_report) > 4096:
         for i in range(0, len(full_report), 4096):
             await update.message.reply_text(full_report[i:i+4096], parse_mode="Markdown")
@@ -173,7 +170,7 @@ async def accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(full_report, parse_mode="Markdown")
 
 async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أمر /details: يعرض تفاصيل حساب معين."""
+    """أمر /details المطور: يبحث في الذاكرة أولاً، ثم يقوم ببحث مباشر في الموقع."""
     if update.effective_chat.id not in ADMIN_IDS: return
 
     if not context.args:
@@ -181,35 +178,72 @@ async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     email_to_find = context.args[0].lower()
-    account_data = accounts_state_cache.get(email_to_find)
 
-    if account_data:
+    # الخطوة 1: البحث في الذاكرة السريعة
+    if email_to_find in accounts_state_cache:
+        account_data = accounts_state_cache[email_to_find]
         details_message = (
-            f"🔍 *تفاصيل الحساب:*\n\n"
+            f"✅ *تم العثور عليه في الذاكرة:*\n\n"
             f"📧 البريد: `{email_to_find}`\n"
             f"🆔 المعرف: `{account_data.get('id', 'N/A')}`\n"
-            f"📊 الحالة الحالية: *{account_data.get('status', 'غير معروف')}*"
+            f"📊 الحالة: *{account_data.get('status', 'غير معروف')}*"
         )
         await update.message.reply_text(details_message, parse_mode="Markdown")
-    else:
-        await update.message.reply_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` في الذاكرة الحالية.")
+        return
+
+    # الخطوة 2: إذا لم يتم العثور عليه، قم ببحث مباشر
+    await update.message.reply_text(f"⏳ لم يتم العثور على `{email_to_find}` في الذاكرة. جاري البحث المباشر في الموقع...")
+    
+    if playwright_page_global is None:
+        await update.message.reply_text("❌ لا يمكن إجراء بحث مباشر الآن. المتصفح غير جاهز.")
+        return
+
+    try:
+        # كود جافا سكريبت للبحث المباشر
+        search_script = f"""
+            (() => {{
+                const emailToFind = "{email_to_find}";
+                // 'accounts' هو المتغير العام الذي يحتوي على قائمة الحسابات في الموقع
+                if (window.accounts && Array.isArray(window.accounts)) {{
+                    const account = window.accounts.find(acc => acc[2] && acc[2].toLowerCase() === emailToFind);
+                    return account ? {{ id: acc[0], email: acc[2], status: acc[6], available: acc[7], taken: acc[5] }} : null;
+                }}
+                return null;
+            }})();
+        """
+        result = await playwright_page_global.evaluate(search_script)
+
+        if result:
+            details_message = (
+                f"🔥 *تم العثور عليه ببحث مباشر:*\n\n"
+                f"📧 البريد: `{result['email']}`\n"
+                f"🆔 المعرف: `{result['id']}`\n"
+                f"📊 الحالة: *{result['status']}*\n"
+                f"💰 المتاح: *{result['available']}*\n"
+                f"💸 المسحوب: *{result['taken']}*"
+            )
+            await update.message.reply_text(details_message, parse_mode="Markdown")
+        else:
+            await update.message.reply_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` حتى في البحث المباشر.")
+
+    except Exception as e:
+        logger.error(f"❌ خطأ أثناء البحث المباشر: {e}")
+        await update.message.reply_text(f"❌ حدث خطأ أثناء محاولة البحث المباشر: `{e}`")
+
 
 # --- 8. منطق البوت الرئيسي (Playwright) ---
 async def main_bot_logic():
     """الوظيفة الرئيسية التي تشغل المتصفح، البوت، وكل شيء."""
-    global telegram_app
+    global telegram_app, playwright_page_global
     
-    # ✨✨ تعديل: إنشاء تطبيق التليجرام هنا ✨✨
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    telegram_app = application # لكي تتمكن باقي الدوال من استخدامه
+    telegram_app = application
     
-    # ✨✨ إضافة معالجات الأوامر الجديدة ✨✨
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("accounts", accounts_command))
     application.add_handler(CommandHandler("details", details_command))
 
-    # تشغيل البوت في الخلفية
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
@@ -228,6 +262,9 @@ async def main_bot_logic():
         logger.info("🍪 تم وضع الكوكيز بنجاح.")
 
         page = await context.new_page()
+        # ✨✨ حفظ الصفحة في المتغير العام ✨✨
+        playwright_page_global = page
+        
         await page.expose_function("onDataUpdate", on_data_update)
         logger.info("🔗 تم ربط دالة البايثون بالصفحة.")
 
@@ -260,20 +297,17 @@ async def main_bot_logic():
 
 # --- 9. نقطة بداية التشغيل ---
 if __name__ == "__main__":
-    # تشغيل خدمة النبض في مسار منفصل
     flask_thread = threading.Thread(target=run_flask_app)
     flask_thread.daemon = True
     flask_thread.start()
     logger.info("🌐 خدمة النبض (Heartbeat) بدأت العمل...")
     
-    # تشغيل منطق البوت الرئيسي
     try:
         asyncio.run(main_bot_logic())
     except KeyboardInterrupt:
         logger.info("🛑 إيقاف النظام...")
     except Exception as e:
         logger.critical(f"❌ حدث خطأ فادح أدى إلى توقف البوت: {e}")
-        # نحاول إرسال إشعار أخير
         loop = asyncio.get_event_loop()
         if loop.is_running():
             loop.create_task(send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nحدث خطأ فادح: `{e}`"))
