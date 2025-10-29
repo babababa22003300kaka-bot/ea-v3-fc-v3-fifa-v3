@@ -1,17 +1,16 @@
-# render.yaml - v2.1 (For Playwright Worker with app.py)
-# هذا الملف يخبر Render بالضبط كيف يشغل البوت
+# render.yaml - v3.0 (Web Service with Heartbeat)
 
 services:
-  - type: worker  # ✨ النوع: خدمة خلفية (worker)، وليس موقع ويب
+  - type: web  # ✨✨ النوع: ويب سيرفس (مجاني) ✨✨
     name: sender-monitor-bot
     env: python
     plan: free
     
-    # أمر بناء وتجهيز البيئة (زي ما هو، مفيش تغيير)
     buildCommand: "pip install -r requirements.txt && python -m playwright install --with-deps"
     
-    # ✨✨ الأمر الصحيح لتشغيل ملف app.py ✨✨
+    # Render هيشغل ده تلقائياً لأنه ويب سيرفس، لكن هنكتبه للتأكيد
     startCommand: "python app.py"
-    
-    # (اختياري) النشر التلقائي عند أي تحديث على GitHub
-    autoDeploy: yes
+
+    # ✨ خاصية جديدة: Health Check ✨
+    # Render هيتأكد كل شوية إن الموقع ده شغال
+    healthCheckPath: /
