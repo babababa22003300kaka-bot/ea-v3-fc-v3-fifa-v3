@@ -1,16 +1,24 @@
-# render.yaml - v3.0 (Web Service with Heartbeat)
+# render.yaml - v4.0 (Final Version for Playwright on Render)
 
 services:
-  - type: web  # ✨✨ النوع: ويب سيرفس (مجاني) ✨✨
+  - type: web
     name: sender-monitor-bot
     env: python
     plan: free
     
-    buildCommand: "pip install -r requirements.txt && python -m playwright install --with-deps"
+    # ✨✨ الجزء الجديد والمهم ✨✨
+    # هذا يخبر Render أن يستخدم بيئة مجهزة لـ Playwright
+    buildFilter:
+      paths:
+        - "playwright.config.ts" # يمكن أن يكون أي اسم ملف، هذا فقط لتفعيل الفلتر
+      ignoredPaths:
+        - "**"
+
+    # أمر البناء أصبح أبسط الآن
+    buildCommand: "pip install -r requirements.txt && python -m playwright install"
     
-    # Render هيشغل ده تلقائياً لأنه ويب سيرفس، لكن هنكتبه للتأكيد
+    # أمر التشغيل كما هو
     startCommand: "python app.py"
 
-    # ✨ خاصية جديدة: Health Check ✨
-    # Render هيتأكد كل شوية إن الموقع ده شغال
+    # Health Check كما هو
     healthCheckPath: /
