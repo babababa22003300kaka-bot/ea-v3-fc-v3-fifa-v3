@@ -1,4 +1,4 @@
-# app.py - الإصدار النهائي v4.0 - مع بحث مباشر وأوامر تحكم متقدمة
+# app.py - الإصدار النهائي v5.0 - مع بحث مزدوج ذكي (نشط وأرشيف)
 
 import asyncio
 import json
@@ -54,7 +54,6 @@ if not all([TELEGRAM_BOT_TOKEN, ADMIN_IDS, WEBSITE_URL, COOKIES]):
 accounts_state_cache = {}
 is_first_run = True
 telegram_app = None
-# ✨✨ متغير جديد للاحتفاظ بصفحة المتصفح للبحث المباشر
 playwright_page_global: Page = None
 
 # --- 5. كود النبض (Heartbeat) ---
@@ -129,12 +128,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
     
     welcome_message = (
-        "👋 *أهلاً بك في بوت المراقبة الفورية (v4.0)!*\n\n"
-        "هذا البوت يعمل الآن على السحابة ويقوم بمراقبة التغييرات في حالة الحسابات بشكل فوري.\n\n"
+        "👋 *أهلاً بك في بوت المراقبة الفورية (v5.0)!*\n\n"
+        "هذا البوت يعمل الآن على السحابة ويراقب التغييرات بشكل فوري.\n\n"
         "*الأوامر المتاحة:*\n"
         "`/status` - عرض حالة النظام وعدد الحسابات.\n"
         "`/accounts` - عرض قائمة مختصرة بجميع الحسابات وحالاتها.\n"
-        "`/details [email]` - ✨*جديد:* بحث مباشر في الموقع عن حساب معين."
+        "`/details [email]` - ✨*جديد:* بحث مزدوج (نشط وأرشيف) عن حساب معين."
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
@@ -162,15 +161,70 @@ async def accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         report_lines.append(f"- `{email}`: *{data['status']}*")
     
     full_report = "\n".join(report_lines)
-    # تقسيم الرسالة إذا كانت طويلة جداً
     if len(full_report) > 4096:
         for i in range(0, len(full_report), 4096):
             await update.message.reply_text(full_report[i:i+4096], parse_mode="Markdown")
     else:
         await update.message.reply_text(full_report, parse_mode="Markdown")
 
+# ✨✨✨ الدالة الجديدة للبحث المباشر في الموقع ✨✨✨
+async def live_search_on_page(email: str, big_update_value: int) -> dict | None:
+    """
+    دالة تقوم بحقن كود جافا سكريبت للبحث عن إيميل معين في قائمة الحسابات
+    الموجودة بالفعل في متغير `accounts` داخل الصفحة.
+    """
+    if playwright_page_global is None:
+        logger.error("❌ المتصفح غير جاهز للبحث المباشر.")
+        return None
+        
+    logger.info(f"⚡️ Executing LIVE search for '{email}' with bigUpdate={big_update_value}...")
+    
+    # هذا الكود سيتم حقنه وتنفيذه في المتصفح
+    search_script = f"""
+        (() => {{
+            // هذه دالة لإعادة بناء الطلب وإرساله للحصول على بيانات محدثة
+            const forceUpdate = async (updateType) => {{
+                // نستخرج التوكن الحالي من الصفحة لضمان صلاحيته
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                const response = await fetch('/dataFunctions/updateSenderPage', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }},
+                    body: `date=0&bigUpdate=${{updateType}}&csrf_token=${{csrfToken}}`
+                }});
+                return response.json();
+            }};
+
+            return forceUpdate({big_update_value}).then(data => {{
+                const accounts = data.data || [];
+                const emailToFind = "{email.lower()}";
+                const account = accounts.find(acc => acc && acc.length > 2 && acc[2] && acc[2].toLowerCase() === emailToFind);
+                
+                if (account) {{
+                    // إرجاع البيانات بتنسيق منظم
+                    return {{
+                        id: account[0],
+                        email: account[2],
+                        status: account[6],
+                        available: account[7],
+                        taken: account[5]
+                    }};
+                }}
+                return null; // إرجاع null إذا لم يتم العثور عليه
+            }});
+        }})();
+    """
+    try:
+        result = await playwright_page_global.evaluate(search_script)
+        return result
+    except Exception as e:
+        logger.error(f"❌ خطأ أثناء تنفيذ كود البحث المباشر: {e}")
+        return None
+
 async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أمر /details المطور: يبحث في الذاكرة أولاً، ثم يقوم ببحث مباشر في الموقع."""
+    """أمر /details المطور: يبحث في الذاكرة، ثم القائمة النشطة، ثم الأرشيف الكامل."""
     if update.effective_chat.id not in ADMIN_IDS: return
 
     if not context.args:
@@ -178,6 +232,7 @@ async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     email_to_find = context.args[0].lower()
+    msg = await update.message.reply_text(f"🔍 البحث عن `{email_to_find}`...")
 
     # الخطوة 1: البحث في الذاكرة السريعة
     if email_to_find in accounts_state_cache:
@@ -188,47 +243,41 @@ async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🆔 المعرف: `{account_data.get('id', 'N/A')}`\n"
             f"📊 الحالة: *{account_data.get('status', 'غير معروف')}*"
         )
-        await update.message.reply_text(details_message, parse_mode="Markdown")
+        await msg.edit_text(details_message, parse_mode="Markdown")
         return
 
-    # الخطوة 2: إذا لم يتم العثور عليه، قم ببحث مباشر
-    await update.message.reply_text(f"⏳ لم يتم العثور على `{email_to_find}` في الذاكرة. جاري البحث المباشر في الموقع...")
-    
-    if playwright_page_global is None:
-        await update.message.reply_text("❌ لا يمكن إجراء بحث مباشر الآن. المتصفح غير جاهز.")
+    # الخطوة 2: البحث المباشر في القائمة النشطة (bigUpdate=1)
+    await msg.edit_text(f"⏳ لم يتم العثور عليه في الذاكرة. جاري البحث في *القائمة النشطة*...")
+    result = await live_search_on_page(email_to_find, 1)
+
+    if result:
+        details_message = (
+            f"🔥 *تم العثور عليه في القائمة النشطة:*\n\n"
+            f"📧 البريد: `{result['email']}`\n"
+            f"🆔 المعرف: `{result['id']}`\n"
+            f"📊 الحالة: *{result['status']}*\n"
+            f"💰 المتاح: *{result.get('available', 'N/A')}*\n"
+            f"💸 المسحوب: *{result.get('taken', 'N/A')}*"
+        )
+        await msg.edit_text(details_message, parse_mode="Markdown")
         return
 
-    try:
-        # كود جافا سكريبت للبحث المباشر
-        search_script = f"""
-            (() => {{
-                const emailToFind = "{email_to_find}";
-                // 'accounts' هو المتغير العام الذي يحتوي على قائمة الحسابات في الموقع
-                if (window.accounts && Array.isArray(window.accounts)) {{
-                    const account = window.accounts.find(acc => acc[2] && acc[2].toLowerCase() === emailToFind);
-                    return account ? {{ id: acc[0], email: acc[2], status: acc[6], available: acc[7], taken: acc[5] }} : null;
-                }}
-                return null;
-            }})();
-        """
-        result = await playwright_page_global.evaluate(search_script)
+    # الخطوة 3: البحث المباشر في الأرشيف الكامل (bigUpdate=0)
+    await msg.edit_text(f"⏳ لم يتم العثور عليه. جاري البحث في *الأرشيف الكامل* (قد يستغرق وقتاً)...")
+    result = await live_search_on_page(email_to_find, 0)
 
-        if result:
-            details_message = (
-                f"🔥 *تم العثور عليه ببحث مباشر:*\n\n"
-                f"📧 البريد: `{result['email']}`\n"
-                f"🆔 المعرف: `{result['id']}`\n"
-                f"📊 الحالة: *{result['status']}*\n"
-                f"💰 المتاح: *{result['available']}*\n"
-                f"💸 المسحوب: *{result['taken']}*"
-            )
-            await update.message.reply_text(details_message, parse_mode="Markdown")
-        else:
-            await update.message.reply_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` حتى في البحث المباشر.")
-
-    except Exception as e:
-        logger.error(f"❌ خطأ أثناء البحث المباشر: {e}")
-        await update.message.reply_text(f"❌ حدث خطأ أثناء محاولة البحث المباشر: `{e}`")
+    if result:
+        details_message = (
+            f"🗄️ *تم العثور عليه في الأرشيف الكامل:*\n\n"
+            f"📧 البريد: `{result['email']}`\n"
+            f"🆔 المعرف: `{result['id']}`\n"
+            f"📊 الحالة: *{result['status']}*\n"
+            f"💰 المتاح: *{result.get('available', 'N/A')}*\n"
+            f"💸 المسحوب: *{result.get('taken', 'N/A')}*"
+        )
+        await msg.edit_text(details_message, parse_mode="Markdown")
+    else:
+        await msg.edit_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` في أي مكان (لا في الذاكرة، ولا في القائمة النشطة، ولا في الأرشيف).")
 
 
 # --- 8. منطق البوت الرئيسي (Playwright) ---
@@ -262,7 +311,6 @@ async def main_bot_logic():
         logger.info("🍪 تم وضع الكوكيز بنجاح.")
 
         page = await context.new_page()
-        # ✨✨ حفظ الصفحة في المتغير العام ✨✨
         playwright_page_global = page
         
         await page.expose_function("onDataUpdate", on_data_update)
@@ -313,4 +361,3 @@ if __name__ == "__main__":
             loop.create_task(send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nحدث خطأ فادح: `{e}`"))
         else:
             asyncio.run(send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nحدث خطأ فادح: `{e}`"))
-
