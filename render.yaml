@@ -1,8 +1,17 @@
+# render.yaml - v2.1 (For Playwright Worker with app.py)
+# هذا الملف يخبر Render بالضبط كيف يشغل البوت
+
 services:
-  - type: worker # بنقوله إن ده كود بيفضل شغال في الخلفية
+  - type: worker  # ✨ النوع: خدمة خلفية (worker)، وليس موقع ويب
     name: sender-monitor-bot
     env: python
-    plan: free # استخدم الخطة المجانية
+    plan: free
+    
+    # أمر بناء وتجهيز البيئة (زي ما هو، مفيش تغيير)
     buildCommand: "pip install -r requirements.txt && python -m playwright install --with-deps"
-    startCommand: "python main.py"
-    autoDeploy: yes # أي تغيير ترفعه على GitHub يشتغل تلقائي
+    
+    # ✨✨ الأمر الصحيح لتشغيل ملف app.py ✨✨
+    startCommand: "python app.py"
+    
+    # (اختياري) النشر التلقائي عند أي تحديث على GitHub
+    autoDeploy: yes
