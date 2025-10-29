@@ -1,0 +1,8 @@
+services:
+  - type: worker # بنقوله إن ده كود بيفضل شغال في الخلفية
+    name: sender-monitor-bot
+    env: python
+    plan: free # استخدم الخطة المجانية
+    buildCommand: "pip install -r requirements.txt && python -m playwright install --with-deps"
+    startCommand: "python main.py"
+    autoDeploy: yes # أي تغيير ترفعه على GitHub يشتغل تلقائي
