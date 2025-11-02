@@ -1,4 +1,4 @@
-# app.py - الإصدار النهائي v7.0 - مع إعادة تدوير ذكية للمتصفح
+# app.py - الإصدار النهائي v8.0 - بوت متكامل مع إعادة تدوير ولوحة تحكم
 
 import asyncio
 import json
@@ -6,9 +6,10 @@ import logging
 import os
 import threading
 import time
+import psutil  # ✨ المكتبة الجديدة لمراقبة النظام
 from flask import Flask
 from playwright.async_api import async_playwright, Page, Browser
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # --- 1. إعداد نظام تسجيل الأحداث (اللوجز) ---
@@ -56,7 +57,7 @@ accounts_state_cache = {}
 is_first_run = True
 telegram_app = None
 playwright_page_global: Page = None
-browser_instance: Browser = None # ✨ متغير جديد للاحتفاظ بالمتصفح
+browser_instance: Browser = None
 
 # --- 5. كود النبض (Heartbeat) ---
 app = Flask(__name__)
@@ -82,7 +83,6 @@ async def send_telegram_notification(message, chat_id=None):
 async def on_data_update(data):
     global accounts_state_cache, is_first_run
     logger.info("...[EVENT] تم استقبال تحديث للبيانات من الصفحة...")
-    # (باقي الكود كما هو بدون تغيير)
     new_accounts_data = data.get("data", [])
     if not isinstance(new_accounts_data, list):
         logger.warning("⚠️ البيانات المستلمة ليست قائمة. التجاهل.")
@@ -121,18 +121,17 @@ async def on_data_update(data):
 
     accounts_state_cache = current_state
 
-
 # --- 7. أوامر التليجرام ---
-# (كل الأوامر كما هي بدون تغيير)
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
     welcome_message = (
-        "👋 *أهلاً بك في بوت المراقبة الفورية (v7.0 - إعادة تدوير ذكية)!*\n\n"
+        "👋 *أهلاً بك في بوت المراقبة الفورية (v8.0 - متكامل)!*\n\n"
         "هذا البوت يعمل الآن على السحابة ويراقب التغييرات بشكل فوري.\n\n"
         "*الأوامر المتاحة:*\n"
         "`/status` - عرض حالة النظام وعدد الحسابات.\n"
         "`/accounts` - عرض قائمة مختصرة بجميع الحسابات وحالاتها.\n"
-        "`/details [email]` - بحث مزدوج (نشط وأرشيف) عن حساب معين."
+        "`/details [email]` - بحث مزدوج (نشط وأرشيف) عن حساب معين.\n"
+        "`/system` - ✨*جديد:* عرض لوحة تحكم أداء النظام (RAM, CPU)."
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
@@ -239,8 +238,37 @@ async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await msg.edit_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` في أي مكان.")
 
+# ✨✨✨ الأمر الجديد لمراقبة صحة النظام ✨✨✨
+async def system_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """أمر /system: يعرض معلومات حيوية عن استهلاك موارد النظام."""
+    if update.effective_chat.id not in ADMIN_IDS: return
 
-# --- 8. ✨✨ منطق إعادة التدوير الذكي ✨✨ ---
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    memory_usage_mb = memory_info.rss / (1024 * 1024)
+    cpu_usage = process.cpu_percent(interval=0.1)
+    create_time = process.create_time()
+    uptime_seconds = time.time() - create_time
+    uptime_str = time.strftime("%H:%M:%S", time.gmtime(uptime_seconds))
+    virtual_mem = psutil.virtual_memory()
+    total_memory_mb = virtual_mem.total / (1024 * 1024)
+    
+    system_report = (
+        f"📊 *لوحة تحكم أداء النظام (v8.0)*\n\n"
+        f"🧠 *استهلاك الذاكرة (RAM):*\n"
+        f"   - البوت الحالي: *{memory_usage_mb:.2f} ميجابايت*\n"
+        f"   - إجمالي المتاح: *{total_memory_mb:.2f} ميجابايت*\n"
+        f"   - النسبة: *{(memory_usage_mb / total_memory_mb) * 100:.2f}%*\n\n"
+        f"💻 *استهلاك المعالج (CPU):*\n"
+        f"   - *{cpu_usage}%*\n\n"
+        f"⏳ *مدة التشغيل (Uptime):*\n"
+        f"   - *{uptime_str}* (ساعة:دقيقة:ثانية)\n\n"
+        f"♻️ *حالة إعادة التدوير:*\n"
+        f"   - سيتم إعادة تشغيل المتصفح تلقائياً كل 6 ساعات للحفاظ على الذاكرة."
+    )
+    await update.message.reply_text(system_report, parse_mode="Markdown")
+
+# --- 8. منطق إعادة التدوير الذكي ---
 async def smart_recycler():
     """
     هذه الدالة تعمل في الخلفية وتقوم بإعادة تشغيل المتصفح كل 6 ساعات
@@ -248,11 +276,9 @@ async def smart_recycler():
     """
     global browser_instance, playwright_page_global
     
-    # انتظر قليلاً في البداية للسماح للنظام بالاستقرار
     await asyncio.sleep(300) 
     
     while True:
-        # انتظر لمدة 6 ساعات
         logger.info(f"♻️ [Recycler] سأقوم بإعادة تدوير المتصفح خلال 6 ساعات لتنظيف الذاكرة.")
         await asyncio.sleep(6 * 60 * 60)
         
@@ -266,18 +292,13 @@ async def smart_recycler():
             except Exception as e:
                 logger.error(f"♻️ [Recycler] خطأ أثناء إغلاق المتصفح: {e}")
 
-        # إعادة تهيئة المتصفح والصفحة
-        # هذا الجزء هو نسخة مصغرة من بداية `main_bot_logic`
         try:
             async with async_playwright() as p:
                 logger.info("🚀 [Recycler] تشغيل متصفح جديد...")
                 browser_instance = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
                 context = await browser_instance.new_context()
 
-                playwright_cookies = [
-                    {"name": name, "value": value, "domain": ".utautotransfer.com", "path": "/"}
-                    for name, value in COOKIES
-                ]
+                playwright_cookies = [{"name": name, "value": value, "domain": ".utautotransfer.com", "path": "/"} for name, value in COOKIES]
                 await context.add_cookies(playwright_cookies)
                 
                 page = await context.new_page()
@@ -297,16 +318,13 @@ async def smart_recycler():
         except Exception as e:
             logger.critical(f"❌ [Recycler] فشل فادح أثناء إعادة التدوير: {e}")
             await send_telegram_notification(f"🚨 *خطأ فادح أثناء الصيانة:*\nفشل النظام في إعادة تشغيل المتصفح. `{e}`")
-            # انتظر فترة أطول قبل المحاولة مرة أخرى
             await asyncio.sleep(60 * 15)
-
 
 # --- 9. منطق البوت الرئيسي (Playwright) ---
 async def main_bot_logic():
     """الوظيفة الرئيسية التي تشغل كل شيء معاً."""
     global telegram_app, playwright_page_global, browser_instance
     
-    # تهيئة وتشغيل بوت التليجرام
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     telegram_app = application
     
@@ -314,25 +332,21 @@ async def main_bot_logic():
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("accounts", accounts_command))
     application.add_handler(CommandHandler("details", details_command))
+    application.add_handler(CommandHandler("system", system_command)) # ✨ إضافة الأمر الجديد هنا
 
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
     logger.info("🤖 بوت تليجرام بدأ العمل ويستمع للأوامر...")
 
-    # تشغيل "إعادة التدوير الذكية" في الخلفية
     asyncio.create_task(smart_recycler())
 
-    # تشغيل المتصفح لأول مرة
     async with async_playwright() as p:
         logger.info("🚀 تشغيل المتصفح لأول مرة...")
         browser_instance = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
         context = await browser_instance.new_context()
 
-        playwright_cookies = [
-            {"name": name, "value": value, "domain": ".utautotransfer.com", "path": "/"}
-            for name, value in COOKIES
-        ]
+        playwright_cookies = [{"name": name, "value": value, "domain": ".utautotransfer.com", "path": "/"} for name, value in COOKIES]
         await context.add_cookies(playwright_cookies)
         logger.info("🍪 تم وضع الكوكيز بنجاح.")
 
@@ -366,10 +380,8 @@ async def main_bot_logic():
             "🟢 *النظام متصل الآن!*\nأنا أستمع للتحديثات الفورية من الموقع."
         )
 
-        # حلقة لا نهائية لإبقاء السكربت الرئيسي يعمل
         while True:
             await asyncio.sleep(3600)
-
 
 # --- 10. نقطة بداية التشغيل ---
 if __name__ == "__main__":
@@ -384,10 +396,8 @@ if __name__ == "__main__":
         logger.info("🛑 إيقاف النظام...")
     except Exception as e:
         logger.critical(f"❌ حدث خطأ فادح أدى إلى توقف البوت: {e}")
-        # محاولة إرسال إشعار أخير
         loop = asyncio.get_event_loop()
         if loop.is_running():
             loop.create_task(send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nحدث خطأ فادح: `{e}`"))
         else:
             asyncio.run(send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nحدث خطأ فادح: `{e}`"))
-
