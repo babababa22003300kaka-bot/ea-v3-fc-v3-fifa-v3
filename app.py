@@ -1,4 +1,4 @@
-# app.py - الإصدار v11.0 (إصدار الألماس) - مستقر، آمن، وذكي
+# app.py - الإصدار v12.0 (الدرع الألماسي) - نظام مضاد للانهيار
 
 import asyncio
 import json
@@ -51,22 +51,14 @@ is_recycling = False
 MAX_CACHE_SIZE = 5000
 MEMORY_THRESHOLD_MB = 420
 
-# ✨ إعدادات "الرجيم" الآمنة للمتصفح (بدون --single-process)
-CHROMIUM_ARGS = [
-    "--no-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--disable-software-rasterizer",
-    "--disable-extensions",
-    "--js-flags=--max-old-space-size=128",
-    "--renderer-process-limit=1",
-]
+CHROMIUM_ARGS = ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-software-rasterizer", "--disable-extensions", "--js-flags=--max-old-space-size=128", "--renderer-process-limit=1"]
 
 # --- 5. كود النبض (Heartbeat) ---
 app = Flask(__name__)
 @app.route('/')
 def heartbeat():
-    return f"Bot is alive. Monitoring {len(accounts_state_cache)} accounts."
+    status = "Online" if playwright_page_global and not playwright_page_global.is_closed() else "Emergency Mode (Browser Down)"
+    return f"Bot is alive. Status: {status}. Monitoring {len(accounts_state_cache)} accounts."
 
 def run_flask_app():
     app.run(host='0.0.0.0', port=10000)
@@ -82,7 +74,6 @@ async def send_telegram_notification(message, chat_id=None):
 
 async def on_data_update(data):
     global accounts_state_cache, is_first_run
-    logger.info("...[EVENT] تم استقبال تحديث للبيانات من الصفحة...")
     new_accounts_data = data.get("data", [])
     if not isinstance(new_accounts_data, list): return
 
@@ -94,7 +85,7 @@ async def on_data_update(data):
     if is_first_run:
         accounts_state_cache = current_state
         is_first_run = False
-        await send_telegram_notification(f"✅ *نظام الألماس (v11.0) بدأ العمل!*\nتم تحميل الحالة الأولية لـ *{len(accounts_state_cache)}* حساب.")
+        await send_telegram_notification(f"✅ *نظام الدرع الألماسي (v12.0) بدأ العمل!*\nتم تحميل الحالة الأولية لـ *{len(accounts_state_cache)}* حساب.")
         return
 
     changes_found = [
@@ -112,24 +103,30 @@ async def on_data_update(data):
         accounts_state_cache = dict(list(accounts_state_cache.items())[-MAX_CACHE_SIZE:])
         logger.warning(f"♻️ تم تقليص ذاكرة الكاش إلى آخر {MAX_CACHE_SIZE} حساب.")
 
-# --- 7. أوامر التليجرام الكاملة ---
+# --- 7. أوامر التليجرام (محصنة ضد الانهيار) ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
-    welcome_message = (
-        "💎 *أهلاً بك في بوت الألماس (v11.0)!*\n\n"
-        "أنا أعمل الآن بنظام إدارة ذاكرة ديناميكي، آمن، ومستقر.\n\n"
+    await update.message.reply_text(
+        "🛡️ *أهلاً بك في بوت الدرع الألماسي (v12.0)!*\n\n"
+        "أنا مصمم للعمل بلا توقف. حتى لو فشل المتصفح، سأبقى متاحاً.\n\n"
         "*الأوامر المتاحة:*\n"
         "`/status` - عرض حالة النظام.\n"
-        "`/accounts` - عرض قائمة الحسابات.\n"
-        "`/details [email]` - بحث شامل عن حساب.\n"
-        "`/system` - لوحة تحكم أداء النظام (RAM, CPU)."
+        "`/accounts` - عرض قائمة الحسابات من الذاكرة.\n"
+        "`/details [email]` - بحث شامل (ذاكرة + مباشر).\n"
+        "`/system` - لوحة تحكم أداء النظام.",
+        parse_mode="Markdown"
     )
-    await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
-    status_message = (f"🟢 *النظام يعمل بشكل طبيعي.*\n\n🧠 الذاكرة تحتوي على *{len(accounts_state_cache)}* حساب.\n💎 أراقب التحديثات وأحمي الذاكرة بشكل ديناميكي.")
-    await update.message.reply_text(status_message, parse_mode="Markdown")
+    browser_status = "متصل ويعمل" if playwright_page_global and not playwright_page_global.is_closed() else "متوقف (وضع الطوارئ)"
+    await update.message.reply_text(
+        f"📊 *حالة النظام (الدرع الألماسي)*\n\n"
+        f"🧠 *الذاكرة:* تحتوي على *{len(accounts_state_cache)}* حساب.\n"
+        f"🖥️ *المتصفح:* *{browser_status}*.\n"
+        f"🛡️ *الحماية:* نظام الحارس الخالد نشط.",
+        parse_mode="Markdown"
+    )
 
 async def accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
@@ -148,32 +145,38 @@ async def accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def details_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
-    if is_recycling:
-        await update.message.reply_text("⏳ *صيانة تلقائية...* يرجى الانتظار 30 ثانية والمحاولة مرة أخرى.")
-        return
     if not context.args:
-        await update.message.reply_text("⚠️ يرجى تحديد إيميل بعد الأمر. مثال: `/details user@example.com`")
+        await update.message.reply_text("⚠️ يرجى تحديد إيميل. مثال: `/details user@example.com`")
         return
+    
     email_to_find = context.args[0].lower()
     msg = await update.message.reply_text(f"🔍 البحث عن `{email_to_find}`...")
+
     if email_to_find in accounts_state_cache:
         account_data = accounts_state_cache[email_to_find]
-        details_message = (f"✅ *تم العثور عليه في الذاكرة:*\n\n📧 البريد: `{email_to_find}`\n🆔 المعرف: `{account_data.get('id', 'N/A')}`\n📊 الحالة: *{account_data.get('status', 'غير معروف')}*")
-        await msg.edit_text(details_message, parse_mode="Markdown")
+        await msg.edit_text(f"✅ *موجود في الذاكرة:*\n\n📧 البريد: `{email_to_find}`\n🆔 المعرف: `{account_data.get('id', 'N/A')}`\n📊 الحالة: *{account_data.get('status', 'غير معروف')}*", parse_mode="Markdown")
         return
+
+    if playwright_page_global is None or playwright_page_global.is_closed():
+        await msg.edit_text(f"⚠️ *الحساب غير موجود في الذاكرة.*\nالبحث المباشر غير متاح حالياً (صيانة أو متصفح غير جاهز).", parse_mode="Markdown")
+        return
+
+    if is_recycling:
+        await msg.edit_text("⏳ *صيانة جارية...* يرجى المحاولة بعد 30 ثانية.", parse_mode="Markdown")
+        return
+
     await msg.edit_text(f"⏳ لم يتم العثور عليه في الذاكرة. جاري البحث في *القائمة النشطة*...")
     result = await live_search_on_page(email_to_find, 1)
     if result:
-        details_message = (f"🔥 *تم العثور عليه في القائمة النشطة:*\n\n📧 البريد: `{result['email']}`\n🆔 المعرف: `{result['id']}`\n📊 الحالة: *{result['status']}*")
-        await msg.edit_text(details_message, parse_mode="Markdown")
+        await msg.edit_text(f"🔥 *تم العثور عليه في القائمة النشطة:*\n\n📧 البريد: `{result['email']}`\n🆔 المعرف: `{result['id']}`\n📊 الحالة: *{result['status']}*", parse_mode="Markdown")
         return
+
     await msg.edit_text(f"⏳ لم يتم العثور عليه. جاري البحث في *الأرشيف الكامل*...")
     result = await live_search_on_page(email_to_find, 0)
     if result:
-        details_message = (f"🗄️ *تم العثور عليه في الأرشيف الكامل:*\n\n📧 البريد: `{result['email']}`\n🆔 المعرف: `{result['id']}`\n📊 الحالة: *{result['status']}*")
-        await msg.edit_text(details_message, parse_mode="Markdown")
+        await msg.edit_text(f"🗄️ *تم العثور عليه في الأرشيف الكامل:*\n\n📧 البريد: `{result['email']}`\n🆔 المعرف: `{result['id']}`\n📊 الحالة: *{result['status']}*", parse_mode="Markdown")
     else:
-        await msg.edit_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` في أي مكان.")
+        await msg.edit_text(f"❌ لم يتم العثور على الحساب `{email_to_find}` في أي مكان.", parse_mode="Markdown")
 
 async def system_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ADMIN_IDS: return
@@ -182,20 +185,18 @@ async def system_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uptime_str = time.strftime("%H:%M:%S", time.gmtime(time.time() - process.create_time()))
     total_memory_mb = psutil.virtual_memory().total / (1024 * 1024)
     system_report = (
-        f"📊 *لوحة تحكم أداء النظام (إصدار الألماس)*\n\n"
+        f"📊 *لوحة تحكم أداء النظام (الدرع الألماسي)*\n\n"
         f"🧠 *استهلاك الذاكرة (RAM):*\n"
         f"   - البوت الحالي: *{memory_usage_mb:.2f} / {total_memory_mb:.0f} ميجابايت*\n"
         f"   - النسبة: *{(memory_usage_mb / total_memory_mb) * 100:.2f}%*\n\n"
         f"⏳ *مدة التشغيل (Uptime):* *{uptime_str}*\n\n"
-        f"💎 *حالة الحارس (Watchdog):*\n"
+        f"🛡️ *حالة الحارس (Watchdog):*\n"
         f"   - أراقب الذاكرة كل 5 دقائق. سأقوم بإعادة التدوير إذا تجاوزت *{MEMORY_THRESHOLD_MB} ميجابايت*."
     )
     await update.message.reply_text(system_report, parse_mode="Markdown")
 
 async def live_search_on_page(email: str, big_update_value: int) -> dict | None:
-    if playwright_page_global is None or playwright_page_global.is_closed():
-        logger.error("❌ المتصفح غير جاهز للبحث المباشر (قد يكون قيد الصيانة).")
-        return None
+    if playwright_page_global is None or playwright_page_global.is_closed(): return None
     search_script = f"""
         (async () => {{
             const forceUpdate = async (updateType) => {{
@@ -221,48 +222,90 @@ async def live_search_on_page(email: str, big_update_value: int) -> dict | None:
         logger.error(f"❌ خطأ أثناء تنفيذ كود البحث المباشر: {e}")
         return None
 
-# --- 8. نظام إعادة التدوير والحارس الذكي (بنية صحيحة) ---
-async def recycle_browser(playwright_instance: Playwright):
+# --- 8. نظام الدرع الألماسي (مضاد للانهيار) ---
+async def setup_browser_with_retry(playwright_instance: Playwright, max_attempts=5) -> bool:
+    for attempt in range(1, max_attempts + 1):
+        try:
+            logger.info(f"🔄 محاولة إعداد المتصفح ({attempt}/{max_attempts})...")
+            await setup_browser_and_page(playwright_instance)
+            logger.info("✅ تم إعداد المتصفح بنجاح!")
+            return True
+        except FileNotFoundError as e:
+            logger.critical(f"❌ ملف مفقود: {e}. لا يمكن المتابعة.")
+            await send_telegram_notification(f"🚨 *ملف مفقود!* `{e}`\nيرجى رفع الملف وإعادة التشغيل.")
+            return False
+        except Exception as e:
+            wait_time = min(60 * (2 ** (attempt - 1)), 300)
+            logger.error(f"❌ فشل الإعداد: {e}. سأحاول مرة أخرى بعد {wait_time} ثانية...")
+            if attempt < max_attempts:
+                await send_telegram_notification(f"⚠️ *فشل إعداد المتصفح (محاولة {attempt}/{max_attempts})*\n`{e}`")
+                await asyncio.sleep(wait_time)
+            else:
+                logger.critical("❌ فشلت كل المحاولات. التحول لوضع الطوارئ...")
+                await send_telegram_notification("🚨 *تنبيه حرج!*\nفشل إعداد المتصفح بعد 5 محاولات. البوت يعمل بدون مراقبة مباشرة.")
+                return False
+    return False
+
+async def recycle_browser_safe(playwright_instance: Playwright):
     global browser_instance, playwright_page_global, is_recycling
     if is_recycling: return
+    
     is_recycling = True
     playwright_page_global = None
-    await send_telegram_notification("⏳ *صيانة تلقائية للذاكرة...*\nجاري إعادة تدوير المتصفح (تستغرق ~30 ثانية).")
+    
+    await send_telegram_notification("⏳ *صيانة تلقائية للذاكرة...*\nالبوت لا يزال يعمل والأوامر الأساسية متاحة.")
+    
     if browser_instance:
         try:
             await browser_instance.close()
         except Exception as e:
-            logger.error(f"خطأ بسيط أثناء إغلاق المتصفح القديم: {e}")
-    try:
-        await setup_browser_and_page(playwright_instance)
-        await send_telegram_notification("🟢 *اكتملت الصيانة.*\nالنظام عاد للعمل بكامل طاقته.")
-    except Exception as e:
-        logger.critical(f"❌ فشل فادح أثناء إعادة تدوير المتصفح: {e}")
-        await send_telegram_notification(f"🚨 *خطأ فادح أثناء الصيانة!*\nفشل النظام في إعادة تشغيل المتصفح. `{e}`")
-    finally:
-        is_recycling = False
+            logger.error(f"⚠️ خطأ بسيط أثناء الإغلاق: {e}")
+    
+    success = await setup_browser_with_retry(playwright_instance, max_attempts=3)
+    
+    if not success:
+        logger.critical("❌ لا يوجد متصفح متاح. البوت يعمل في وضع محدود.")
+        await send_telegram_notification("🚨 *البوت في وضع الطوارئ!*\nلا يوجد متصفح. الأوامر الأساسية متاحة.")
+    else:
+        await send_telegram_notification("🟢 *اكتملت الصيانة بنجاح.*")
+    
+    is_recycling = False
 
-async def ram_watchdog(playwright_instance: Playwright):
+async def immortal_ram_watchdog(playwright_instance: Playwright):
+    while True:
+        try:
+            await ram_watchdog_core(playwright_instance)
+        except Exception as e:
+            logger.critical(f"🚨 Watchdog تعطل! {e}. إعادة تشغيل فورية...")
+            await send_telegram_notification(f"🚨 *Watchdog تعطل!* `{e}`\nجاري إعادة التشغيل...")
+            await asyncio.sleep(10)
+
+async def ram_watchdog_core(playwright_instance: Playwright):
     await asyncio.sleep(300)
     process = psutil.Process(os.getpid())
     while True:
-        try:
-            memory_mb = process.memory_info().rss / (1024 ** 2)
-            logger.info(f"📈 [RAM] الاستهلاك الحالي: {memory_mb:.1f}MB")
-            if memory_mb > MEMORY_THRESHOLD_MB:
-                logger.warning(f"⚠️ الذاكرة وصلت {memory_mb:.2f} MB! تفعيل إعادة التدوير الفوري.")
-                await recycle_browser(playwright_instance)
-                await asyncio.sleep(3600)
-            else:
-                await asyncio.sleep(300)
-        except Exception as e:
-            logger.error(f"❌ خطأ في حارس الذاكرة: {e}. سأحاول مرة أخرى بعد دقيقة.")
-            await asyncio.sleep(60)
+        memory_mb = process.memory_info().rss / (1024 ** 2)
+        logger.info(f"📈 [RAM] {memory_mb:.1f}MB")
+        if memory_mb > MEMORY_THRESHOLD_MB:
+            logger.warning(f"⚠️ تجاوز الحد ({memory_mb:.2f}MB). تفعيل الصيانة...")
+            await recycle_browser_safe(playwright_instance)
+            await asyncio.sleep(3600)
+        else:
+            await asyncio.sleep(300)
 
-# --- 9. منطق البوت الرئيسي (بنية صحيحة) ---
+async def periodic_reconnect(playwright_instance: Playwright):
+    while True:
+        await asyncio.sleep(600)
+        if playwright_page_global is None or playwright_page_global.is_closed():
+            logger.info("🔄 محاولة إعادة الاتصال الدورية...")
+            success = await setup_browser_with_retry(playwright_instance, max_attempts=2)
+            if success:
+                await send_telegram_notification("✅ *تم استعادة الاتصال!* المراقبة المباشرة عادت للعمل.")
+                break
+
+# --- 9. منطق البوت الرئيسي (محصن ضد الانهيار) ---
 async def setup_browser_and_page(playwright_instance: Playwright):
     global browser_instance, playwright_page_global
-    logger.info("🚀 تشغيل المتصفح بوضع 'الرجيم'...")
     browser_instance = await playwright_instance.chromium.launch(headless=True, args=CHROMIUM_ARGS)
     context = await browser_instance.new_context(java_script_enabled=True)
     
@@ -272,7 +315,6 @@ async def setup_browser_and_page(playwright_instance: Playwright):
         else:
             await route.continue_()
     await context.route("**/*", resource_blocker)
-    logger.info("⛔️ تم حجب الموارد غير الضرورية لتوفير الذاكرة.")
 
     await context.add_cookies([{"name": k, "value": v, "domain": ".utautotransfer.com", "path": "/"} for k, v in COOKIES])
     page = await context.new_page()
@@ -281,7 +323,6 @@ async def setup_browser_and_page(playwright_instance: Playwright):
         await page.add_init_script(f.read())
     await page.goto(WEBSITE_URL, timeout=120000, wait_until="domcontentloaded")
     playwright_page_global = page
-    logger.info("✅ تم إعداد المتصفح والصفحة بنجاح.")
 
 async def main_bot_logic():
     global telegram_app
@@ -292,21 +333,26 @@ async def main_bot_logic():
     application.add_handler(CommandHandler("accounts", accounts_command))
     application.add_handler(CommandHandler("details", details_command))
     application.add_handler(CommandHandler("system", system_command))
+
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
-    logger.info("🤖 بوت تليجرام بدأ العمل ويستمع للأوامر...")
+    logger.info("🤖 بوت تليجرام نشط ويستمع للأوامر...")
     
     async with async_playwright() as p:
-        try:
-            await setup_browser_and_page(p)
-            asyncio.create_task(ram_watchdog(p))
-            await send_telegram_notification("💎 *نظام الألماس متصل الآن!*\nأنا أراقب التحديثات وأحمي الذاكرة بشكل ديناميكي.")
-            while True:
-                await asyncio.sleep(3600)
-        except Exception as e:
-            logger.critical(f"❌ فشل فادح في الإعداد الأولي للنظام: {e}", exc_info=True)
-            await send_telegram_notification(f"🚨 *توقف النظام!* 🚨\nفشل في الإعداد الأولي للمتصفح: `{e}`")
+        browser_ready = await setup_browser_with_retry(p, max_attempts=5)
+        
+        asyncio.create_task(immortal_ram_watchdog(p))
+        
+        if browser_ready:
+            await send_telegram_notification("🛡️ *نظام الدرع الألماسي متصل بالكامل!*\nالمراقبة المباشرة نشطة والحماية من التوقف مفعّلة.")
+        else:
+            logger.warning("⚠️ البوت يعمل في وضع الطوارئ (بدون متصفح).")
+            await send_telegram_notification("⚠️ *البوت يعمل في وضع الطوارئ*\nالأوامر الأساسية متاحة، لكن المراقبة المباشرة معطلة. سيتم المحاولة تلقائياً كل 10 دقائق.")
+            asyncio.create_task(periodic_reconnect(p))
+        
+        while True:
+            await asyncio.sleep(3600)
 
 # --- 10. نقطة بداية التشغيل ---
 if __name__ == "__main__":
