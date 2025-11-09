@@ -3845,13 +3845,27 @@ def run_bot():
         try:
             logger.info("🚀 بدء تشغيل البوت...")
 
+            # تعطيل signal handlers في الـ thread
             application = Application.builder().token(BOT_TOKEN).build()
             application.add_handler(CommandHandler("start", start))
             application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
             application.add_handler(CallbackQueryHandler(button_callback))
 
             logger.info("✅ البوت يعمل بنجاح!")
-            application.run_polling(drop_pending_updates=True, shutdown_signals=None)
+            
+            # استخدام run_polling مع تعطيل signal handlers
+            loop.run_until_complete(
+                application.initialize()
+            )
+            loop.run_until_complete(
+                application.start()
+            )
+            loop.run_until_complete(
+                application.updater.start_polling(drop_pending_updates=True)
+            )
+            
+            # Keep running
+            loop.run_forever()
 
         except KeyboardInterrupt:
             logger.info("🛑 تم إيقاف البوت")
@@ -3866,6 +3880,14 @@ def run_bot():
             except:
                 pass
             should_restart = True
+
+        finally:
+            try:
+                loop.run_until_complete(application.updater.stop())
+                loop.run_until_complete(application.stop())
+                loop.run_until_complete(application.shutdown())
+            except:
+                pass
 
         if should_restart:
             logger.info("🔄 إعادة التشغيل في 3 ثواني...")
