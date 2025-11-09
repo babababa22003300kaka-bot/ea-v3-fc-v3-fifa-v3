@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # إعدادات البوت
 
-BOT_TOKEN = "7543459860:AAF5jxstFjVRxNvKnyTBrC0IWNg1kV0bsGc"
+BOT_TOKEN = "7980723104:AAFCByhLt-3A6bjqYY4Ezdyr4Hp6GFNqDa4"
 
 ADMIN_IDS = [1124247595, 1108589010]
 
