@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # إعدادات البوت
 
-BOT_TOKEN = "7980723104:AAFCByhLt-3A6bjqYY4Ezdyr4Hp6GFNqDa4"
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
 ADMIN_IDS = [1124247595, 1108589010]
 
