@@ -3832,15 +3832,18 @@ def stats_json():
     return account_manager.get_statistics(), 200
 
 def run_bot():
-    """تشغيل البوت في خيط منفصل"""
+    """تشغيل البوت في خيط منفصل مع event loop جديد"""
     global should_restart
+
+    # إنشاء event loop جديد للـ thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     while True:
         should_restart = False
 
         try:
             logger.info("🚀 بدء تشغيل البوت...")
-            # handle_signals()  # تم إلغاء هذا السطر لحل مشكلة التشغيل
 
             application = Application.builder().token(BOT_TOKEN).build()
             application.add_handler(CommandHandler("start", start))
