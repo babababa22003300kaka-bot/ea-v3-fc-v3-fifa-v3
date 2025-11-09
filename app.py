@@ -3840,7 +3840,7 @@ def run_bot():
 
         try:
             logger.info("🚀 بدء تشغيل البوت...")
-            handle_signals()
+            # handle_signals()  # تم إلغاء هذا السطر لحل مشكلة التشغيل
 
             application = Application.builder().token(BOT_TOKEN).build()
             application.add_handler(CommandHandler("start", start))
