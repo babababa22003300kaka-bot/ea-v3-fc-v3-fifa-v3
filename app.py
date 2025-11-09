@@ -3851,7 +3851,7 @@ def run_bot():
             application.add_handler(CallbackQueryHandler(button_callback))
 
             logger.info("✅ البوت يعمل بنجاح!")
-            application.run_polling(drop_pending_updates=True)
+            application.run_polling(drop_pending_updates=True, shutdown_signals=None)
 
         except KeyboardInterrupt:
             logger.info("🛑 تم إيقاف البوت")
