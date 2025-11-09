@@ -1,5 +1,5 @@
-playwright==1.44.0
 python-telegram-bot==21.0.1
-asyncio
+
 Flask==3.0.3
-psutil
+
+greenlet==3.0.0
